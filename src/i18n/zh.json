@@ -1,0 +1,44 @@
+{
+  "app.title": "Astra 3D 引擎",
+  "app.version": "v0.1.0",
+
+  "menu.file": "文件(F)",
+  "menu.edit": "编辑(E)",
+  "menu.view": "视图(V)",
+  "menu.run": "运行(R)",
+
+  "toolbar.play": "▶ 运行",
+  "toolbar.stop": "■ 停止",
+
+  "hierarchy.title": "层级",
+  "hierarchy.empty": "场景中没有对象。",
+  "hierarchy.emptyHint": "点击下方按钮创建一个。",
+  "hierarchy.addCube": "+ 立方体",
+  "hierarchy.addSphere": "+ 球体",
+  "hierarchy.addPlane": "+ 平面",
+  "hierarchy.delete": "删除",
+
+  "inspector.title": "属性",
+  "inspector.empty": "未选中对象",
+  "inspector.emptyHint": "在场景或层级面板中选择一个对象",
+  "inspector.object": "对象",
+  "inspector.name": "名称",
+  "inspector.type": "类型",
+  "inspector.color": "颜色",
+  "inspector.transform": "变换",
+  "inspector.position": "位置",
+  "inspector.rotation": "旋转",
+  "inspector.scale": "缩放",
+  "inspector.delete": "删除对象",
+
+  "viewport.perspective": "透视",
+
+  "tool.select": "选择",
+  "tool.move": "移动",
+  "tool.rotate": "旋转",
+  "tool.scale": "缩放",
+
+  "status.objects": "对象数: {count}",
+  "status.selected": "已选中: {name}",
+  "status.noSelection": "未选中"
+}

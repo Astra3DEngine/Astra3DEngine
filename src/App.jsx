@@ -3,12 +3,14 @@ import Viewport from './components/Viewport.jsx';
 import HierarchyPanel from './components/HierarchyPanel.jsx';
 import InspectorPanel from './components/InspectorPanel.jsx';
 import Toolbar from './components/Toolbar.jsx';
+import { msg, toggleLocale, getLocale } from './i18n/index.js';
 
 function App() {
   const [selectedObject, setSelectedObject] = useState(null);
   const [sceneObjects, setSceneObjects] = useState([]);
   const [currentTool, setCurrentTool] = useState('select');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [locale, setLocaleState] = useState(getLocale());
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -34,6 +36,11 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleToggleLocale = useCallback(() => {
+    toggleLocale();
+    setLocaleState(getLocale());
   }, []);
 
   const handleObjectSelect = useCallback((object) => {
@@ -70,6 +77,8 @@ function App() {
       <Toolbar
         isPlaying={isPlaying}
         setIsPlaying={setIsPlaying}
+        onToggleLocale={handleToggleLocale}
+        currentLocale={locale}
       />
 
       <div className="main-content">
@@ -105,9 +114,13 @@ function App() {
       </div>
 
       <div className="status-bar">
-        <span>Astra 3D Engine v0.1.0</span>
-        <span>Objects: {sceneObjects.length}</span>
-        <span>{selectedObject ? `Selected: ${selectedObject.name}` : 'No selection'}</span>
+        <span>{msg('app.title')} {msg('app.version')}</span>
+        <span>{msg('status.objects', { count: sceneObjects.length })}</span>
+        <span>
+          {selectedObject
+            ? msg('status.selected', { name: selectedObject.name })
+            : msg('status.noSelection')}
+        </span>
       </div>
     </div>
   );

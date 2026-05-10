@@ -1,11 +1,12 @@
 import React from 'react';
+import { msg, localeNames } from '../i18n/index.js';
 
-function Toolbar({ isPlaying, setIsPlaying }) {
+function Toolbar({ isPlaying, setIsPlaying, onToggleLocale, currentLocale }) {
   const menus = [
-    { id: 'file', label: '文件(F)' },
-    { id: 'edit', label: '编辑(E)' },
-    { id: 'view', label: '视图(V)' },
-    { id: 'run', label: '运行(R)' }
+    { id: 'file', labelKey: 'menu.file' },
+    { id: 'edit', labelKey: 'menu.edit' },
+    { id: 'view', labelKey: 'menu.view' },
+    { id: 'run', labelKey: 'menu.run' }
   ];
 
   return (
@@ -13,7 +14,7 @@ function Toolbar({ isPlaying, setIsPlaying }) {
       <div className="toolbar-menus">
         {menus.map(menu => (
           <button key={menu.id} className="menu-btn">
-            {menu.label}
+            {msg(menu.labelKey)}
           </button>
         ))}
       </div>
@@ -23,7 +24,14 @@ function Toolbar({ isPlaying, setIsPlaying }) {
           className={`toolbar-btn ${isPlaying ? 'stop' : 'play'}`}
           onClick={() => setIsPlaying(!isPlaying)}
         >
-          {isPlaying ? '■ Stop' : '▶ Play'}
+          {isPlaying ? msg('toolbar.stop') : msg('toolbar.play')}
+        </button>
+        <button
+          className="menu-btn"
+          onClick={onToggleLocale}
+          title={localeNames[currentLocale === 'en' ? 'zh' : 'en']}
+        >
+          {currentLocale === 'en' ? '中文' : 'EN'}
         </button>
       </div>
     </div>

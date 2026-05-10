@@ -1,0 +1,44 @@
+{
+  "app.title": "Astra 3D Engine",
+  "app.version": "v0.1.0",
+
+  "menu.file": "File(F)",
+  "menu.edit": "Edit(E)",
+  "menu.view": "View(V)",
+  "menu.run": "Run(R)",
+
+  "toolbar.play": "▶ Play",
+  "toolbar.stop": "■ Stop",
+
+  "hierarchy.title": "Hierarchy",
+  "hierarchy.empty": "No objects in scene.",
+  "hierarchy.emptyHint": "Click buttons below to create one.",
+  "hierarchy.addCube": "+ Cube",
+  "hierarchy.addSphere": "+ Sphere",
+  "hierarchy.addPlane": "+ Plane",
+  "hierarchy.delete": "Delete",
+
+  "inspector.title": "Inspector",
+  "inspector.empty": "No object selected",
+  "inspector.emptyHint": "Select an object in the scene or Hierarchy panel",
+  "inspector.object": "Object",
+  "inspector.name": "Name",
+  "inspector.type": "Type",
+  "inspector.color": "Color",
+  "inspector.transform": "Transform",
+  "inspector.position": "Position",
+  "inspector.rotation": "Rotation",
+  "inspector.scale": "Scale",
+  "inspector.delete": "Delete Object",
+
+  "viewport.perspective": "Perspective",
+
+  "tool.select": "Select",
+  "tool.move": "Move",
+  "tool.rotate": "Rotate",
+  "tool.scale": "Scale",
+
+  "status.objects": "Objects: {count}",
+  "status.selected": "Selected: {name}",
+  "status.noSelection": "No selection"
+}

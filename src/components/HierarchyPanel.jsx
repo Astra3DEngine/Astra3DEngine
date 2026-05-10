@@ -1,10 +1,11 @@
 import React from 'react';
+import { msg } from '../i18n/index.js';
 
 function HierarchyPanel({ objects, selectedObject, onSelectObject, onAddObject, onDeleteObject }) {
   return (
     <div className="panel hierarchy-panel">
       <div className="panel-header">
-        <span>Hierarchy</span>
+        <span>{msg('hierarchy.title')}</span>
       </div>
       <div className="panel-content">
         {objects.length === 0 ? (
@@ -12,10 +13,10 @@ function HierarchyPanel({ objects, selectedObject, onSelectObject, onAddObject, 
             color: 'var(--text-secondary)',
             textAlign: 'center',
             padding: '20px',
-            fontSize: '13px'
+            fontSize: '12px'
           }}>
-            No objects in scene.<br />
-            Click buttons below to create one.
+            {msg('hierarchy.empty')}<br />
+            <span style={{ opacity: 0.7 }}>{msg('hierarchy.emptyHint')}</span>
           </div>
         ) : (
           objects.map(obj => (
@@ -34,7 +35,7 @@ function HierarchyPanel({ objects, selectedObject, onSelectObject, onAddObject, 
                   e.stopPropagation();
                   onDeleteObject(obj.id);
                 }}
-                title="Delete"
+                title={msg('hierarchy.delete')}
               >
                 ✕
               </button>
@@ -44,13 +45,13 @@ function HierarchyPanel({ objects, selectedObject, onSelectObject, onAddObject, 
       </div>
       <div className="hierarchy-actions">
         <button className="btn btn-small" onClick={() => onAddObject('cube')}>
-          + Cube
+          {msg('hierarchy.addCube')}
         </button>
         <button className="btn btn-small" onClick={() => onAddObject('sphere')}>
-          + Sphere
+          {msg('hierarchy.addSphere')}
         </button>
         <button className="btn btn-small" onClick={() => onAddObject('plane')}>
-          + Plane
+          {msg('hierarchy.addPlane')}
         </button>
       </div>
     </div>

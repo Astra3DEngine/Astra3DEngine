@@ -1,17 +1,18 @@
 import React from 'react';
+import { msg } from '../i18n/index.js';
 
 function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
   if (!selectedObject) {
     return (
       <div className="panel inspector-panel">
         <div className="panel-header">
-          <span>Inspector</span>
+          <span>{msg('inspector.title')}</span>
         </div>
         <div className="inspector-empty">
           <div className="inspector-empty-icon">⊘</div>
-          <div>No object selected</div>
-          <div style={{ fontSize: '12px', marginTop: '8px' }}>
-            Select an object in the scene<br />or Hierarchy panel
+          <div>{msg('inspector.empty')}</div>
+          <div style={{ fontSize: '11px', marginTop: '6px' }}>
+            {msg('inspector.emptyHint')}
           </div>
         </div>
       </div>
@@ -36,13 +37,13 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
   return (
     <div className="panel inspector-panel">
       <div className="panel-header">
-        <span>Inspector</span>
+        <span>{msg('inspector.title')}</span>
       </div>
       <div className="panel-content">
         <div className="inspector-section">
-          <div className="inspector-section-title">Object</div>
+          <div className="inspector-section-title">{msg('inspector.object')}</div>
           <div className="inspector-row">
-            <label className="inspector-label">Name</label>
+            <label className="inspector-label">{msg('inspector.name')}</label>
             <input
               type="text"
               className="inspector-input"
@@ -51,7 +52,7 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
             />
           </div>
           <div className="inspector-row">
-            <label className="inspector-label">Type</label>
+            <label className="inspector-label">{msg('inspector.type')}</label>
             <input
               type="text"
               className="inspector-input"
@@ -61,7 +62,7 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
             />
           </div>
           <div className="inspector-row">
-            <label className="inspector-label">Color</label>
+            <label className="inspector-label">{msg('inspector.color')}</label>
             <input
               type="color"
               className="inspector-input inspector-color"
@@ -72,10 +73,10 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
         </div>
 
         <div className="inspector-section">
-          <div className="inspector-section-title">Transform</div>
+          <div className="inspector-section-title">{msg('inspector.transform')}</div>
 
           <div className="inspector-row">
-            <label className="inspector-label">Position</label>
+            <label className="inspector-label">{msg('inspector.position')}</label>
             <div className="inspector-vector3">
               {['X', 'Y', 'Z'].map((axis, i) => (
                 <div key={axis} className="vector-input">
@@ -92,7 +93,7 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
           </div>
 
           <div className="inspector-row">
-            <label className="inspector-label">Rotation</label>
+            <label className="inspector-label">{msg('inspector.rotation')}</label>
             <div className="inspector-vector3">
               {['X', 'Y', 'Z'].map((axis, i) => (
                 <div key={axis} className="vector-input">
@@ -109,7 +110,7 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
           </div>
 
           <div className="inspector-row">
-            <label className="inspector-label">Scale</label>
+            <label className="inspector-label">{msg('inspector.scale')}</label>
             <div className="inspector-vector3">
               {['X', 'Y', 'Z'].map((axis, i) => (
                 <div key={axis} className="vector-input">
@@ -134,7 +135,7 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
             style={{ width: '100%' }}
             onClick={() => onDeleteObject(selectedObject.id)}
           >
-            Delete Object
+            {msg('inspector.delete')}
           </button>
         </div>
       </div>

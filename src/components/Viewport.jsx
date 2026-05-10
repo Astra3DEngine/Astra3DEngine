@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
+import { msg } from '../i18n/index.js';
 
 function Viewport({ objects, selectedObject, onSelectObject, currentTool, onToolChange, isPlaying, onUpdateObject }) {
   const containerRef = useRef(null);
@@ -327,10 +328,10 @@ function Viewport({ objects, selectedObject, onSelectObject, currentTool, onTool
   }, [isPlaying]);
 
   const tools = [
-    { id: 'select', label: 'Select', icon: '↖' },
-    { id: 'move', label: 'Move', icon: '✥' },
-    { id: 'rotate', label: 'Rotate', icon: '↻' },
-    { id: 'scale', label: 'Scale', icon: '⤢' }
+    { id: 'select', labelKey: 'tool.select', icon: '↖' },
+    { id: 'move', labelKey: 'tool.move', icon: '✥' },
+    { id: 'rotate', labelKey: 'tool.rotate', icon: '↻' },
+    { id: 'scale', labelKey: 'tool.scale', icon: '⤢' }
   ];
 
   return (
@@ -341,14 +342,14 @@ function Viewport({ objects, selectedObject, onSelectObject, currentTool, onTool
             key={tool.id}
             className={`viewport-tool-btn ${currentTool === tool.id ? 'active' : ''}`}
             onClick={() => onToolChange(tool.id)}
-            title={tool.label}
+            title={msg(tool.labelKey)}
           >
             {tool.icon}
           </button>
         ))}
       </div>
       <div className="viewport-overlay">
-        <span className="viewport-label">Perspective</span>
+        <span className="viewport-label">{msg('viewport.perspective')}</span>
       </div>
     </div>
   );
