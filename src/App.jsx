@@ -1,9 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import Viewport from './components/Viewport.jsx';
 import HierarchyPanel from './components/HierarchyPanel.jsx';
 import InspectorPanel from './components/InspectorPanel.jsx';
 import Toolbar from './components/Toolbar.jsx';
-import AssetPanel from './components/AssetPanel.jsx';
 
 function App() {
   const [selectedObject, setSelectedObject] = useState(null);
@@ -11,11 +10,11 @@ function App() {
   const [currentTool, setCurrentTool] = useState('select');
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const handleObjectSelect = (object) => {
+  const handleObjectSelect = useCallback((object) => {
     setSelectedObject(object);
-  };
+  }, []);
 
-  const handleAddObject = (type) => {
+  const handleAddObject = useCallback((type) => {
     const newObject = {
       id: Date.now(),
       name: `${type}_${sceneObjects.length + 1}`,
@@ -25,24 +24,20 @@ function App() {
       scale: [1, 1, 1],
       color: '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')
     };
-    setSceneObjects([...sceneObjects, newObject]);
-  };
+    setSceneObjects(prev => [...prev, newObject]);
+  }, [sceneObjects.length]);
 
-  const handleDeleteObject = (id) => {
-    setSceneObjects(sceneObjects.filter(obj => obj.id !== id));
-    if (selectedObject && selectedObject.id === id) {
-      setSelectedObject(null);
-    }
-  };
+  const handleDeleteObject = useCallback((id) => {
+    setSceneObjects(prev => prev.filter(obj => obj.id !== id));
+    setSelectedObject(prev => prev && prev.id === id ? null : prev);
+  }, []);
 
-  const handleUpdateObject = (id, updates) => {
-    setSceneObjects(sceneObjects.map(obj =>
+  const handleUpdateObject = useCallback((id, updates) => {
+    setSceneObjects(prev => prev.map(obj =>
       obj.id === id ? { ...obj, ...updates } : obj
     ));
-    if (selectedObject && selectedObject.id === id) {
-      setSelectedObject({ ...selectedObject, ...updates });
-    }
-  };
+    setSelectedObject(prev => prev && prev.id === id ? { ...prev, ...updates } : prev);
+  }, []);
 
   return (
     <div className="app-container">
@@ -62,7 +57,6 @@ function App() {
             onAddObject={handleAddObject}
             onDeleteObject={handleDeleteObject}
           />
-          <AssetPanel />
         </div>
 
         <div className="center-area">
@@ -72,6 +66,7 @@ function App() {
             onSelectObject={handleObjectSelect}
             currentTool={currentTool}
             isPlaying={isPlaying}
+            onUpdateObject={handleUpdateObject}
           />
         </div>
 

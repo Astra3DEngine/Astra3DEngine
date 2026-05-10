@@ -15,7 +15,7 @@ function HierarchyPanel({ objects, selectedObject, onSelectObject, onAddObject, 
             fontSize: '13px'
           }}>
             No objects in scene.<br />
-            Click "Add Object" to create one.
+            Click buttons below to create one.
           </div>
         ) : (
           objects.map(obj => (
@@ -28,18 +28,16 @@ function HierarchyPanel({ objects, selectedObject, onSelectObject, onAddObject, 
                 {obj.type === 'cube' ? '◼' : obj.type === 'sphere' ? '●' : '▲'}
               </span>
               <span className="hierarchy-item-name">{obj.name}</span>
-              <div className="hierarchy-item-actions">
-                <button
-                  className="icon-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteObject(obj.id);
-                  }}
-                  title="Delete"
-                >
-                  ✕
-                </button>
-              </div>
+              <button
+                className="icon-btn delete-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteObject(obj.id);
+                }}
+                title="Delete"
+              >
+                ✕
+              </button>
             </div>
           ))
         )}

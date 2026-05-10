@@ -8,10 +8,6 @@ function Toolbar({ currentTool, setCurrentTool, isPlaying, setIsPlaying }) {
     { id: 'scale', label: 'Scale', icon: '⤢' }
   ];
 
-  const handlePlayToggle = () => {
-    setIsPlaying(!isPlaying);
-  };
-
   return (
     <div className="toolbar">
       <div className="toolbar-section">
@@ -33,7 +29,7 @@ function Toolbar({ currentTool, setCurrentTool, isPlaying, setIsPlaying }) {
       <div className="toolbar-section">
         <button
           className={`toolbar-btn ${isPlaying ? 'stop' : 'play'}`}
-          onClick={handlePlayToggle}
+          onClick={() => setIsPlaying(!isPlaying)}
         >
           {isPlaying ? '■ Stop' : '▶ Play'}
         </button>

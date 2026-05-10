@@ -14,7 +14,6 @@
   --text-secondary: #a0a0a0;
   --border: #2a2a4a;
   --success: #4caf50;
-  --warning: #ff9800;
   --danger: #f44336;
 }
 
@@ -91,11 +90,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.tool-btn svg {
-  width: 20px;
-  height: 20px;
 }
 
 /* Main Content Area */
@@ -186,15 +180,29 @@ body {
 .hierarchy-item-name {
   flex: 1;
   font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.hierarchy-item-actions {
-  display: none;
-  gap: 4px;
+.delete-btn {
+  opacity: 0;
+  transition: opacity 0.15s;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
 }
 
-.hierarchy-item:hover .hierarchy-item-actions {
-  display: flex;
+.delete-btn:hover {
+  color: var(--danger);
+  background-color: rgba(244, 67, 54, 0.2);
+}
+
+.hierarchy-item:hover .delete-btn {
+  opacity: 1;
 }
 
 .hierarchy-actions {
@@ -228,9 +236,10 @@ body {
 }
 
 .inspector-label {
-  width: 80px;
+  width: 70px;
   font-size: 12px;
   color: var(--text-secondary);
+  flex-shrink: 0;
 }
 
 .inspector-input {
@@ -248,7 +257,12 @@ body {
   border-color: var(--accent);
 }
 
-.inspector-input[type="color"] {
+.inspector-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.inspector-color {
   width: 60px;
   height: 28px;
   padding: 2px;
@@ -261,15 +275,21 @@ body {
   flex: 1;
 }
 
-.inspector-vector3 input {
-  width: 65px;
+.vector-input {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.vector-input input {
+  width: 100%;
   text-align: center;
 }
 
 .vector-label {
   font-size: 11px;
   color: var(--text-secondary);
-  text-align: center;
   margin-top: 2px;
 }
 
@@ -290,48 +310,6 @@ body {
   opacity: 0.3;
 }
 
-/* Asset Panel */
-.asset-panel {
-  height: 200px;
-  border-top: 1px solid var(--border);
-}
-
-.asset-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.asset-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px;
-  background-color: var(--bg-dark);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.asset-item:hover {
-  background-color: rgba(74, 144, 217, 0.2);
-  border-color: var(--accent);
-}
-
-.asset-item-icon {
-  font-size: 24px;
-  margin-bottom: 4px;
-}
-
-.asset-item-name {
-  font-size: 11px;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  width: 100%;
-}
-
 /* Viewport */
 .viewport-container {
   flex: 1;
@@ -340,9 +318,8 @@ body {
   overflow: hidden;
 }
 
-.viewport-canvas {
-  width: 100%;
-  height: 100%;
+.viewport-container canvas {
+  display: block;
 }
 
 .viewport-overlay {
@@ -351,6 +328,7 @@ body {
   left: 8px;
   display: flex;
   gap: 4px;
+  pointer-events: none;
 }
 
 .viewport-label {
@@ -371,25 +349,6 @@ body {
   border-top: 1px solid var(--border);
   font-size: 12px;
   color: var(--text-secondary);
-}
-
-/* Scrollbar Styles */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-dark);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
 }
 
 /* Buttons */
@@ -421,34 +380,21 @@ body {
   background-color: #e53935;
 }
 
-.btn-success {
-  background-color: var(--success);
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.btn-success:hover {
-  background-color: #43a047;
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
 }
 
-.icon-btn {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  width: 28px;
-  height: 28px;
+::-webkit-scrollbar-thumb {
+  background: var(--border);
   border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
 }
 
-.icon-btn:hover {
-  background-color: var(--bg-panel);
-  border-color: var(--accent);
-}
-
-.icon-btn svg {
-  width: 16px;
-  height: 16px;
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
 }

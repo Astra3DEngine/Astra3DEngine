@@ -64,7 +64,7 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
             <label className="inspector-label">Color</label>
             <input
               type="color"
-              className="inspector-input"
+              className="inspector-input inspector-color"
               value={selectedObject.color}
               onChange={(e) => handleColorChange(e.target.value)}
             />
@@ -78,7 +78,7 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
             <label className="inspector-label">Position</label>
             <div className="inspector-vector3">
               {['X', 'Y', 'Z'].map((axis, i) => (
-                <div key={axis} style={{ flex: 1 }}>
+                <div key={axis} className="vector-input">
                   <input
                     type="number"
                     className="inspector-input"
@@ -95,7 +95,7 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
             <label className="inspector-label">Rotation</label>
             <div className="inspector-vector3">
               {['X', 'Y', 'Z'].map((axis, i) => (
-                <div key={axis} style={{ flex: 1 }}>
+                <div key={axis} className="vector-input">
                   <input
                     type="number"
                     className="inspector-input"
@@ -112,7 +112,7 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
             <label className="inspector-label">Scale</label>
             <div className="inspector-vector3">
               {['X', 'Y', 'Z'].map((axis, i) => (
-                <div key={axis} style={{ flex: 1 }}>
+                <div key={axis} className="vector-input">
                   <input
                     type="number"
                     className="inspector-input"
