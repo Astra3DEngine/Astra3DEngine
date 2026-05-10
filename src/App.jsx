@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Viewport from './components/Viewport.jsx';
 import HierarchyPanel from './components/HierarchyPanel.jsx';
 import InspectorPanel from './components/InspectorPanel.jsx';
@@ -9,6 +9,32 @@ function App() {
   const [sceneObjects, setSceneObjects] = useState([]);
   const [currentTool, setCurrentTool] = useState('select');
   const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      switch (e.key.toLowerCase()) {
+        case 'q':
+          setCurrentTool('select');
+          break;
+        case 'w':
+          setCurrentTool('move');
+          break;
+        case 'e':
+          setCurrentTool('rotate');
+          break;
+        case 'r':
+          setCurrentTool('scale');
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleObjectSelect = useCallback((object) => {
     setSelectedObject(object);
@@ -42,8 +68,6 @@ function App() {
   return (
     <div className="app-container">
       <Toolbar
-        currentTool={currentTool}
-        setCurrentTool={setCurrentTool}
         isPlaying={isPlaying}
         setIsPlaying={setIsPlaying}
       />
@@ -65,6 +89,7 @@ function App() {
             selectedObject={selectedObject}
             onSelectObject={handleObjectSelect}
             currentTool={currentTool}
+            onToolChange={setCurrentTool}
             isPlaying={isPlaying}
             onUpdateObject={handleUpdateObject}
           />

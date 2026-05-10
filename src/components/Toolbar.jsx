@@ -1,32 +1,24 @@
 import React from 'react';
 
-function Toolbar({ currentTool, setCurrentTool, isPlaying, setIsPlaying }) {
-  const tools = [
-    { id: 'select', label: 'Select', icon: '↖' },
-    { id: 'move', label: 'Move', icon: '✥' },
-    { id: 'rotate', label: 'Rotate', icon: '↻' },
-    { id: 'scale', label: 'Scale', icon: '⤢' }
+function Toolbar({ isPlaying, setIsPlaying }) {
+  const menus = [
+    { id: 'file', label: '文件(F)' },
+    { id: 'edit', label: '编辑(E)' },
+    { id: 'view', label: '视图(V)' },
+    { id: 'run', label: '运行(R)' }
   ];
 
   return (
     <div className="toolbar">
-      <div className="toolbar-section">
-        <span style={{ fontWeight: 'bold', marginRight: '16px' }}>ASTRA 3D</span>
-        <div style={{ display: 'flex', gap: '4px' }}>
-          {tools.map(tool => (
-            <button
-              key={tool.id}
-              className={`toolbar-btn tool-btn ${currentTool === tool.id ? 'active' : ''}`}
-              onClick={() => setCurrentTool(tool.id)}
-              title={tool.label}
-            >
-              {tool.icon}
-            </button>
-          ))}
-        </div>
+      <div className="toolbar-menus">
+        {menus.map(menu => (
+          <button key={menu.id} className="menu-btn">
+            {menu.label}
+          </button>
+        ))}
       </div>
 
-      <div className="toolbar-section">
+      <div className="toolbar-right">
         <button
           className={`toolbar-btn ${isPlaying ? 'stop' : 'play'}`}
           onClick={() => setIsPlaying(!isPlaying)}

@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 
-function Viewport({ objects, selectedObject, onSelectObject, currentTool, isPlaying, onUpdateObject }) {
+function Viewport({ objects, selectedObject, onSelectObject, currentTool, onToolChange, isPlaying, onUpdateObject }) {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -326,8 +326,27 @@ function Viewport({ objects, selectedObject, onSelectObject, currentTool, isPlay
     }
   }, [isPlaying]);
 
+  const tools = [
+    { id: 'select', label: 'Select', icon: '↖' },
+    { id: 'move', label: 'Move', icon: '✥' },
+    { id: 'rotate', label: 'Rotate', icon: '↻' },
+    { id: 'scale', label: 'Scale', icon: '⤢' }
+  ];
+
   return (
     <div className="viewport-container" ref={containerRef}>
+      <div className="viewport-toolbar">
+        {tools.map(tool => (
+          <button
+            key={tool.id}
+            className={`viewport-tool-btn ${currentTool === tool.id ? 'active' : ''}`}
+            onClick={() => onToolChange(tool.id)}
+            title={tool.label}
+          >
+            {tool.icon}
+          </button>
+        ))}
+      </div>
       <div className="viewport-overlay">
         <span className="viewport-label">Perspective</span>
       </div>
