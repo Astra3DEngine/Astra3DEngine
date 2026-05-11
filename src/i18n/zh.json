@@ -40,5 +40,10 @@
 
   "status.objects": "对象数: {count}",
   "status.selected": "已选中: {name}",
-  "status.noSelection": "未选中"
+  "status.noSelection": "未选中",
+
+  "assets.title": "素材库",
+  "assets.import": "导入",
+  "assets.empty": "暂无素材，点击导入按钮添加。",
+  "assets.dragHint": "拖拽文件到此处"
 }

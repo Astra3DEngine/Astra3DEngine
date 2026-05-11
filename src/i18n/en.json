@@ -40,5 +40,10 @@
 
   "status.objects": "Objects: {count}",
   "status.selected": "Selected: {name}",
-  "status.noSelection": "No selection"
+  "status.noSelection": "No selection",
+
+  "assets.title": "Assets",
+  "assets.import": "Import",
+  "assets.empty": "No assets. Click Import to add.",
+  "assets.dragHint": "Drag files here"
 }

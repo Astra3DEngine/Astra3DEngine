@@ -171,11 +171,11 @@ Astra3DEngine/
 
 ### 4. 资源管理器
 
-- [ ] 导入模型（GLTF/GLB优先，OBJ支持）
+- [x] 导入模型（GLTF/GLB优先，OBJ支持）
 - [ ] 纹理管理（支持预览）
 - [ ] 预制件（Prefab）系统
 - [ ] 场景文件序列化（JSON格式）
-- [ ]  资源压缩和优化   
+- [ ]  资源压缩和优化
 
 ### 5. 物理系统
 
@@ -303,48 +303,6 @@ Astra3DEngine/
 2. **[Godot Engine](https://godotengine.org/)**
    - 开源引擎
    - 场景系统和节点架构
-
-### 学习资源
-
-- [Getting started with Unity Web](https://learn.unity.com/tutorial/getting-started-with-unity-web) - WebGL发布流程参考
-- [3D Game Engine Development Guide](https://codepal.ai/code-generator/query/SVCtznTu/3d-game-engine-development-tutorial) - 3D引擎开发基础知识
-
----
-
-## 七、建议的第一步行动
-
-1. **环境准备**
-   - 安装 Node.js 18+
-   - 配置 Git
-   - 安装 pnpm 或 yarn（推荐pnpm）
-
-2. **学习 Three.js 基础**
-   - 完成官方基础教程
-   - 学习GLTF模型加载
-   - 理解材质和光照
-
-3. **研究开源项目**
-   - 克隆 gg-web-engine
-   - 分析其代码架构
-   - 理解模块拆分方式
-
-4. **搭建原型**
-   - 用 Vite + React + Three.js 搭建项目
-   - 实现简单的场景编辑器雏形
-   - 验证技术可行性
-
-5. **迭代开发**
-   - 根据路线图逐步实现功能
-   - 保持架构的灵活性
-   - 持续测试和优化
-
----
-
-## 八、命名说明
-
-**Astra** 来自拉丁语"星辰"之意，象征这个引擎能够帮助你将游戏梦想照亮整个网络世界。
-
----
 
 ## 许可证
 

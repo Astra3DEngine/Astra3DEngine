@@ -36,6 +36,19 @@ body {
   width: 100vw;
 }
 
+.main-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
 /* Toolbar Styles */
 .toolbar {
   display: flex;
@@ -62,9 +75,9 @@ body {
 .toolbar-logo {
   display: flex;
   align-items: center;
-  padding: 0 10px;
+  padding: 2px 2px;
   border-right: 1px solid var(--border);
-  margin-right: 4px;
+  margin-right: 2px;
 }
 
 .toolbar-logo svg {
@@ -409,6 +422,102 @@ body {
   padding: 3px 6px;
   border-radius: 3px;
   font-size: 11px;
+}
+
+/* Bottom Area - Assets Panel */
+.bottom-area {
+  height: 160px;
+  border-top: 1px solid var(--border);
+  background-color: var(--bg-panel);
+}
+
+.assets-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.assets-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.assets-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-right: auto;
+}
+
+.assets-content {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 12px;
+  transition: background-color 0.2s;
+}
+
+.assets-content.dragging {
+  background-color: rgba(64, 120, 192, 0.15);
+  border: 2px dashed var(--accent);
+  border-radius: 4px;
+}
+
+.assets-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.assets-grid {
+  display: flex;
+  gap: 8px;
+  height: 100%;
+}
+
+.asset-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 100%;
+  background-color: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.asset-item:hover {
+  border-color: var(--accent);
+  background-color: var(--bg-panel);
+}
+
+.asset-item.selected {
+  border-color: var(--accent-active);
+  background-color: rgba(64, 120, 192, 0.2);
+}
+
+.asset-icon {
+  font-size: 28px;
+  margin-bottom: 4px;
+}
+
+.asset-name {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Status Bar */

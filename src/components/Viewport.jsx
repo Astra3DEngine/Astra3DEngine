@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { msg } from '../i18n/index.js';
 
-function Viewport({ objects, selectedObject, onSelectObject, currentTool, onToolChange, isPlaying, onUpdateObject }) {
+function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool, onToolChange, isPlaying, onUpdateObject }) {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -14,6 +14,11 @@ function Viewport({ objects, selectedObject, onSelectObject, currentTool, onTool
   const meshesRef = useRef({});
   const animationRef = useRef(null);
   const selectedObjectRef = useRef(selectedObject);
+  const assetsRef = useRef(assets || []);
+
+  useEffect(() => {
+    assetsRef.current = assets || [];
+  }, [assets]);
 
   useEffect(() => {
     selectedObjectRef.current = selectedObject;
@@ -70,6 +75,8 @@ function Viewport({ objects, selectedObject, onSelectObject, currentTool, onTool
     });
 
     transformControls.addEventListener('change', () => {
+      if (!isTransformDragging) return;
+      
       const current = selectedObjectRef.current;
       if (!current || !meshesRef.current[current.id]) return;
 
@@ -92,6 +99,13 @@ function Viewport({ objects, selectedObject, onSelectObject, currentTool, onTool
         onUpdateObject(current.id, {
           scale: [mesh.scale.x, mesh.scale.y, mesh.scale.z]
         });
+      }
+
+      if (mesh.material && mesh.material.color) {
+        const colorHex = '#' + mesh.material.color.getHexString();
+        if (colorHex !== (selectedObjectRef.current?.color || '').toString()) {
+          onUpdateObject(current.id, { color: colorHex });
+        }
       }
     });
 
@@ -179,11 +193,15 @@ function Viewport({ objects, selectedObject, onSelectObject, currentTool, onTool
         const mesh = meshesRef.current[id];
         if (mesh) {
           sceneRef.current.remove(mesh);
-          mesh.geometry.dispose();
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach(m => m.dispose());
-          } else {
-            mesh.material.dispose();
+          if (mesh.geometry) {
+            mesh.geometry.dispose();
+          }
+          if (mesh.material) {
+            if (Array.isArray(mesh.material)) {
+              mesh.material.forEach(m => m.dispose());
+            } else {
+              mesh.material.dispose();
+            }
           }
           delete meshesRef.current[id];
         }
@@ -200,10 +218,35 @@ function Viewport({ objects, selectedObject, onSelectObject, currentTool, onTool
           THREE.MathUtils.degToRad(obj.rotation[2])
         );
         mesh.scale.set(obj.scale[0], obj.scale[1], obj.scale[2]);
-        if (mesh.material.color) {
+        if (mesh.material && mesh.material.color) {
           mesh.material.color.setStyle(obj.color || '#4a90d9');
         }
       } else {
+        if (obj.isModel && obj.assetId) {
+          const asset = assetsRef.current.find(a => a.id === obj.assetId);
+          if (asset && asset.gltfScene) {
+            const modelGroup = new THREE.Group();
+            
+            const modelContent = asset.gltfScene.clone();
+            const center = asset.center || new THREE.Vector3(0, 0, 0);
+            modelContent.position.sub(center);
+            
+            modelGroup.add(modelContent);
+            modelGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
+            modelGroup.rotation.set(
+              THREE.MathUtils.degToRad(obj.rotation[0]),
+              THREE.MathUtils.degToRad(obj.rotation[1]),
+              THREE.MathUtils.degToRad(obj.rotation[2])
+            );
+            modelGroup.scale.set(obj.scale[0], obj.scale[1], obj.scale[2]);
+            modelGroup.userData = { id: obj.id, isModel: true, assetSize: asset.size };
+
+            sceneRef.current.add(modelGroup);
+            meshesRef.current[obj.id] = modelGroup;
+          }
+          return;
+        }
+
         let geometry;
         switch (obj.type) {
           case 'cube':
@@ -258,13 +301,25 @@ function Viewport({ objects, selectedObject, onSelectObject, currentTool, onTool
       if (mesh.parent === sceneRef.current) {
         transformControlsRef.current.attach(mesh);
 
-        const outline = new THREE.LineSegments(
-          new THREE.EdgesGeometry(mesh.geometry),
-          new THREE.LineBasicMaterial({ color: 0x4a90d9, linewidth: 2 })
-        );
-        outline.scale.setScalar(1.01);
-        mesh.add(outline);
-        mesh.userData.outline = outline;
+        if (mesh.userData.isModel) {
+          const assetSize = mesh.userData.assetSize || new THREE.Vector3(1, 1, 1);
+          const size = assetSize.clone().multiply(mesh.scale);
+          
+          const outline = new THREE.LineSegments(
+            new THREE.EdgesGeometry(new THREE.BoxGeometry(size.x, size.y, size.z)),
+            new THREE.LineBasicMaterial({ color: 0x4a90d9, linewidth: 2 })
+          );
+          mesh.add(outline);
+          mesh.userData.outline = outline;
+        } else {
+          const outline = new THREE.LineSegments(
+            new THREE.EdgesGeometry(mesh.geometry),
+            new THREE.LineBasicMaterial({ color: 0x4a90d9, linewidth: 2 })
+          );
+          outline.scale.setScalar(1.01);
+          mesh.add(outline);
+          mesh.userData.outline = outline;
+        }
       }
     } else {
       transformControlsRef.current.detach();
@@ -285,10 +340,10 @@ function Viewport({ objects, selectedObject, onSelectObject, currentTool, onTool
 
       raycaster.setFromCamera(mouse, cameraRef.current);
 
-      const validMeshes = Object.values(meshesRef.current).filter(
-        mesh => mesh.parent === sceneRef.current && mesh.geometry
+      const validObjects = Object.values(meshesRef.current).filter(
+        mesh => mesh.parent === sceneRef.current
       );
-      const intersects = raycaster.intersectObjects(validMeshes, true);
+      const intersects = raycaster.intersectObjects(validObjects, true);
 
       if (intersects.length > 0) {
         let clickedMesh = intersects[0].object;
