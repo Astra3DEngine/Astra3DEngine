@@ -235,15 +235,133 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
     
     const geometry = createTruncatedCube();
     
-    const material = new THREE.MeshStandardMaterial({
-      color: 0x0099ff,
-      metalness: 0.3,
-      roughness: 0.7,
-      flatShading: true
-    });
+    const sqrt2 = Math.sqrt(2);
+    const sqrt3 = Math.sqrt(3);
     
-    const viewCubeMesh = new THREE.Mesh(geometry, material);
+    const faceNormals = [
+      new THREE.Vector3(1, 0, 0),
+      new THREE.Vector3(-1, 0, 0),
+      new THREE.Vector3(0, 1, 0),
+      new THREE.Vector3(0, -1, 0),
+      new THREE.Vector3(0, 0, 1),
+      new THREE.Vector3(0, 0, -1),
+      new THREE.Vector3(1 / sqrt2, 1 / sqrt2, 0),
+      new THREE.Vector3(1 / sqrt2, -1 / sqrt2, 0),
+      new THREE.Vector3(-1 / sqrt2, 1 / sqrt2, 0),
+      new THREE.Vector3(-1 / sqrt2, -1 / sqrt2, 0),
+      new THREE.Vector3(1 / sqrt2, 0, 1 / sqrt2),
+      new THREE.Vector3(1 / sqrt2, 0, -1 / sqrt2),
+      new THREE.Vector3(-1 / sqrt2, 0, 1 / sqrt2),
+      new THREE.Vector3(-1 / sqrt2, 0, -1 / sqrt2),
+      new THREE.Vector3(0, 1 / sqrt2, 1 / sqrt2),
+      new THREE.Vector3(0, 1 / sqrt2, -1 / sqrt2),
+      new THREE.Vector3(0, -1 / sqrt2, 1 / sqrt2),
+      new THREE.Vector3(0, -1 / sqrt2, -1 / sqrt2),
+      new THREE.Vector3(1 / sqrt3, 1 / sqrt3, 1 / sqrt3),
+      new THREE.Vector3(1 / sqrt3, 1 / sqrt3, -1 / sqrt3),
+      new THREE.Vector3(1 / sqrt3, -1 / sqrt3, 1 / sqrt3),
+      new THREE.Vector3(1 / sqrt3, -1 / sqrt3, -1 / sqrt3),
+      new THREE.Vector3(-1 / sqrt3, 1 / sqrt3, 1 / sqrt3),
+      new THREE.Vector3(-1 / sqrt3, 1 / sqrt3, -1 / sqrt3),
+      new THREE.Vector3(-1 / sqrt3, -1 / sqrt3, 1 / sqrt3),
+      new THREE.Vector3(-1 / sqrt3, -1 / sqrt3, -1 / sqrt3)
+    ];
+    
+    const faceMaterials = [];
+    for (let i = 0; i < 26; i++) {
+      faceMaterials.push(new THREE.MeshStandardMaterial({
+        color: 0x66ccff,
+        metalness: 0.3,
+        roughness: 0.7,
+        flatShading: true
+      }));
+    }
+    
+    const positionAttr = geometry.getAttribute('position');
+    const triangleCount = positionAttr.count / 3;
+    const faceTriangleMap = new Map();
+    
+    for (let i = 0; i < 26; i++) {
+      faceTriangleMap.set(i, []);
+    }
+    
+    const vA = new THREE.Vector3(), vB = new THREE.Vector3(), vC = new THREE.Vector3();
+    const normal = new THREE.Vector3();
+    const edge1 = new THREE.Vector3(), edge2 = new THREE.Vector3();
+    
+    for (let triIdx = 0; triIdx < triangleCount; triIdx++) {
+      const iA = triIdx * 3;
+      const iB = triIdx * 3 + 1;
+      const iC = triIdx * 3 + 2;
+      
+      vA.fromBufferAttribute(positionAttr, iA);
+      vB.fromBufferAttribute(positionAttr, iB);
+      vC.fromBufferAttribute(positionAttr, iC);
+      
+      edge1.subVectors(vB, vA);
+      edge2.subVectors(vC, vA);
+      normal.crossVectors(edge1, edge2).normalize();
+      
+      let bestFaceIdx = 0;
+      let bestDot = Math.abs(normal.dot(faceNormals[0]));
+      
+      for (let i = 1; i < 26; i++) {
+        const dot = Math.abs(normal.dot(faceNormals[i]));
+        if (dot > bestDot) {
+          bestDot = dot;
+          bestFaceIdx = i;
+        }
+      }
+      
+      faceTriangleMap.get(bestFaceIdx).push(triIdx);
+    }
+    
+    geometry.clearGroups();
+    let materialIndex = 0;
+    const faceToMaterial = new Map();
+    
+    for (let faceIdx = 0; faceIdx < 26; faceIdx++) {
+      const triangles = faceTriangleMap.get(faceIdx);
+      if (triangles.length === 0) continue;
+      
+      triangles.sort((a, b) => a - b);
+      
+      let start = triangles[0];
+      let count = 1;
+      
+      for (let i = 1; i <= triangles.length; i++) {
+        if (i < triangles.length && triangles[i] === triangles[i-1] + 1) {
+          count++;
+        } else {
+          geometry.addGroup(start * 3, count * 3, materialIndex);
+          start = i < triangles.length ? triangles[i] : -1;
+          count = 1;
+        }
+      }
+      
+      faceToMaterial.set(faceIdx, materialIndex);
+      materialIndex++;
+    }
+    
+    const viewCubeMesh = new THREE.Mesh(geometry, faceMaterials);
     viewCubeScene.add(viewCubeMesh);
+    
+    const hitGeometry = geometry.clone();
+    hitGeometry.scale(1.15, 1.15, 1.15);
+    const hitMesh = new THREE.Mesh(hitGeometry, new THREE.MeshBasicMaterial({ visible: false }));
+    viewCubeMesh.add(hitMesh);
+    
+    let currentFaceIndex = -1;
+    
+    const updateFaceColor = (faceIndex) => {
+      if (currentFaceIndex >= 0 && faceToMaterial.has(currentFaceIndex)) {
+        faceMaterials[faceToMaterial.get(currentFaceIndex)].color.setHex(0x66ccff);
+      }
+      if (faceIndex >= 0 && faceToMaterial.has(faceIndex)) {
+        faceMaterials[faceToMaterial.get(faceIndex)].color.setHex(0x0099ff);
+        currentFaceIndex = faceIndex;
+      }
+    };
     
     const edgesGeometry = new THREE.EdgesGeometry(geometry);
     const edgesMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 1 });
@@ -287,35 +405,31 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       
       raycaster.setFromCamera(mouse, viewCubeCamera);
-      const intersects = raycaster.intersectObject(viewCubeMesh);
+      const intersects = raycaster.intersectObject(hitMesh);
       
       if (intersects.length > 0 && cameraRef.current) {
         const intersection = intersects[0];
         const intersectPoint = intersection.point.clone();
         
-        intersectPoint.applyMatrix4(new THREE.Matrix4().getInverse(viewCubeMesh.matrixWorld));
+        const inverseMatrix = new THREE.Matrix4().copy(viewCubeMesh.matrixWorld).invert();
+        intersectPoint.applyMatrix4(inverseMatrix);
         
         const direction = intersectPoint.clone().normalize();
         
-        const mainDirections = [
-          new THREE.Vector3(1, 0, 0),
-          new THREE.Vector3(-1, 0, 0),
-          new THREE.Vector3(0, 1, 0),
-          new THREE.Vector3(0, -1, 0),
-          new THREE.Vector3(0, 0, 1),
-          new THREE.Vector3(0, 0, -1)
-        ];
+        let bestMatch = faceNormals[0];
+        let bestDot = direction.dot(faceNormals[0]);
+        let bestIndex = 0;
         
-        let bestMatch = mainDirections[0];
-        let bestDot = direction.dot(mainDirections[0]);
-        
-        for (let i = 1; i < mainDirections.length; i++) {
-          const dot = direction.dot(mainDirections[i]);
+        for (let i = 1; i < faceNormals.length; i++) {
+          const dot = direction.dot(faceNormals[i]);
           if (dot > bestDot) {
             bestDot = dot;
-            bestMatch = mainDirections[i];
+            bestMatch = faceNormals[i];
+            bestIndex = i;
           }
         }
+        
+        updateFaceColor(bestIndex);
         
         const distance = cameraRef.current.position.length();
         const targetPosition = bestMatch.clone().multiplyScalar(distance);
