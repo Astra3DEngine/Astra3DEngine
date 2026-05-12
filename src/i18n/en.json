@@ -37,6 +37,8 @@
   "tool.move": "Move",
   "tool.rotate": "Rotate",
   "tool.scale": "Scale",
+  "tool.uniformScaleOn": "Uniform Scale: ON",
+  "tool.uniformScaleOff": "Uniform Scale: OFF",
 
   "status.objects": "Objects: {count}",
   "status.selected": "Selected: {name}",

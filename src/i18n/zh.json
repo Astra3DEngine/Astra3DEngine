@@ -37,6 +37,8 @@
   "tool.move": "移动",
   "tool.rotate": "旋转",
   "tool.scale": "缩放",
+  "tool.uniformScaleOn": "固定比例缩放: 开",
+  "tool.uniformScaleOff": "固定比例缩放: 关",
 
   "status.objects": "对象数: {count}",
   "status.selected": "已选中: {name}",

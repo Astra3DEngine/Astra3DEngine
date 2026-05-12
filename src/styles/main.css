@@ -424,6 +424,28 @@ body {
   font-size: 11px;
 }
 
+.view-cube {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 80px;
+  height: 80px;
+  z-index: 100;
+  cursor: grab;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: rgba(34, 34, 34, 0.5);
+  border: 1px solid var(--border);
+}
+
+.view-cube:active {
+  cursor: grabbing;
+}
+
+.view-cube canvas {
+  display: block;
+}
+
 /* Bottom Area - Assets Panel */
 .bottom-area {
   height: 160px;

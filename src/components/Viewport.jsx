@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
+import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js';
 import { msg } from '../i18n/index.js';
 
 function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool, onToolChange, isPlaying, onUpdateObject }) {
@@ -15,6 +16,16 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
   const animationRef = useRef(null);
   const selectedObjectRef = useRef(selectedObject);
   const assetsRef = useRef(assets || []);
+  const [uniformScale, setUniformScale] = useState(false);
+  const uniformScaleRef = useRef(false);
+  const viewCubeRef = useRef(null);
+  const viewCubeSceneRef = useRef(null);
+  const viewCubeCameraRef = useRef(null);
+  const viewCubeRendererRef = useRef(null);
+
+  useEffect(() => {
+    uniformScaleRef.current = uniformScale;
+  }, [uniformScale]);
 
   useEffect(() => {
     assetsRef.current = assets || [];
@@ -68,10 +79,18 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
     transformControlsRef.current = transformControls;
 
     let isTransformDragging = false;
+    let lastScale = new THREE.Vector3();
 
     transformControls.addEventListener('dragging-changed', (event) => {
       isTransformDragging = event.value;
       orbitControls.enabled = !event.value;
+      
+      if (event.value && transformControls.getMode() === 'scale') {
+        const current = selectedObjectRef.current;
+        if (current && meshesRef.current[current.id]) {
+          lastScale.copy(meshesRef.current[current.id].scale);
+        }
+      }
     });
 
     transformControls.addEventListener('change', () => {
@@ -96,6 +115,10 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
           ]
         });
       } else if (mode === 'scale') {
+        if (uniformScaleRef.current) {
+          const avgScale = (mesh.scale.x + mesh.scale.y + mesh.scale.z) / 3;
+          mesh.scale.set(avgScale, avgScale, avgScale);
+        }
         onUpdateObject(current.id, {
           scale: [mesh.scale.x, mesh.scale.y, mesh.scale.z]
         });
@@ -121,6 +144,15 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
 
       orbitControls.update();
       renderer.render(scene, camera);
+      
+      if (viewCubeRendererRef.current && viewCubeSceneRef.current && viewCubeCameraRef.current) {
+        const direction = new THREE.Vector3();
+        camera.getWorldDirection(direction);
+        viewCubeCameraRef.current.position.copy(direction).negate().multiplyScalar(3);
+        viewCubeCameraRef.current.up.copy(camera.up);
+        viewCubeCameraRef.current.lookAt(0, 0, 0);
+        viewCubeRendererRef.current.render(viewCubeSceneRef.current, viewCubeCameraRef.current);
+      }
     };
     animate();
 
@@ -146,6 +178,211 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
       if (rendererRef.current) {
         rendererRef.current.dispose();
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!viewCubeRef.current) return;
+    
+    const size = 80;
+    
+    const viewCubeScene = new THREE.Scene();
+    viewCubeSceneRef.current = viewCubeScene;
+    
+    const viewCubeCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    viewCubeCamera.position.set(2, 2, 2);
+    viewCubeCamera.lookAt(0, 0, 0);
+    viewCubeCameraRef.current = viewCubeCamera;
+    
+    const viewCubeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    viewCubeRenderer.setSize(size, size);
+    viewCubeRenderer.setPixelRatio(window.devicePixelRatio);
+    viewCubeRenderer.setClearColor(0x000000, 0);
+    viewCubeRef.current.appendChild(viewCubeRenderer.domElement);
+    viewCubeRendererRef.current = viewCubeRenderer;
+    
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    viewCubeScene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(1, 1, 1);
+    viewCubeScene.add(directionalLight);
+    
+    const createTruncatedCube = () => {
+      const scale = 0.7;
+      const t = 1/3;
+      const a = (1 - t) * scale;
+      const b = 1 * scale;
+      const vertices = [];
+      
+      const addVertex = (x, y, z) => {
+        vertices.push(new THREE.Vector3(x, y, z));
+      };
+      
+      for (let sx = -1; sx <= 1; sx += 2) {
+        for (let sy = -1; sy <= 1; sy += 2) {
+          for (let sz = -1; sz <= 1; sz += 2) {
+            addVertex(sx * a, sy * a, sz * b);
+            addVertex(sx * a, sy * b, sz * a);
+            addVertex(sx * b, sy * a, sz * a);
+          }
+        }
+      }
+      
+      const geometry = new ConvexGeometry(vertices);
+      return geometry;
+    };
+    
+    const geometry = createTruncatedCube();
+    
+    const material = new THREE.MeshStandardMaterial({
+      color: 0x0099ff,
+      metalness: 0.3,
+      roughness: 0.7,
+      flatShading: true
+    });
+    
+    const viewCubeMesh = new THREE.Mesh(geometry, material);
+    viewCubeScene.add(viewCubeMesh);
+    
+    const edgesGeometry = new THREE.EdgesGeometry(geometry);
+    const edgesMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 1 });
+    const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+    viewCubeMesh.add(edges);
+    
+    const faceLabels = [
+      { position: new THREE.Vector3(1.15, 0, 0), label: 'R', color: 0xff0000 },
+      { position: new THREE.Vector3(-1.15, 0, 0), label: 'L', color: 0xff0000 },
+      { position: new THREE.Vector3(0, 1.15, 0), label: 'T', color: 0x00ff00 },
+      { position: new THREE.Vector3(0, -1.15, 0), label: 'B', color: 0x00ff00 },
+      { position: new THREE.Vector3(0, 0, 1.15), label: 'F', color: 0x0000ff },
+      { position: new THREE.Vector3(0, 0, -1.15), label: 'K', color: 0x0000ff }
+    ];
+    
+    faceLabels.forEach(({ position, label, color }) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 32;
+      canvas.height = 32;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, 16, 16);
+      
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.position.copy(position);
+      sprite.scale.set(0.35, 0.35, 1);
+      viewCubeMesh.add(sprite);
+    });
+    
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    
+    const handleViewCubeClick = (e) => {
+      const rect = viewCubeRenderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      
+      raycaster.setFromCamera(mouse, viewCubeCamera);
+      const intersects = raycaster.intersectObject(viewCubeMesh);
+      
+      if (intersects.length > 0 && cameraRef.current) {
+        const intersection = intersects[0];
+        const intersectPoint = intersection.point.clone();
+        
+        intersectPoint.applyMatrix4(new THREE.Matrix4().getInverse(viewCubeMesh.matrixWorld));
+        
+        const direction = intersectPoint.clone().normalize();
+        
+        const mainDirections = [
+          new THREE.Vector3(1, 0, 0),
+          new THREE.Vector3(-1, 0, 0),
+          new THREE.Vector3(0, 1, 0),
+          new THREE.Vector3(0, -1, 0),
+          new THREE.Vector3(0, 0, 1),
+          new THREE.Vector3(0, 0, -1)
+        ];
+        
+        let bestMatch = mainDirections[0];
+        let bestDot = direction.dot(mainDirections[0]);
+        
+        for (let i = 1; i < mainDirections.length; i++) {
+          const dot = direction.dot(mainDirections[i]);
+          if (dot > bestDot) {
+            bestDot = dot;
+            bestMatch = mainDirections[i];
+          }
+        }
+        
+        const distance = cameraRef.current.position.length();
+        const targetPosition = bestMatch.clone().multiplyScalar(distance);
+        
+        const startPos = cameraRef.current.position.clone();
+        const startTime = Date.now();
+        const duration = 300;
+        
+        const animateCamera = () => {
+          const elapsed = Date.now() - startTime;
+          const t = Math.min(elapsed / duration, 1);
+          const easeT = t * (2 - t);
+          
+          cameraRef.current.position.lerpVectors(startPos, targetPosition, easeT);
+          cameraRef.current.lookAt(0, 0, 0);
+          
+          if (t < 1) {
+            requestAnimationFrame(animateCamera);
+          }
+        };
+        animateCamera();
+      }
+    };
+    
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
+    
+    const handleMouseDown = (e) => {
+      isDragging = true;
+      previousMousePosition = { x: e.clientX, y: e.clientY };
+    };
+    
+    const handleMouseMove = (e) => {
+      if (!isDragging || !cameraRef.current || !orbitControlsRef.current) return;
+      
+      const deltaX = e.clientX - previousMousePosition.x;
+      const deltaY = e.clientY - previousMousePosition.y;
+      
+      const spherical = new THREE.Spherical();
+      spherical.setFromVector3(cameraRef.current.position);
+      
+      spherical.theta -= deltaX * 0.01;
+      spherical.phi -= deltaY * 0.01;
+      
+      spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+      
+      cameraRef.current.position.setFromSpherical(spherical);
+      cameraRef.current.lookAt(0, 0, 0);
+      
+      previousMousePosition = { x: e.clientX, y: e.clientY };
+    };
+    
+    const handleMouseUp = () => {
+      isDragging = false;
+    };
+    
+    viewCubeRenderer.domElement.addEventListener('click', handleViewCubeClick);
+    viewCubeRenderer.domElement.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      viewCubeRenderer.domElement.removeEventListener('click', handleViewCubeClick);
+      viewCubeRenderer.domElement.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      viewCubeRenderer.dispose();
     };
   }, []);
 
@@ -402,10 +639,20 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
             {tool.icon}
           </button>
         ))}
+        {currentTool === 'scale' && (
+          <button
+            className={`viewport-tool-btn ${uniformScale ? 'active' : ''}`}
+            onClick={() => setUniformScale(!uniformScale)}
+            title={uniformScale ? msg('tool.uniformScaleOn') : msg('tool.uniformScaleOff')}
+          >
+            🔗
+          </button>
+        )}
       </div>
       <div className="viewport-overlay">
         <span className="viewport-label">{msg('viewport.perspective')}</span>
       </div>
+      <div className="view-cube" ref={viewCubeRef} />
     </div>
   );
 }

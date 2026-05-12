@@ -14,7 +14,7 @@ function Toolbar({ isPlaying, setIsPlaying, onToggleLocale, currentLocale }) {
       <div className="toolbar-left">
         <div className="toolbar-logo">
           <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink"
-              height="28" viewBox="0,0,69.99346,66.43688">
+              height="24" viewBox="0,0,69.99346,66.43688">
               <g transform="translate(-205.00327,-146.78156)">
                   <g stroke="#000000" strokeWidth="0" strokeMiterlimit="10">
                       <path d="M274.99673,190.93032l-11.95866,22.28812h-44.44009l13.31277,-22.10459z"
