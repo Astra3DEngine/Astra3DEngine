@@ -22,6 +22,7 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
   const viewCubeSceneRef = useRef(null);
   const viewCubeCameraRef = useRef(null);
   const viewCubeRendererRef = useRef(null);
+  const viewCubeMeshRef = useRef(null);
 
   useEffect(() => {
     uniformScaleRef.current = uniformScale;
@@ -145,12 +146,8 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
       orbitControls.update();
       renderer.render(scene, camera);
       
-      if (viewCubeRendererRef.current && viewCubeSceneRef.current && viewCubeCameraRef.current) {
-        const direction = new THREE.Vector3();
-        camera.getWorldDirection(direction);
-        viewCubeCameraRef.current.position.copy(direction).negate().multiplyScalar(3);
-        viewCubeCameraRef.current.up.copy(camera.up);
-        viewCubeCameraRef.current.lookAt(0, 0, 0);
+      if (viewCubeRendererRef.current && viewCubeSceneRef.current && viewCubeCameraRef.current && viewCubeMeshRef.current) {
+        viewCubeMeshRef.current.quaternion.copy(camera.quaternion).invert();
         viewCubeRendererRef.current.render(viewCubeSceneRef.current, viewCubeCameraRef.current);
       }
     };
@@ -190,7 +187,7 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
     viewCubeSceneRef.current = viewCubeScene;
     
     const viewCubeCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-    viewCubeCamera.position.set(2, 2, 2);
+    viewCubeCamera.position.set(0, 0, 3);
     viewCubeCamera.lookAt(0, 0, 0);
     viewCubeCameraRef.current = viewCubeCamera;
     
@@ -303,10 +300,10 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
       normal.crossVectors(edge1, edge2).normalize();
       
       let bestFaceIdx = 0;
-      let bestDot = Math.abs(normal.dot(faceNormals[0]));
+      let bestDot = normal.dot(faceNormals[0]);
       
       for (let i = 1; i < 26; i++) {
-        const dot = Math.abs(normal.dot(faceNormals[i]));
+        const dot = normal.dot(faceNormals[i]);
         if (dot > bestDot) {
           bestDot = dot;
           bestFaceIdx = i;
@@ -345,6 +342,7 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
     
     const viewCubeMesh = new THREE.Mesh(geometry, faceMaterials);
     viewCubeScene.add(viewCubeMesh);
+    viewCubeMeshRef.current = viewCubeMesh;
     
     const hitGeometry = geometry.clone();
     hitGeometry.scale(1.15, 1.15, 1.15);
@@ -431,8 +429,10 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
         
         updateFaceColor(bestIndex);
         
-        const distance = cameraRef.current.position.length();
-        const targetPosition = bestMatch.clone().multiplyScalar(distance);
+        const target = orbitControlsRef.current ? orbitControlsRef.current.target.clone() : new THREE.Vector3(0, 0, 0);
+        const offset = cameraRef.current.position.clone().sub(target);
+        const distance = offset.length();
+        const targetPosition = bestMatch.clone().multiplyScalar(distance).add(target);
         
         const startPos = cameraRef.current.position.clone();
         const startTime = Date.now();
@@ -444,10 +444,14 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
           const easeT = t * (2 - t);
           
           cameraRef.current.position.lerpVectors(startPos, targetPosition, easeT);
-          cameraRef.current.lookAt(0, 0, 0);
+          cameraRef.current.lookAt(target);
           
           if (t < 1) {
             requestAnimationFrame(animateCamera);
+          } else {
+            if (orbitControlsRef.current) {
+              orbitControlsRef.current.update();
+            }
           }
         };
         animateCamera();
@@ -478,6 +482,7 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
       
       cameraRef.current.position.setFromSpherical(spherical);
       cameraRef.current.lookAt(0, 0, 0);
+      orbitControlsRef.current.target.set(0, 0, 0);
       
       previousMousePosition = { x: e.clientX, y: e.clientY };
     };
