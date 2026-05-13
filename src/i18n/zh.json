@@ -32,6 +32,8 @@
   "inspector.delete": "删除对象",
 
   "viewport.perspective": "透视",
+  "viewport.orthographic": "正交",
+  "viewport.cameraMode": "视角模式",
 
   "tool.select": "选择",
   "tool.move": "移动",

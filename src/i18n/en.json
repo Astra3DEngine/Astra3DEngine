@@ -32,6 +32,8 @@
   "inspector.delete": "Delete Object",
 
   "viewport.perspective": "Perspective",
+  "viewport.orthographic": "Orthographic",
+  "viewport.cameraMode": "Camera Mode",
 
   "tool.select": "Select",
   "tool.move": "Move",

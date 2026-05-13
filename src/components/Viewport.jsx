@@ -23,6 +23,14 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
   const viewCubeCameraRef = useRef(null);
   const viewCubeRendererRef = useRef(null);
   const viewCubeMeshRef = useRef(null);
+  const viewCubeOrthoCameraRef = useRef(null);
+  const orthographicCameraRef = useRef(null);
+  const [cameraType, setCameraType] = useState('perspective');
+  const cameraTypeRef = useRef('perspective');
+
+  useEffect(() => {
+    cameraTypeRef.current = cameraType;
+  }, [cameraType]);
 
   useEffect(() => {
     uniformScaleRef.current = uniformScale;
@@ -50,6 +58,11 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
     camera.position.set(5, 5, 5);
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
+
+    const orthographicCamera = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000);
+    orthographicCamera.position.set(5, 5, 5);
+    orthographicCamera.lookAt(0, 0, 0);
+    orthographicCameraRef.current = orthographicCamera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
@@ -144,11 +157,31 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
       }
 
       orbitControls.update();
-      renderer.render(scene, camera);
+      
+      orthographicCamera.position.copy(camera.position);
+      orthographicCamera.quaternion.copy(camera.quaternion);
+      
+      const distance = camera.position.length();
+      const frustumSize = distance * 0.8;
+      const aspect = renderer.domElement.width / renderer.domElement.height;
+      orthographicCamera.left = -frustumSize * aspect / 2;
+      orthographicCamera.right = frustumSize * aspect / 2;
+      orthographicCamera.top = frustumSize / 2;
+      orthographicCamera.bottom = -frustumSize / 2;
+      orthographicCamera.updateProjectionMatrix();
+      
+      const activeCamera = cameraTypeRef.current === 'orthographic' ? orthographicCamera : camera;
+      
+      if (transformControlsRef.current) {
+        transformControlsRef.current.camera = activeCamera;
+      }
+      
+      renderer.render(scene, activeCamera);
       
       if (viewCubeRendererRef.current && viewCubeSceneRef.current && viewCubeCameraRef.current && viewCubeMeshRef.current) {
-        viewCubeMeshRef.current.quaternion.copy(camera.quaternion).invert();
-        viewCubeRendererRef.current.render(viewCubeSceneRef.current, viewCubeCameraRef.current);
+        viewCubeMeshRef.current.quaternion.copy(activeCamera.quaternion).invert();
+        const viewCubeActiveCamera = cameraTypeRef.current === 'orthographic' ? viewCubeOrthoCameraRef.current : viewCubeCameraRef.current;
+        viewCubeRendererRef.current.render(viewCubeSceneRef.current, viewCubeActiveCamera);
       }
     };
     animate();
@@ -190,6 +223,11 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
     viewCubeCamera.position.set(0, 0, 3);
     viewCubeCamera.lookAt(0, 0, 0);
     viewCubeCameraRef.current = viewCubeCamera;
+    
+    const viewCubeOrthoCamera = new THREE.OrthographicCamera(-1.5, 1.5, 1.5, -1.5, 0.1, 100);
+    viewCubeOrthoCamera.position.set(0, 0, 3);
+    viewCubeOrthoCamera.lookAt(0, 0, 0);
+    viewCubeOrthoCameraRef.current = viewCubeOrthoCamera;
     
     const viewCubeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     viewCubeRenderer.setSize(size, size);
@@ -769,9 +807,24 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
         )}
       </div>
       <div className="viewport-overlay">
-        <span className="viewport-label">{msg('viewport.perspective')}</span>
+        <span className="viewport-label">
+          {cameraType === 'perspective' ? msg('viewport.perspective') : msg('viewport.orthographic')}
+        </span>
       </div>
       <div className="view-cube" ref={viewCubeRef} />
+      <div className="viewport-dock">
+        <div className="viewport-dock-item">
+          <label className="viewport-dock-label">{msg('viewport.cameraMode')}:</label>
+          <select
+            className="viewport-dock-select"
+            value={cameraType}
+            onChange={(e) => setCameraType(e.target.value)}
+          >
+            <option value="perspective">{msg('viewport.perspective')}</option>
+            <option value="orthographic">{msg('viewport.orthographic')}</option>
+          </select>
+        </div>
+      </div>
     </div>
   );
 }
