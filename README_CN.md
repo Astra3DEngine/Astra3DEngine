@@ -1,6 +1,6 @@
 <div><img src="./src/logo.svg" height="24px" />  <font size="6px">Astra 3D Engine</font></div>
 
-一个开玩笑的 3D 引擎。
+一个开玩笑的 3D 引擎，就和 [NOTHING](https://github.com/NeuronPulse/nothing) 一样。
 
   ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)![NodeJS](https://img.shields.io/badge/Node.js-v22.18.0-339933?style=flat-square&logo=node.js)![React](https://img.shields.io/badge/React-v18.2.0-0099FF?style=flat-square&logo=react)![Three.js](https://img.shields.io/badge/Three.js-v0.160.0-66ccff?style=flat-square&logo=three.js)![Vite](https://img.shields.io/badge/Vite-v4.4.9-9135ff?style=flat-square&logo=vite)
 

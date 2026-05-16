@@ -109,7 +109,7 @@ interface Scene {
 - [ ] 拖拽排序、嵌套
 - [ ] 多选、复制粘贴
 - [ ] 搜索过滤
-- [ ] 右键上下文菜单
+- [x] 右键上下文菜单
 
 ### 2. 属性检查器 (Inspector Panel)
 
@@ -135,8 +135,20 @@ interface Scene {
 - [x] 定向球拖拽旋转
 - [x] 定向球极点万向节锁处理
 - [x] 底部工具条（视角切换）
+- [x] 自适应容器大小（ResizeObserver）
 
-### 4. 资源管理器
+### 4. 编辑器 UI (Editor UI)
+
+- [x] 可折叠面板组件（CollapsiblePanel）
+- [x] 面板横向折叠模式
+- [x] 面板竖向折叠模式（侧边栏全部折叠时）
+- [x] 工具栏菜单快捷键（Alt+F/E/V/R）
+- [x] 语言子菜单展开功能
+- [x] 预制件列表滚动条显示
+- [x] 层级列表项样式优化
+- [x] 面板标题容器紧凑设计
+
+### 5. 资源管理器
 
 - [x] 导入模型（GLTF/GLB优先，OBJ支持）
 - [ ] 纹理管理（支持预览）
@@ -144,14 +156,14 @@ interface Scene {
 - [ ] 场景文件序列化（JSON格式）
 - [ ] 资源压缩和优化
 
-### 5. 物理系统
+### 6. 物理系统
 
 - [ ] 碰撞体配置（Box、Sphere、Mesh）
 - [ ] 刚体属性（质量、阻力、重力）
 - [ ] 射线检测
 - [ ] 物理材质（摩擦力、弹性）
 
-### 6. 播放控制
+### 7. 播放控制
 
 - [x] Play/Stop
 - [ ] Pause
@@ -159,7 +171,7 @@ interface Scene {
 - [ ] 时间缩放
 - [ ] 断点调试（高级功能）
 
-### 7. 构建发布
+### 8. 构建发布
 
 - [ ] WebGL打包
 - [ ] 压缩优化（Terser、Draco）
@@ -176,7 +188,7 @@ interface Scene {
 | **精度**：浮点误差 | 使用高精度数学库（如gl-matrix） |
 | **兼容性**：浏览器差异 | 抽象WebGL上下文，统一API |
 | **资源加载**：大模型卡顿 | 异步加载 + 进度条 + LOD |
-| **持久化**：场景数据存储 | JSON序列化 + IndexedDB缓存 |
+| **持久化**：场景数据存储 | [项目格式设计](./PROJECT_FORMAT_DESIGN.md)：文件夹结构 + .astra 压缩包 |
 | **物理同步**：Web端物理引擎不稳定 | 内置确定性物理模式选项 |
 
 ### 运行时优化考虑
@@ -204,12 +216,28 @@ interface Scene {
 
 ### Phase 2: 编辑器完善
 
-- [ ] Inspector面板（组件编辑）
+- [x] Inspector面板（组件编辑）
 - [ ] 资源管理器
 - [ ] 场景保存/加载
 - [ ] 预制件系统
-- [ ] Undo/Redo
-- [ ] 快捷键支持
+- [x] Undo/Redo
+- [x] 快捷键支持
+- [x] 多语言支持（中、英、日、俄、拉丁语）
+- [x] 主题切换（浅色/深色模式）
+- [x] 设置持久化（LocalStorage）
+- [x] 可折叠面板组件
+- [x] SVG图标系统
+
+**项目格式设计**（详见 [PROJECT_FORMAT_DESIGN.md](./PROJECT_FORMAT_DESIGN.md)）：
+- [ ] 项目文件夹结构实现
+- [ ] 场景文件序列化（JSON格式）
+- [ ] 资源元数据系统（.meta 文件）
+- [ ] GUID 引用机制
+- [ ] 项目导出为 .astra 压缩包
+- [ ] 项目导入（解压 .astra）
+- [ ] 增量保存机制
+- [ ] 自动保存功能
+- [ ] 自动备份功能
 
 **目标**：能够完整编辑一个简单场景
 
@@ -267,10 +295,26 @@ interface Scene {
 1. **[Unity Engine](https://unity.com/)**
    - 组件系统设计
    - 编辑器架构
+   - .meta 文件系统设计
 
 2. **[Godot Engine](https://godotengine.org/)**
    - 开源引擎
    - 场景系统和节点架构
+   - .tscn 文本场景格式
+
+### 项目格式相关库
+
+1. **[JSZip](https://stuk.github.io/jszip/)**
+   - JavaScript ZIP 处理库
+   - 用于 .astra 压缩包的创建和解压
+
+2. **[chokidar](https://github.com/paulmillr/chokidar)**
+   - 跨平台文件监视库
+   - 用于检测文件变更
+
+3. **[file-saver](https://github.com/eligrey/FileSaver.js/)**
+   - 客户端文件保存库
+   - 用于导出项目文件
 
 ## 许可证
 
