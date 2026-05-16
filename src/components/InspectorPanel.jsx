@@ -1,7 +1,16 @@
 import React from 'react';
 import { msg } from '../i18n/index.js';
+import IconPrefabInstance from '../icons/prefab-instance.svg?react';
+import IconDelete from '../icons/delete.svg?react';
 
-function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
+function InspectorPanel({ 
+  selectedObject, 
+  onUpdateObject, 
+  onDeleteObject,
+  prefabs,
+  onDisconnectPrefab,
+  onApplyToPrefab
+}) {
   if (!selectedObject) {
     return (
       <div className="panel inspector-panel">
@@ -34,12 +43,52 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
     onUpdateObject(selectedObject.id, { name });
   };
 
+  const getPrefab = () => {
+    if (!selectedObject.prefabId || !prefabs) return null;
+    return prefabs.find(p => p.id === selectedObject.prefabId);
+  };
+
+  const prefab = getPrefab();
+  const isPrefabInstance = !!prefab;
+
+  const handleOverrideToggle = (property) => {
+    const currentOverrides = selectedObject.overrides || { scale: false, color: false };
+    const newOverrides = { ...currentOverrides, [property]: !currentOverrides[property] };
+    onUpdateObject(selectedObject.id, { overrides: newOverrides });
+  };
+
   return (
     <div className="panel inspector-panel">
       <div className="panel-header">
         <span>{msg('inspector.title')}</span>
       </div>
       <div className="panel-content">
+        {isPrefabInstance && (
+          <div className="inspector-section inspector-prefab-section">
+            <div className="inspector-section-title">{msg('inspector.prefab')}</div>
+            <div className="inspector-prefab-info">
+              <IconPrefabInstance className="inspector-prefab-icon" />
+              <span className="inspector-prefab-name">{prefab.name}</span>
+            </div>
+            <div className="inspector-prefab-actions">
+              <button 
+                className="btn btn-small"
+                onClick={() => onApplyToPrefab(selectedObject.id)}
+                title={msg('inspector.applyToPrefab')}
+              >
+                {msg('inspector.applyToPrefab')}
+              </button>
+              <button 
+                className="btn btn-small btn-secondary"
+                onClick={() => onDisconnectPrefab(selectedObject.id)}
+                title={msg('inspector.disconnectPrefab')}
+              >
+                {msg('inspector.disconnectPrefab')}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="inspector-section">
           <div className="inspector-section-title">{msg('inspector.object')}</div>
           <div className="inspector-row">
@@ -56,19 +105,31 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
             <input
               type="text"
               className="inspector-input"
-              value={selectedObject.type}
+              value={isPrefabInstance ? `${prefab.template.type} (Prefab)` : selectedObject.type}
               disabled
               style={{ opacity: 0.6 }}
             />
           </div>
           <div className="inspector-row">
             <label className="inspector-label">{msg('inspector.color')}</label>
-            <input
-              type="color"
-              className="inspector-input inspector-color"
-              value={selectedObject.color}
-              onChange={(e) => handleColorChange(e.target.value)}
-            />
+            <div className="inspector-color-row">
+              <input
+                type="color"
+                className="inspector-input inspector-color"
+                value={selectedObject.color}
+                onChange={(e) => handleColorChange(e.target.value)}
+              />
+              {isPrefabInstance && (
+                <label className="inspector-override-label">
+                  <input
+                    type="checkbox"
+                    checked={selectedObject.overrides?.color || false}
+                    onChange={() => handleOverrideToggle('color')}
+                  />
+                  <span>{msg('inspector.override')}</span>
+                </label>
+              )}
+            </div>
           </div>
         </div>
 
@@ -111,20 +172,32 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
 
           <div className="inspector-row">
             <label className="inspector-label">{msg('inspector.scale')}</label>
-            <div className="inspector-vector3">
-              {['X', 'Y', 'Z'].map((axis, i) => (
-                <div key={axis} className="vector-input">
+            <div className="inspector-vector3-with-override">
+              <div className="inspector-vector3">
+                {['X', 'Y', 'Z'].map((axis, i) => (
+                  <div key={axis} className="vector-input">
+                    <input
+                      type="number"
+                      className="inspector-input"
+                      value={selectedObject.scale[i]}
+                      onChange={(e) => handleTransformChange('scale', i, e.target.value)}
+                      min="0.01"
+                      step="0.1"
+                    />
+                    <div className="vector-label">{axis}</div>
+                  </div>
+                ))}
+              </div>
+              {isPrefabInstance && (
+                <label className="inspector-override-label">
                   <input
-                    type="number"
-                    className="inspector-input"
-                    value={selectedObject.scale[i]}
-                    onChange={(e) => handleTransformChange('scale', i, e.target.value)}
-                    min="0.01"
-                    step="0.1"
+                    type="checkbox"
+                    checked={selectedObject.overrides?.scale || false}
+                    onChange={() => handleOverrideToggle('scale')}
                   />
-                  <div className="vector-label">{axis}</div>
-                </div>
-              ))}
+                  <span>{msg('inspector.override')}</span>
+                </label>
+              )}
             </div>
           </div>
         </div>
@@ -135,7 +208,7 @@ function InspectorPanel({ selectedObject, onUpdateObject, onDeleteObject }) {
             style={{ width: '100%' }}
             onClick={() => onDeleteObject(selectedObject.id)}
           >
-            {msg('inspector.delete')}
+            <IconDelete className="btn-icon" /> {msg('inspector.delete')}
           </button>
         </div>
       </div>

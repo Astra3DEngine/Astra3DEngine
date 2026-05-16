@@ -1,5 +1,5 @@
-import React from 'react';
-import { msg } from '../i18n/index.js';
+import React, { useRef, useEffect } from 'react';
+import { msg, languages, getLocale } from '../i18n/index.js';
 import DropdownMenu from './DropdownMenu.jsx';
 
 import IconNewProject from '../icons/new-project.svg?react';
@@ -18,14 +18,49 @@ function Toolbar({
   isPlaying, 
   setIsPlaying, 
   onToggleLocale,
+  onSetLocale,
   onSaveProject,
   onSaveAsProject,
   onLoadProject,
   onNewProject,
   projectFileName,
   onToggleTheme,
-  theme
+  theme,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+  onOpenPreferences
 }) {
+  const fileMenuRef = useRef(null);
+  const editMenuRef = useRef(null);
+  const viewMenuRef = useRef(null);
+  const runMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleMenuShortcut = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      
+      if (e.altKey && !e.ctrlKey && !e.shiftKey) {
+        const key = e.key.toLowerCase();
+        const allRefs = [fileMenuRef, editMenuRef, viewMenuRef, runMenuRef];
+        
+        if (key === 'f' || key === 'e' || key === 'v' || key === 'r') {
+          e.preventDefault();
+          allRefs.forEach(ref => ref.current?.close());
+          
+          if (key === 'f') fileMenuRef.current?.open();
+          else if (key === 'e') editMenuRef.current?.open();
+          else if (key === 'v') viewMenuRef.current?.open();
+          else if (key === 'r') runMenuRef.current?.open();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleMenuShortcut);
+    return () => document.removeEventListener('keydown', handleMenuShortcut);
+  }, []);
+
   const fileMenuItems = [
     {
       label: msg('menu.newProject'),
@@ -59,13 +94,15 @@ function Toolbar({
       label: msg('menu.undo'),
       icon: <IconUndo className="menu-icon" />,
       shortcut: 'Ctrl+Z',
-      disabled: true
+      disabled: !canUndo,
+      onClick: onUndo
     },
     {
       label: msg('menu.redo'),
       icon: <IconRedo className="menu-icon" />,
       shortcut: 'Ctrl+Y',
-      disabled: true
+      disabled: !canRedo,
+      onClick: onRedo
     }
   ];
 
@@ -78,12 +115,17 @@ function Toolbar({
     {
       label: msg('menu.language'),
       icon: <IconLanguage className="menu-icon" />,
-      onClick: onToggleLocale
+      submenu: languages.map(lang => ({
+        label: lang.nativeName,
+        active: getLocale() === lang.code,
+        onClick: () => onSetLocale(lang.code)
+      }))
     },
     { divider: true },
     {
       label: msg('menu.preferences'),
-      icon: <IconSettings className="menu-icon" />
+      icon: <IconSettings className="menu-icon" />,
+      onClick: onOpenPreferences
     }
   ];
 
@@ -117,21 +159,25 @@ function Toolbar({
         </div>
         <div className="toolbar-menus">
           <DropdownMenu 
+            ref={fileMenuRef}
             label={msg('menu.file')} 
             items={fileMenuItems}
             roundedCorners="bottom"
           />
           <DropdownMenu 
+            ref={editMenuRef}
             label={msg('menu.edit')} 
             items={editMenuItems}
             roundedCorners="bottom"
           />
           <DropdownMenu 
+            ref={viewMenuRef}
             label={msg('menu.view')} 
             items={viewMenuItems}
             roundedCorners="bottom"
           />
           <DropdownMenu 
+            ref={runMenuRef}
             label={msg('menu.run')} 
             items={runMenuItems}
             roundedCorners="bottom"

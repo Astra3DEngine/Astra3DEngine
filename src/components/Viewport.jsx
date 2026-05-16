@@ -13,7 +13,7 @@ import IconScale from '../icons/scale.svg?react';
 import IconUniformScale from '../icons/uniform-scale.svg?react';
 import IconChevronDown from '../icons/chevron-down.svg?react';
 
-function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool, onToolChange, isPlaying, onUpdateObject, theme = 'dark' }) {
+function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool, onToolChange, isPlaying, onUpdateObject, onRecordHistory, theme = 'dark' }) {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -24,6 +24,7 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
   const animationRef = useRef(null);
   const selectedObjectRef = useRef(selectedObject);
   const assetsRef = useRef(assets || []);
+  const onRecordHistoryRef = useRef(onRecordHistory);
   const [uniformScale, setUniformScale] = useState(false);
   const uniformScaleRef = useRef(false);
   const viewCubeRef = useRef(null);
@@ -51,6 +52,10 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
   useEffect(() => {
     selectedObjectRef.current = selectedObject;
   }, [selectedObject]);
+
+  useEffect(() => {
+    onRecordHistoryRef.current = onRecordHistory;
+  }, [onRecordHistory]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -101,16 +106,23 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
     transformControlsRef.current = transformControls;
 
     let isTransformDragging = false;
+    let hasDragged = false;
     let lastScale = new THREE.Vector3();
 
     transformControls.addEventListener('dragging-changed', (event) => {
       isTransformDragging = event.value;
       orbitControls.enabled = !event.value;
       
-      if (event.value && transformControls.getMode() === 'scale') {
-        const current = selectedObjectRef.current;
-        if (current && meshesRef.current[current.id]) {
-          lastScale.copy(meshesRef.current[current.id].scale);
+      if (event.value) {
+        hasDragged = true;
+        if (onRecordHistoryRef.current) {
+          onRecordHistoryRef.current();
+        }
+        if (transformControls.getMode() === 'scale') {
+          const current = selectedObjectRef.current;
+          if (current && meshesRef.current[current.id]) {
+            lastScale.copy(meshesRef.current[current.id].scale);
+          }
         }
       }
     });
@@ -127,7 +139,7 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
       if (mode === 'translate') {
         onUpdateObject(current.id, {
           position: [mesh.position.x, mesh.position.y, mesh.position.z]
-        });
+        }, false);
       } else if (mode === 'rotate') {
         onUpdateObject(current.id, {
           rotation: [
@@ -135,7 +147,7 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
             THREE.MathUtils.radToDeg(mesh.rotation.y),
             THREE.MathUtils.radToDeg(mesh.rotation.z)
           ]
-        });
+        }, false);
       } else if (mode === 'scale') {
         if (uniformScaleRef.current) {
           const avgScale = (mesh.scale.x + mesh.scale.y + mesh.scale.z) / 3;
@@ -143,13 +155,13 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
         }
         onUpdateObject(current.id, {
           scale: [mesh.scale.x, mesh.scale.y, mesh.scale.z]
-        });
+        }, false);
       }
 
       if (mesh.material && mesh.material.color) {
         const colorHex = '#' + mesh.material.color.getHexString();
         if (colorHex !== (selectedObjectRef.current?.color || '').toString()) {
-          onUpdateObject(current.id, { color: colorHex });
+          onUpdateObject(current.id, { color: colorHex }, false);
         }
       }
     });

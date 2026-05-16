@@ -26,3 +26,37 @@
 .btn-danger:hover {
   background-color: #e53935;
 }
+
+.icon-btn {
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background-color 0.15s;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  color: var(--text-primary);
+  background-color: var(--hover-bg);
+}
+
+.icon-btn.icon-btn-danger:hover {
+  color: var(--danger);
+  background-color: rgba(244, 67, 54, 0.15);
+}
+
+.icon-btn.icon-btn-accent:hover {
+  color: var(--accent-active);
+}
+
+.btn-icon {
+  width: 12px;
+  height: 12px;
+}

@@ -5,17 +5,31 @@ import Viewport from './components/Viewport.jsx';
 import HierarchyPanel from './components/HierarchyPanel.jsx';
 import InspectorPanel from './components/InspectorPanel.jsx';
 import AssetsPanel from './components/AssetsPanel.jsx';
+import PrefabsPanel from './components/PrefabsPanel.jsx';
 import Toolbar from './components/Toolbar.jsx';
-import { msg, toggleLocale, getLocale } from './i18n/index.js';
+import PreferencesModal from './components/PreferencesModal.jsx';
+import { msg, toggleLocale, getLocale, setLocale } from './i18n/index.js';
+import { useHistory } from './hooks/useHistory.js';
 
 function App() {
   const [selectedObject, setSelectedObject] = useState(null);
-  const [sceneObjects, setSceneObjects] = useState([]);
+  const {
+    state: sceneObjects,
+    setState: setSceneObjectsWithHistory,
+    recordCurrentState,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    reset: resetHistory
+  } = useHistory([]);
   const [currentTool, setCurrentTool] = useState('select');
   const [isPlaying, setIsPlaying] = useState(false);
   const [locale, setLocaleState] = useState(getLocale());
   const [assets, setAssets] = useState([]);
   const [selectedAsset, setSelectedAsset] = useState(null);
+  const [prefabs, setPrefabs] = useState([]);
+  const [selectedPrefab, setSelectedPrefab] = useState(null);
   const gltfLoaderRef = useRef(new GLTFLoader());
   const fileHandleRef = useRef(null);
   const [projectFileName, setProjectFileName] = useState(null);
@@ -24,12 +38,14 @@ function App() {
     const saved = localStorage.getItem('astra-theme');
     return saved || 'dark';
   });
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
 
   const hasFileSystemAccess = 'showSaveFilePicker' in window && 'showOpenFilePicker' in window;
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
 
       switch (e.key.toLowerCase()) {
         case 'q':
@@ -56,6 +72,11 @@ function App() {
   const handleToggleLocale = useCallback(() => {
     toggleLocale();
     setLocaleState(getLocale());
+  }, []);
+
+  const handleSetLocale = useCallback((locale) => {
+    setLocale(locale);
+    setLocaleState(locale);
   }, []);
 
   const handleToggleTheme = useCallback(() => {
@@ -87,20 +108,20 @@ function App() {
         assetId: asset.id,
         isModel: true
       };
-      setSceneObjects(prev => [...prev, newObject]);
+      setSceneObjectsWithHistory(prev => [...prev, newObject]);
     } else {
       const newObject = {
         id: Date.now(),
-        name: `${type}_${sceneObjects.length + 1}`,
+        name: `${type}_1`,
         type: type,
         position: [0, 0, 0],
         rotation: [0, 0, 0],
         scale: [1, 1, 1],
         color: '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')
       };
-      setSceneObjects(prev => [...prev, newObject]);
+      setSceneObjectsWithHistory(prev => [...prev, newObject]);
     }
-  }, [sceneObjects.length]);
+  }, [setSceneObjectsWithHistory]);
 
   const handleImportAsset = useCallback((file) => {
     const fileExt = file.name.split('.').pop().toLowerCase();
@@ -153,16 +174,197 @@ function App() {
   }, [handleAddObject]);
 
   const handleDeleteObject = useCallback((id) => {
-    setSceneObjects(prev => prev.filter(obj => obj.id !== id));
+    setSceneObjectsWithHistory(prev => prev.filter(obj => obj.id !== id));
     setSelectedObject(prev => prev && prev.id === id ? null : prev);
-  }, []);
+  }, [setSceneObjectsWithHistory]);
 
-  const handleUpdateObject = useCallback((id, updates) => {
-    setSceneObjects(prev => prev.map(obj =>
+  const handleUpdateObject = useCallback((id, updates, recordHistory = true) => {
+    setSceneObjectsWithHistory(prev => prev.map(obj =>
       obj.id === id ? { ...obj, ...updates } : obj
-    ));
+    ), recordHistory);
     setSelectedObject(prev => prev && prev.id === id ? { ...prev, ...updates } : prev);
-  }, []);
+  }, [setSceneObjectsWithHistory]);
+
+  const [clipboard, setClipboard] = useState(null);
+
+  const handleCopyObject = useCallback((id) => {
+    const obj = sceneObjects.find(o => o.id === id);
+    if (obj) {
+      setClipboard({ ...obj });
+    }
+  }, [sceneObjects]);
+
+  const handlePasteObject = useCallback(() => {
+    if (!clipboard) return null;
+
+    const newObj = {
+      ...clipboard,
+      id: Date.now(),
+      name: `${clipboard.name}_copy`,
+      position: [
+        clipboard.position[0] + 1,
+        clipboard.position[1],
+        clipboard.position[2]
+      ]
+    };
+
+    setSceneObjectsWithHistory(prev => [...prev, newObj]);
+    setSelectedObject(newObj);
+    return newObj;
+  }, [clipboard, setSceneObjectsWithHistory]);
+
+  const handleDuplicateObject = useCallback((id) => {
+    const obj = sceneObjects.find(o => o.id === id);
+    if (!obj) return null;
+
+    const newObj = {
+      ...obj,
+      id: Date.now(),
+      name: `${obj.name}_copy`,
+      position: [
+        obj.position[0] + 1,
+        obj.position[1],
+        obj.position[2]
+      ]
+    };
+
+    setSceneObjectsWithHistory(prev => [...prev, newObj]);
+    setSelectedObject(newObj);
+    return newObj;
+  }, [sceneObjects, setSceneObjectsWithHistory]);
+
+  const handleRenameObject = useCallback((id, newName) => {
+    handleUpdateObject(id, { name: newName });
+  }, [handleUpdateObject]);
+
+  const handleCreatePrefab = useCallback((objectId) => {
+    const obj = sceneObjects.find(o => o.id === objectId);
+    if (!obj) return null;
+
+    const prefab = {
+      id: Date.now(),
+      name: `${obj.name}_Prefab`,
+      template: {
+        type: obj.type,
+        color: obj.color,
+        scale: [...obj.scale],
+        defaultPosition: [0, 0, 0],
+        defaultRotation: [0, 0, 0],
+        assetId: obj.assetId,
+        isModel: obj.isModel
+      }
+    };
+
+    setPrefabs(prev => [...prev, prefab]);
+
+    setSceneObjectsWithHistory(prev => prev.map(o =>
+      o.id === objectId ? { 
+        ...o, 
+        prefabId: prefab.id,
+        overrides: { scale: false, color: false }
+      } : o
+    ));
+
+    return prefab;
+  }, [sceneObjects, setSceneObjectsWithHistory]);
+
+  const handleInstantiatePrefab = useCallback((prefabId, position = null) => {
+    const prefab = prefabs.find(p => p.id === prefabId);
+    if (!prefab) return;
+
+    const instancePosition = position || [...prefab.template.defaultPosition];
+    const instance = {
+      id: Date.now(),
+      name: `${prefab.name}_Instance`,
+      prefabId: prefab.id,
+      position: instancePosition,
+      rotation: [...prefab.template.defaultRotation],
+      scale: [...prefab.template.scale],
+      color: prefab.template.color,
+      overrides: { scale: false, color: false }
+    };
+
+    setSceneObjectsWithHistory(prev => [...prev, instance]);
+    return instance;
+  }, [prefabs, setSceneObjectsWithHistory]);
+
+  const handleDeletePrefab = useCallback((prefabId) => {
+    setSceneObjectsWithHistory(prev => prev.map(obj => 
+      obj.prefabId === prefabId 
+        ? { 
+            ...obj, 
+            prefabId: null,
+            type: prefabs.find(p => p.id === prefabId)?.template.type || obj.type,
+            overrides: undefined
+          }
+        : obj
+    ));
+
+    setPrefabs(prev => prev.filter(p => p.id !== prefabId));
+    setSelectedPrefab(prev => prev && prev.id === prefabId ? null : prev);
+  }, [prefabs, setSceneObjectsWithHistory]);
+
+  const handleUpdatePrefab = useCallback((prefabId, updates) => {
+    setPrefabs(prev => prev.map(p => 
+      p.id === prefabId ? { ...p, ...updates } : p
+    ));
+
+    setSceneObjectsWithHistory(prev => prev.map(obj => {
+      if (obj.prefabId !== prefabId) return obj;
+
+      const prefab = prefabs.find(p => p.id === prefabId);
+      if (!prefab) return obj;
+
+      const newObj = { ...obj };
+      
+      if (!obj.overrides?.scale && updates.template?.scale) {
+        newObj.scale = [...updates.template.scale];
+      }
+      if (!obj.overrides?.color && updates.template?.color) {
+        newObj.color = updates.template.color;
+      }
+
+      return newObj;
+    }), false);
+  }, [prefabs, setSceneObjectsWithHistory]);
+
+  const handleDisconnectPrefab = useCallback((objectId) => {
+    const obj = sceneObjects.find(o => o.id === objectId);
+    if (!obj || !obj.prefabId) return;
+
+    const prefab = prefabs.find(p => p.id === obj.prefabId);
+    
+    setSceneObjectsWithHistory(prev => prev.map(o =>
+      o.id === objectId ? { 
+        ...o, 
+        prefabId: null,
+        type: prefab?.template.type || o.type,
+        assetId: prefab?.template.assetId,
+        isModel: prefab?.template.isModel,
+        overrides: undefined
+      } : o
+    ));
+  }, [sceneObjects, prefabs, setSceneObjectsWithHistory]);
+
+  const handleApplyToPrefab = useCallback((objectId) => {
+    const obj = sceneObjects.find(o => o.id === objectId);
+    if (!obj || !obj.prefabId) return;
+
+    handleUpdatePrefab(obj.prefabId, {
+      template: {
+        ...prefabs.find(p => p.id === obj.prefabId)?.template,
+        color: obj.color,
+        scale: [...obj.scale]
+      }
+    });
+
+    setSceneObjectsWithHistory(prev => prev.map(o =>
+      o.id === objectId ? { 
+        ...o, 
+        overrides: { scale: false, color: false }
+      } : o
+    ));
+  }, [sceneObjects, prefabs, handleUpdatePrefab, setSceneObjectsWithHistory]);
 
   const getProjectData = useCallback(() => {
     return {
@@ -179,9 +381,16 @@ function App() {
           scale: obj.scale,
           color: obj.color,
           assetId: obj.assetId,
-          isModel: obj.isModel
+          isModel: obj.isModel,
+          prefabId: obj.prefabId,
+          overrides: obj.overrides
         }))
       },
+      prefabs: prefabs.map(prefab => ({
+        id: prefab.id,
+        name: prefab.name,
+        template: prefab.template
+      })),
       assets: assets.map(asset => ({
         id: asset.id,
         name: asset.name,
@@ -189,7 +398,7 @@ function App() {
         assetType: asset.assetType
       }))
     };
-  }, [sceneObjects, assets, projectFileName]);
+  }, [sceneObjects, prefabs, assets, projectFileName]);
 
   const writeToFile = async (handle, data) => {
     const writable = await handle.createWritable();
@@ -270,8 +479,10 @@ function App() {
         if (projectData.version && projectData.scene) {
           fileHandleRef.current = handle;
           setProjectFileName(handle.name);
-          setSceneObjects(projectData.scene.objects || []);
+          resetHistory(projectData.scene.objects || []);
+          setPrefabs(projectData.prefabs || []);
           setSelectedObject(null);
+          setSelectedPrefab(null);
           setHasUnsavedChanges(false);
           console.log('Project loaded:', handle.name);
         } else {
@@ -297,8 +508,10 @@ function App() {
           
           if (projectData.version && projectData.scene) {
             setProjectFileName(file.name);
-            setSceneObjects(projectData.scene.objects || []);
+            resetHistory(projectData.scene.objects || []);
+            setPrefabs(projectData.prefabs || []);
             setSelectedObject(null);
+            setSelectedPrefab(null);
             setHasUnsavedChanges(false);
             console.log('Project loaded:', file.name);
           } else {
@@ -311,7 +524,7 @@ function App() {
       
       input.click();
     }
-  }, [hasFileSystemAccess]);
+  }, [hasFileSystemAccess, resetHistory]);
 
   const handleNewProject = useCallback(async () => {
     if (hasUnsavedChanges || sceneObjects.length > 0) {
@@ -321,16 +534,24 @@ function App() {
     
     fileHandleRef.current = null;
     setProjectFileName(null);
-    setSceneObjects([]);
+    resetHistory([]);
+    setPrefabs([]);
     setSelectedObject(null);
+    setSelectedPrefab(null);
     setAssets([]);
     setSelectedAsset(null);
     setHasUnsavedChanges(false);
-  }, [sceneObjects.length, hasUnsavedChanges]);
+  }, [sceneObjects.length, hasUnsavedChanges, resetHistory]);
 
   useEffect(() => {
     const handleFileShortcuts = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      
+      if (e.key === 'F5') {
+        e.preventDefault();
+        setIsPlaying(prev => !prev);
+        return;
+      }
       
       const modifier = e.ctrlKey || e.metaKey;
       if (modifier) {
@@ -346,6 +567,16 @@ function App() {
         } else if (key === 'o') {
           e.preventDefault();
           handleLoadProject();
+        } else if (key === 'z') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            redo();
+          } else {
+            undo();
+          }
+        } else if (key === 'y') {
+          e.preventDefault();
+          redo();
         }
       }
       
@@ -357,7 +588,7 @@ function App() {
 
     document.addEventListener('keydown', handleFileShortcuts);
     return () => document.removeEventListener('keydown', handleFileShortcuts);
-  }, [handleSaveProject, handleSaveAsProject, handleLoadProject, handleNewProject]);
+  }, [handleSaveProject, handleSaveAsProject, handleLoadProject, handleNewProject, undo, redo]);
 
   return (
     <div className="app-container">
@@ -365,6 +596,7 @@ function App() {
         isPlaying={isPlaying}
         setIsPlaying={setIsPlaying}
         onToggleLocale={handleToggleLocale}
+        onSetLocale={handleSetLocale}
         onSaveProject={handleSaveProject}
         onSaveAsProject={handleSaveAsProject}
         onLoadProject={handleLoadProject}
@@ -372,6 +604,20 @@ function App() {
         projectFileName={projectFileName}
         onToggleTheme={handleToggleTheme}
         theme={theme}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
+        onOpenPreferences={() => setIsPreferencesOpen(true)}
+      />
+
+      <PreferencesModal
+        isOpen={isPreferencesOpen}
+        onClose={() => setIsPreferencesOpen(false)}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        onToggleLocale={handleToggleLocale}
+        onSetLocale={handleSetLocale}
       />
 
       <div className="main-content-wrapper">
@@ -383,6 +629,21 @@ function App() {
               onSelectObject={handleObjectSelect}
               onAddObject={handleAddObject}
               onDeleteObject={handleDeleteObject}
+              onCreatePrefab={handleCreatePrefab}
+              prefabs={prefabs}
+              onCopyObject={handleCopyObject}
+              onPasteObject={handlePasteObject}
+              onDuplicateObject={handleDuplicateObject}
+              onRenameObject={handleRenameObject}
+              clipboard={clipboard}
+            />
+            <PrefabsPanel
+              prefabs={prefabs}
+              sceneObjects={sceneObjects}
+              selectedPrefab={selectedPrefab}
+              onSelectPrefab={setSelectedPrefab}
+              onInstantiatePrefab={handleInstantiatePrefab}
+              onDeletePrefab={handleDeletePrefab}
             />
           </div>
 
@@ -396,6 +657,7 @@ function App() {
               onToolChange={setCurrentTool}
               isPlaying={isPlaying}
               onUpdateObject={handleUpdateObject}
+              onRecordHistory={recordCurrentState}
               theme={theme}
             />
           </div>
@@ -405,6 +667,9 @@ function App() {
               selectedObject={selectedObject}
               onUpdateObject={handleUpdateObject}
               onDeleteObject={handleDeleteObject}
+              prefabs={prefabs}
+              onDisconnectPrefab={handleDisconnectPrefab}
+              onApplyToPrefab={handleApplyToPrefab}
             />
           </div>
         </div>

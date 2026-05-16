@@ -1,6 +1,7 @@
 .hierarchy-panel {
   flex: 1;
   min-height: 200px;
+  overflow: hidden;
 }
 
 .hierarchy-item {
@@ -25,7 +26,19 @@
   width: 16px;
   height: 16px;
   margin-right: 6px;
-  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hierarchy-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-secondary);
+}
+
+.hierarchy-item.selected .hierarchy-icon {
+  color: var(--text-primary);
 }
 
 .hierarchy-item-name {
@@ -36,24 +49,7 @@
   white-space: nowrap;
 }
 
-.delete-btn {
-  opacity: 0;
-  transition: opacity 0.15s;
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 2px 5px;
-  border-radius: 3px;
-  font-size: 11px;
-}
-
-.delete-btn:hover {
-  color: var(--danger);
-  background-color: rgba(244, 67, 54, 0.2);
-}
-
-.hierarchy-item:hover .delete-btn {
+.hierarchy-item:hover .icon-btn {
   opacity: 1;
 }
 
@@ -62,4 +58,77 @@
   gap: 6px;
   padding: 6px;
   border-top: 1px solid var(--border);
+}
+
+.hierarchy-item.prefab-instance {
+  border-left: 2px solid var(--accent-active);
+  padding-left: 4px;
+}
+
+.hierarchy-prefab-badge {
+  font-size: 9px;
+  padding: 1px 4px;
+  background-color: var(--accent);
+  border-radius: 3px;
+  margin-right: 4px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.context-menu {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: 160px;
+  padding: 4px 0;
+}
+
+.context-menu-item {
+  padding: 8px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.context-menu-item:hover {
+  background-color: var(--hover-bg);
+}
+
+.context-menu-item.context-menu-danger {
+  color: #f44336;
+}
+
+.context-menu-item.context-menu-danger:hover {
+  background-color: rgba(244, 67, 54, 0.15);
+}
+
+.context-menu-divider {
+  height: 1px;
+  background-color: var(--border);
+  margin: 4px 0;
+}
+
+.context-menu-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.context-menu-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.hierarchy-rename-input {
+  flex: 1;
+  background-color: var(--bg-dark);
+  border: 1px solid var(--accent-active);
+  border-radius: 3px;
+  padding: 2px 6px;
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
 }

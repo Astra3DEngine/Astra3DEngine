@@ -18,9 +18,16 @@
   "menu.darkMode": "暗色模式",
   "menu.language": "语言",
   "menu.preferences": "首选项",
+  "preferences.close": "关闭",
+  "preferences.category.appearance": "外观",
+  "preferences.category.language": "语言",
+  "preferences.theme.title": "主题",
+  "preferences.theme.description": "选择应用程序的配色方案",
+  "preferences.language.title": "显示语言",
+  "preferences.language.description": "选择应用程序的显示语言",
 
-  "toolbar.play": "▶ 运行",
-  "toolbar.stop": "■ 停止",
+  "toolbar.play": "运行",
+  "toolbar.stop": "停止",
 
   "hierarchy.title": "层级",
   "hierarchy.empty": "场景中没有对象。",
@@ -29,6 +36,10 @@
   "hierarchy.addSphere": "+ 球体",
   "hierarchy.addPlane": "+ 平面",
   "hierarchy.delete": "删除",
+  "hierarchy.copy": "复制",
+  "hierarchy.paste": "粘贴",
+  "hierarchy.duplicate": "副本",
+  "hierarchy.rename": "重命名",
 
   "inspector.title": "属性",
   "inspector.empty": "未选中对象",
@@ -61,5 +72,22 @@
   "assets.title": "素材库",
   "assets.import": "导入",
   "assets.empty": "暂无素材，点击导入按钮添加。",
-  "assets.dragHint": "拖拽文件到此处"
+  "assets.dragHint": "拖拽文件到此处",
+
+  "prefabs.title": "预制件",
+  "prefabs.empty": "暂无预制件。",
+  "prefabs.emptyHint": "在层级面板中右键对象创建预制件。",
+  "prefabs.createFromObject": "创建预制件",
+  "prefabs.instantiate": "实例化",
+  "prefabs.delete": "删除预制件",
+  "prefabs.edit": "编辑预制件",
+  "prefabs.instances": "实例数: {count}",
+
+  "inspector.prefab": "预制件",
+  "inspector.prefabSource": "预制件源",
+  "inspector.prefabInstance": "预制件实例",
+  "inspector.override": "覆盖",
+  "inspector.revert": "还原",
+  "inspector.applyToPrefab": "应用到预制件",
+  "inspector.disconnectPrefab": "断开预制件连接"
 }

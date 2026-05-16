@@ -94,3 +94,79 @@
   margin-bottom: 10px;
   opacity: 0.3;
 }
+
+.inspector-prefab-section {
+  background-color: var(--bg-dark);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 14px;
+}
+
+.inspector-prefab-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.inspector-prefab-badge {
+  font-size: 16px;
+}
+
+.inspector-prefab-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent-active);
+}
+
+.inspector-prefab-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-active);
+}
+
+.inspector-prefab-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.inspector-color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.inspector-vector3-with-override {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 4px;
+}
+
+.inspector-override-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.inspector-override-label input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
+}

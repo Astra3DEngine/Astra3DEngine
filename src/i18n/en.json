@@ -18,9 +18,16 @@
   "menu.darkMode": "Dark Mode",
   "menu.language": "Language",
   "menu.preferences": "Preferences",
+  "preferences.close": "Close",
+  "preferences.category.appearance": "Appearance",
+  "preferences.category.language": "Language",
+  "preferences.theme.title": "Theme",
+  "preferences.theme.description": "Choose the color scheme for the application",
+  "preferences.language.title": "Display Language",
+  "preferences.language.description": "Choose the display language for the application",
 
-  "toolbar.play": "▶ Play",
-  "toolbar.stop": "■ Stop",
+  "toolbar.play": "Play",
+  "toolbar.stop": "Stop",
 
   "hierarchy.title": "Hierarchy",
   "hierarchy.empty": "No objects in scene.",
@@ -29,6 +36,10 @@
   "hierarchy.addSphere": "+ Sphere",
   "hierarchy.addPlane": "+ Plane",
   "hierarchy.delete": "Delete",
+  "hierarchy.copy": "Copy",
+  "hierarchy.paste": "Paste",
+  "hierarchy.duplicate": "Duplicate",
+  "hierarchy.rename": "Rename",
 
   "inspector.title": "Inspector",
   "inspector.empty": "No object selected",
@@ -61,5 +72,22 @@
   "assets.title": "Assets",
   "assets.import": "Import",
   "assets.empty": "No assets. Click Import to add.",
-  "assets.dragHint": "Drag files here"
+  "assets.dragHint": "Drag files here",
+
+  "prefabs.title": "Prefabs",
+  "prefabs.empty": "No prefabs.",
+  "prefabs.emptyHint": "Right-click an object in Hierarchy to create a prefab.",
+  "prefabs.createFromObject": "Create Prefab",
+  "prefabs.instantiate": "Instantiate",
+  "prefabs.delete": "Delete Prefab",
+  "prefabs.edit": "Edit Prefab",
+  "prefabs.instances": "Instances: {count}",
+
+  "inspector.prefab": "Prefab",
+  "inspector.prefabSource": "Prefab Source",
+  "inspector.prefabInstance": "Prefab Instance",
+  "inspector.override": "Override",
+  "inspector.revert": "Revert",
+  "inspector.applyToPrefab": "Apply to Prefab",
+  "inspector.disconnectPrefab": "Disconnect Prefab"
 }
