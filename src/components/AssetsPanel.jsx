@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { msg } from '../i18n/index.js';
+import CollapsiblePanel from './CollapsiblePanel.jsx';
 
 function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset }) {
   const fileInputRef = useRef(null);
@@ -57,21 +58,26 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset }) {
   };
 
   return (
-    <div className="assets-panel">
-      <div className="assets-header">
-        <span className="assets-title">{msg('assets.title')}</span>
-        <button className="btn btn-small" onClick={handleImportClick}>
-          {msg('assets.import')}
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".gltf,.glb,.obj,.png,.jpg,.jpeg,.webp"
-          multiple
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
-      </div>
+    <CollapsiblePanel 
+      title={msg('assets.title')} 
+      className="assets-panel"
+      storageKey="astra-panel-assets-collapsed"
+      headerRight={
+        <>
+          <button className="btn btn-small" onClick={handleImportClick}>
+            {msg('assets.import')}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".gltf,.glb,.obj,.png,.jpg,.jpeg,.webp"
+            multiple
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+        </>
+      }
+    >
       <div
         className={`assets-content ${isDragging ? 'dragging' : ''}`}
         onDragOver={handleDragOver}
@@ -98,7 +104,7 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset }) {
           </div>
         )}
       </div>
-    </div>
+    </CollapsiblePanel>
   );
 }
 

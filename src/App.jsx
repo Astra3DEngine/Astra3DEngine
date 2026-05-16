@@ -39,6 +39,21 @@ function App() {
     return saved || 'dark';
   });
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+  
+  const [hierarchyCollapsed, setHierarchyCollapsed] = useState(() => {
+    const saved = localStorage.getItem('astra-panel-hierarchy-collapsed');
+    return saved === 'true';
+  });
+  const [prefabsCollapsed, setPrefabsCollapsed] = useState(() => {
+    const saved = localStorage.getItem('astra-panel-prefabs-collapsed');
+    return saved === 'true';
+  });
+  const [inspectorCollapsed, setInspectorCollapsed] = useState(() => {
+    const saved = localStorage.getItem('astra-panel-inspector-collapsed');
+    return saved === 'true';
+  });
+  
+  const leftSidebarAllCollapsed = hierarchyCollapsed && prefabsCollapsed;
 
   const hasFileSystemAccess = 'showSaveFilePicker' in window && 'showOpenFilePicker' in window;
 
@@ -622,7 +637,7 @@ function App() {
 
       <div className="main-content-wrapper">
         <div className="main-content">
-          <div className="left-sidebar">
+          <div className={`left-sidebar ${leftSidebarAllCollapsed ? 'all-collapsed' : ''}`}>
             <HierarchyPanel
               objects={sceneObjects}
               selectedObject={selectedObject}
@@ -636,6 +651,8 @@ function App() {
               onDuplicateObject={handleDuplicateObject}
               onRenameObject={handleRenameObject}
               clipboard={clipboard}
+              vertical={leftSidebarAllCollapsed}
+              onCollapseChange={setHierarchyCollapsed}
             />
             <PrefabsPanel
               prefabs={prefabs}
@@ -644,6 +661,8 @@ function App() {
               onSelectPrefab={setSelectedPrefab}
               onInstantiatePrefab={handleInstantiatePrefab}
               onDeletePrefab={handleDeletePrefab}
+              vertical={leftSidebarAllCollapsed}
+              onCollapseChange={setPrefabsCollapsed}
             />
           </div>
 
@@ -662,7 +681,7 @@ function App() {
             />
           </div>
 
-          <div className="right-sidebar">
+          <div className={`right-sidebar ${inspectorCollapsed ? 'all-collapsed' : ''}`}>
             <InspectorPanel
               selectedObject={selectedObject}
               onUpdateObject={handleUpdateObject}
@@ -670,6 +689,8 @@ function App() {
               prefabs={prefabs}
               onDisconnectPrefab={handleDisconnectPrefab}
               onApplyToPrefab={handleApplyToPrefab}
+              vertical={inspectorCollapsed}
+              onCollapseChange={setInspectorCollapsed}
             />
           </div>
         </div>

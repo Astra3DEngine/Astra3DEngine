@@ -4,6 +4,11 @@
   overflow: hidden;
 }
 
+.hierarchy-panel.collapsed {
+  flex: none !important;
+  min-height: 0 !important;
+}
+
 .hierarchy-item {
   display: flex;
   align-items: center;

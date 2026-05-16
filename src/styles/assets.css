@@ -1,5 +1,4 @@
 .bottom-area {
-  height: 160px;
   border-top: 1px solid var(--border);
   background-color: var(--bg-panel);
 }
@@ -7,22 +6,15 @@
 .assets-panel {
   display: flex;
   flex-direction: column;
-  height: 100%;
 }
 
-.assets-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 6px 12px;
-  border-bottom: 1px solid var(--border);
+.assets-panel:not(.collapsed) {
+  height: 160px;
 }
 
-.assets-title {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-right: auto;
+.assets-panel.collapsed {
+  height: auto;
+  flex: none !important;
 }
 
 .assets-content {

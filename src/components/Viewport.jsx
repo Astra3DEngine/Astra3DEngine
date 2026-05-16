@@ -227,8 +227,14 @@ function Viewport({ objects, assets, selectedObject, onSelectObject, currentTool
 
     window.addEventListener('resize', handleResize);
 
+    const resizeObserver = new ResizeObserver(handleResize);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
     return () => {
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }

@@ -1,5 +1,28 @@
 .inspector-panel {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.inspector-panel.collapsed {
+  flex: none !important;
+  min-height: 0 !important;
+}
+
+.inspector-panel.vertical-collapsed {
+  width: 24px;
+  min-width: 24px;
+  flex: 1 !important;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-toolbar);
+  border-left: 1px solid var(--border);
+}
+
+.inspector-panel.vertical-collapsed:hover {
+  background-color: var(--hover-bg);
 }
 
 .inspector-section {

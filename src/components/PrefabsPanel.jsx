@@ -1,5 +1,6 @@
 import React from 'react';
 import { msg } from '../i18n/index.js';
+import CollapsiblePanel from './CollapsiblePanel.jsx';
 import IconCube from '../icons/cube.svg?react';
 import IconSphere from '../icons/sphere.svg?react';
 import IconPlane from '../icons/plane.svg?react';
@@ -14,7 +15,9 @@ function PrefabsPanel({
   selectedPrefab, 
   onSelectPrefab, 
   onInstantiatePrefab, 
-  onDeletePrefab 
+  onDeletePrefab,
+  vertical,
+  onCollapseChange
 }) {
   const getInstanceCount = (prefabId) => {
     return sceneObjects.filter(obj => obj.prefabId === prefabId).length;
@@ -30,10 +33,13 @@ function PrefabsPanel({
   };
 
   return (
-    <div className="panel prefabs-panel">
-      <div className="panel-header">
-        <span>{msg('prefabs.title')}</span>
-      </div>
+    <CollapsiblePanel 
+      title={msg('prefabs.title')} 
+      className="prefabs-panel"
+      storageKey="astra-panel-prefabs-collapsed"
+      vertical={vertical}
+      onCollapseChange={onCollapseChange}
+    >
       <div className="panel-content">
         {prefabs.length === 0 ? (
           <div className="prefabs-empty">
@@ -81,7 +87,7 @@ function PrefabsPanel({
           ))
         )}
       </div>
-    </div>
+    </CollapsiblePanel>
   );
 }
 

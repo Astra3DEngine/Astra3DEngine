@@ -1,5 +1,92 @@
 # 更新日志
 
+## 2026-05-16 预制件系统与右键菜单
+
+### 新增功能
+- **预制件系统**：
+  - 创建 `PrefabsPanel` 组件显示预制件列表
+  - 从层级面板右键菜单创建预制件
+  - 双击预制件实例化到场景
+  - 预制件实例显示链接图标和 P 徽章
+  - 属性面板显示预制件源信息
+  - 支持应用到预制件、断开预制件连接
+  - 覆盖标记：勾选后实例属性不再跟随预制件更新
+  - 预制件数据保存到项目文件
+- **右键菜单功能增强**：
+  - 复制：复制对象到剪贴板
+  - 粘贴：从剪贴板粘贴对象（位置偏移 +1）
+  - 副本：直接复制一份对象
+  - 重命名：内联编辑对象名称（Enter 确认，Escape 取消）
+  - 创建预制件：将对象转为预制件模板
+  - 删除：删除对象
+- **SVG 图标系统扩展**：
+  - 新增 cube.svg、sphere.svg、plane.svg、model.svg 对象类型图标
+  - 新增 prefab.svg、prefab-instance.svg 预制件图标
+  - 新增 copy.svg、paste.svg、duplicate.svg、rename.svg、delete.svg、plus.svg 操作图标
+  - 新增 chevron-down.svg、chevron-right.svg 折叠箭头图标
+  - 替换所有 emoji 和特殊符号为 SVG 图标
+- **面板折叠功能**：
+  - 创建 `CollapsiblePanel` 可折叠面板组件
+  - 点击标题栏折叠/展开面板
+  - 折叠状态保存到 LocalStorage（刷新页面后保持）
+  - 素材面板折叠后视口自动扩展
+- **竖向折叠模式**：
+  - 当侧边栏所有面板都折叠时，标题栏变成竖向显示
+  - 左侧边栏：标题栏横向排列
+  - 右侧边栏：标题栏纵向填满
+  - 视口区域自动扩展变大
+- **预览界面自适应大小**：
+  - 使用 ResizeObserver 监听容器大小变化
+  - 折叠面板后视口自动调整大小
+
+### BUG修复
+- **预制件面板滚动条不显示**：修复预制件列表超出高度后不显示滚动条的问题
+  - 添加 `overflow: hidden` 到父容器
+  - 添加 `min-height: 0` 允许 flex 子项收缩
+- **图标按钮样式不统一**：创建通用图标按钮样式模板
+  - `.icon-btn` 基础样式
+  - `.icon-btn.icon-btn-danger` 删除按钮（红色高亮）
+  - `.icon-btn.icon-btn-accent` 强调按钮（主题色高亮）
+
+### 技术改进
+- 预制件数据结构：`{ id, name, template: { type, color, scale, defaultPosition, defaultRotation, assetId, isModel } }`
+- 预制件实例：`{ ...obj, prefabId, overrides: { scale, color } }`
+- 复制/粘贴使用 clipboard 状态管理
+- 重命名使用内联输入框，支持 Enter/Escape 键
+
+### 新增文件
+- `src/components/PrefabsPanel.jsx` - 预制件面板组件
+- `src/components/CollapsiblePanel.jsx` - 可折叠面板组件
+- `src/icons/cube.svg` - 立方体图标
+- `src/icons/sphere.svg` - 球体图标
+- `src/icons/plane.svg` - 平面图标
+- `src/icons/model.svg` - 模型图标
+- `src/icons/prefab.svg` - 预制件图标
+- `src/icons/prefab-instance.svg` - 预制件实例图标
+- `src/icons/copy.svg` - 复制图标
+- `src/icons/paste.svg` - 粘贴图标
+- `src/icons/duplicate.svg` - 副本图标
+- `src/icons/rename.svg` - 重命名图标
+- `src/icons/delete.svg` - 删除图标
+- `src/icons/plus.svg` - 加号图标
+- `src/icons/chevron-down.svg` - 向下箭头图标
+- `src/icons/chevron-right.svg` - 向右箭头图标
+
+### 修改文件
+- `src/App.jsx` - 集成预制件系统、复制/粘贴/重命名功能、面板折叠状态管理
+- `src/components/HierarchyPanel.jsx` - 右键菜单功能、SVG 图标、折叠功能
+- `src/components/InspectorPanel.jsx` - 预制件实例信息显示、折叠功能
+- `src/components/PrefabsPanel.jsx` - 折叠功能
+- `src/components/AssetsPanel.jsx` - 折叠功能
+- `src/components/Viewport.jsx` - ResizeObserver 自适应大小
+- `src/styles/buttons.css` - 通用图标按钮样式
+- `src/styles/panel.css` - 预制件面板样式、滚动条修复、折叠样式、竖向折叠样式
+- `src/styles/hierarchy.css` - 右键菜单样式、重命名输入框样式、折叠样式
+- `src/styles/inspector.css` - 预制件信息样式、折叠样式
+- `src/styles/assets.css` - 折叠样式
+- `src/i18n/zh.json` - 中文翻译
+- `src/i18n/en.json` - 英文翻译
+
 ## 2026-05-16 撤销重做与首选项设置
 
 ### 新增功能

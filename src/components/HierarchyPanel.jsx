@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { msg } from '../i18n/index.js';
+import CollapsiblePanel from './CollapsiblePanel.jsx';
 import IconCube from '../icons/cube.svg?react';
 import IconSphere from '../icons/sphere.svg?react';
 import IconPlane from '../icons/plane.svg?react';
@@ -24,7 +25,9 @@ function HierarchyPanel({
   onPasteObject,
   onDuplicateObject,
   onRenameObject,
-  clipboard
+  clipboard,
+  vertical,
+  onCollapseChange
 }) {
   const [contextMenu, setContextMenu] = useState(null);
   const [isRenaming, setIsRenaming] = useState(null);
@@ -138,10 +141,13 @@ function HierarchyPanel({
   };
 
   return (
-    <div className="panel hierarchy-panel">
-      <div className="panel-header">
-        <span>{msg('hierarchy.title')}</span>
-      </div>
+    <CollapsiblePanel 
+      title={msg('hierarchy.title')} 
+      className="hierarchy-panel"
+      storageKey="astra-panel-hierarchy-collapsed"
+      vertical={vertical}
+      onCollapseChange={onCollapseChange}
+    >
       <div className="panel-content">
         {objects.length === 0 ? (
           <div style={{
@@ -248,7 +254,7 @@ function HierarchyPanel({
           </div>
         </div>
       )}
-    </div>
+    </CollapsiblePanel>
   );
 }
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { msg } from '../i18n/index.js';
+import CollapsiblePanel from './CollapsiblePanel.jsx';
 import IconPrefabInstance from '../icons/prefab-instance.svg?react';
 import IconDelete from '../icons/delete.svg?react';
 
@@ -9,26 +10,12 @@ function InspectorPanel({
   onDeleteObject,
   prefabs,
   onDisconnectPrefab,
-  onApplyToPrefab
+  onApplyToPrefab,
+  vertical,
+  onCollapseChange
 }) {
-  if (!selectedObject) {
-    return (
-      <div className="panel inspector-panel">
-        <div className="panel-header">
-          <span>{msg('inspector.title')}</span>
-        </div>
-        <div className="inspector-empty">
-          <div className="inspector-empty-icon">⊘</div>
-          <div>{msg('inspector.empty')}</div>
-          <div style={{ fontSize: '11px', marginTop: '6px' }}>
-            {msg('inspector.emptyHint')}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const handleTransformChange = (property, index, value) => {
+    if (!selectedObject) return;
     const newValue = parseFloat(value) || 0;
     const newTransform = [...selectedObject[property]];
     newTransform[index] = newValue;
@@ -36,15 +23,17 @@ function InspectorPanel({
   };
 
   const handleColorChange = (color) => {
+    if (!selectedObject) return;
     onUpdateObject(selectedObject.id, { color });
   };
 
   const handleNameChange = (name) => {
+    if (!selectedObject) return;
     onUpdateObject(selectedObject.id, { name });
   };
 
   const getPrefab = () => {
-    if (!selectedObject.prefabId || !prefabs) return null;
+    if (!selectedObject || !selectedObject.prefabId || !prefabs) return null;
     return prefabs.find(p => p.id === selectedObject.prefabId);
   };
 
@@ -52,16 +41,26 @@ function InspectorPanel({
   const isPrefabInstance = !!prefab;
 
   const handleOverrideToggle = (property) => {
+    if (!selectedObject) return;
     const currentOverrides = selectedObject.overrides || { scale: false, color: false };
     const newOverrides = { ...currentOverrides, [property]: !currentOverrides[property] };
     onUpdateObject(selectedObject.id, { overrides: newOverrides });
   };
 
-  return (
-    <div className="panel inspector-panel">
-      <div className="panel-header">
-        <span>{msg('inspector.title')}</span>
-      </div>
+  const renderContent = () => {
+    if (!selectedObject) {
+      return (
+        <div className="inspector-empty">
+          <div className="inspector-empty-icon">⊘</div>
+          <div>{msg('inspector.empty')}</div>
+          <div style={{ fontSize: '11px', marginTop: '6px' }}>
+            {msg('inspector.emptyHint')}
+          </div>
+        </div>
+      );
+    }
+
+    return (
       <div className="panel-content">
         {isPrefabInstance && (
           <div className="inspector-section inspector-prefab-section">
@@ -212,7 +211,19 @@ function InspectorPanel({
           </button>
         </div>
       </div>
-    </div>
+    );
+  };
+
+  return (
+    <CollapsiblePanel 
+      title={msg('inspector.title')} 
+      className="inspector-panel"
+      storageKey="astra-panel-inspector-collapsed"
+      vertical={vertical}
+      onCollapseChange={onCollapseChange}
+    >
+      {renderContent()}
+    </CollapsiblePanel>
   );
 }
 
