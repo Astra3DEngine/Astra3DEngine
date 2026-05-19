@@ -14,10 +14,12 @@
 .modal-content {
   background-color: var(--bg-panel);
   border-radius: 8px;
-  min-width: 400px;
-  max-width: 500px;
+  width: 480px;
+  max-width: 90vw;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
@@ -59,6 +61,8 @@
 
 .modal-body {
   padding: 20px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .modal-footer {
@@ -88,13 +92,16 @@
 }
 
 .preferences-modal {
-  min-width: 600px;
-  max-width: 700px;
+  width: 650px;
+  max-width: 90vw;
+  height: 420px;
+  max-height: 85vh;
 }
 
 .preferences-body {
   display: flex;
-  min-height: 300px;
+  flex: 1;
+  min-height: 0;
 }
 
 .preferences-sidebar {
@@ -133,6 +140,7 @@
   flex: 1;
   padding: 20px 24px;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .preferences-section {
@@ -230,15 +238,17 @@
 }
 
 .snapshots-modal {
-  min-width: 500px;
-  max-width: 600px;
+  width: 550px;
+  max-width: 90vw;
+  height: 400px;
+  max-height: 85vh;
 }
 
 .snapshots-body {
   padding: 20px;
-  min-height: 200px;
-  max-height: 400px;
+  flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .snapshots-loading {
@@ -528,4 +538,45 @@
 
 .toast-info .toast-progress {
   background-color: #3b82f6;
+}
+
+.modal {
+  background-color: var(--bg-panel);
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.info-modal {
+  width: 420px;
+  max-width: 90vw;
+}
+
+.info-content {
+  padding: 8px 0;
+}
+
+.info-content p {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.info-content h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
 }

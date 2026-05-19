@@ -4,5 +4,11 @@
   "noPlugins": "No plugins available",
   "noResults": "No matching plugins found",
   "author": "Author: {0}",
-  "hint": "Plugins are stored in src/plugins/plugins/ directory"
+  "hint": "Plugins are stored in src/plugins/plugins/ directory",
+  "tagAll": "All",
+  "tagNew": "New",
+  "tagRecommended": "Recommended",
+  "tagTheme": "Theme",
+  "tagDebug": "Debug",
+  "tagDanger": "Danger"
 }

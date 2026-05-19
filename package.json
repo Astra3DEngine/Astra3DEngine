@@ -3,10 +3,14 @@
   "version": "0.1.0",
   "description": "A joking 3D engine",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "desktop": "vite --config vite.config.desktop.js",
+    "desktop:build": "vite build --config vite.config.desktop.js && electron-builder",
+    "desktop:preview": "electron dist-electron/main.js"
   },
   "dependencies": {
     "file-saver": "^2.0.5",
@@ -17,8 +21,34 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
     "vite": "^5.0.10",
+    "vite-plugin-electron": "^0.28.0",
     "vite-plugin-svgr": "^5.2.0"
+  },
+  "build": {
+    "appId": "com.astra3d.engine",
+    "productName": "Astra 3D Engine",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "electron/icon.icns"
+    },
+    "win": {
+      "icon": "electron/icon.ico",
+      "target": "nsis"
+    },
+    "linux": {
+      "icon": "electron/icon.png",
+      "target": "AppImage"
+    }
   },
   "packageManager": "pnpm@8.15.0"
 }

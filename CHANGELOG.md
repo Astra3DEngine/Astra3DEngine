@@ -1,5 +1,55 @@
 # 更新日志
 
+## 2026-05-20 Electron 桌面端支持
+
+### 新增功能
+- **Electron 桌面端支持**：
+  - 新增 `pnpm desktop` 命令启动桌面应用调试
+  - 新增 `pnpm desktop:build` 构建桌面端安装包
+  - 新增 `pnpm desktop:preview` 预览已构建的桌面端
+  - 自定义标题栏（使用项目工具栏）
+  - 窗口控制按钮（最小化、最大化、关闭）
+  - Logo 下拉菜单（隐私政策、源代码、检查更新、关于）
+  - Alt+点击 Logo 打开小游戏窗口（独立系统窗口）
+- **新增组件**：
+  - `InfoModal.jsx` - 信息弹窗组件
+- **新增页面**：
+  - `public/game.html` - 小游戏页面
+- **新增图标**：
+  - `window-minimize.svg` - 最小化图标
+  - `window-maximize.svg` - 最大化图标
+  - `window-restore.svg` - 还原图标
+  - `window-close.svg` - 关闭图标
+
+### 新增文件
+- `electron/main.js` - Electron 主进程
+- `electron/preload.js` - Preload 脚本
+- `vite.config.desktop.js` - 桌面端 Vite 配置
+- `src/components/InfoModal.jsx` - 信息弹窗组件
+- `public/game.html` - 小游戏页面
+- `src/icons/window-minimize.svg` - 最小化图标
+- `src/icons/window-maximize.svg` - 最大化图标
+- `src/icons/window-restore.svg` - 还原图标
+- `src/icons/window-close.svg` - 关闭图标
+
+### 修改文件
+- `package.json` - 添加 Electron 相关依赖和脚本
+- `src/components/Toolbar.jsx` - Logo 点击功能、窗口控制按钮、Electron 环境检测
+- `src/styles/toolbar.css` - Logo 按钮、下拉菜单、窗口控制按钮样式
+- `src/styles/modal.css` - InfoModal 样式
+
+### BUG修复
+- **Preload 脚本格式错误**：改用 CommonJS 的 `require` 语法
+- **vite-plugin-electron 配置**：使用数组形式配置多个入口
+- **Electron 环境检测失败**：改为在 useEffect 中检测并使用 state
+- **窗口拖动不工作**：正确设置 `-webkit-app-region: drag/no-drag`
+- **窗口控制按钮图标不一致**：重新设计 SVG 图标，统一 12x12 viewBox
+
+### 技术改进
+- 使用 IPC 通信实现窗口控制
+- Preload 脚本暴露 `electronAPI` 到渲染进程
+- 支持最大化状态同步（窗口事件监听）
+
 ## 2026-05-18 插件系统 l10n 完善
 
 ### 问题描述

@@ -1,10 +1,15 @@
 .toolbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   background-color: var(--bg-toolbar);
   padding: 0;
   border-bottom: 1px solid var(--border);
   height: 32px;
+}
+
+.toolbar-electron {
+  -webkit-app-region: drag;
 }
 
 .toolbar-left {
@@ -12,22 +17,71 @@
   align-items: center;
 }
 
-.toolbar-logo {
+.toolbar-logo-wrapper {
+  position: relative;
   display: flex;
   align-items: center;
   padding: 2px 2px;
   border-right: 1px solid var(--border);
   margin-right: 2px;
+  -webkit-app-region: no-drag;
 }
 
-.toolbar-logo svg {
+.toolbar-logo-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  border-radius: 2px;
+  transition: background-color 0.15s;
+}
+
+.toolbar-logo-btn:hover {
+  background-color: var(--bg-panel);
+}
+
+.toolbar-logo-btn svg {
   display: block;
+}
+
+.logo-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 2px;
+  min-width: 100px;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.logo-menu-item {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.logo-menu-item:hover {
+  background-color: var(--accent);
 }
 
 .toolbar-menus {
   display: flex;
   align-items: center;
   gap: 4px;
+  -webkit-app-region: no-drag;
 }
 
 .menu-btn {
@@ -60,4 +114,43 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.toolbar-window-controls {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  -webkit-app-region: no-drag;
+}
+
+.window-control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.window-control-btn svg {
+  display: block;
+}
+
+.window-control-btn:hover {
+  background-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.window-control-btn.close:hover {
+  background-color: #e11d48;
+  color: white;
+}
+
+.toolbar-spacer {
+  flex: 1;
+  -webkit-app-region: drag;
 }

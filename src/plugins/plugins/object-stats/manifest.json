@@ -4,5 +4,6 @@
   "version": "1.0.0",
   "author": "Astra3D Team",
   "enabledByDefault": false,
-  "userscript": "index.js"
+  "userscript": "index.js",
+  "tags": ["debug"]
 }

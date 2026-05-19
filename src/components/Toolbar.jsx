@@ -1,6 +1,7 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { msg, languages, getLocale } from '../i18n/index.js';
 import DropdownMenu from './DropdownMenu.jsx';
+import InfoModal from './InfoModal.jsx';
 
 import IconNewProject from '../icons/new-project.svg?react';
 import IconOpenProject from '../icons/open-project.svg?react';
@@ -11,12 +12,18 @@ import IconRedo from '../icons/redo.svg?react';
 import IconTheme from '../icons/theme.svg?react';
 import IconLanguage from '../icons/language.svg?react';
 import IconSettings from '../icons/settings.svg?react';
+import IconPuzzle from '../icons/puzzle.svg?react';
 import IconPlay from '../icons/play.svg?react';
 import IconStop from '../icons/stop.svg?react';
 import IconImport from '../icons/import.svg?react';
 import IconExport from '../icons/export.svg?react';
 import IconSnapshot from '../icons/snapshot.svg?react';
 import IconRecent from '../icons/recent.svg?react';
+
+import IconWindowMinimize from '../icons/window-minimize.svg?react';
+import IconWindowMaximize from '../icons/window-maximize.svg?react';
+import IconWindowRestore from '../icons/window-restore.svg?react';
+import IconWindowClose from '../icons/window-close.svg?react';
 
 function Toolbar({ 
   isPlaying, 
@@ -46,6 +53,36 @@ function Toolbar({
   const editMenuRef = useRef(null);
   const viewMenuRef = useRef(null);
   const runMenuRef = useRef(null);
+  const logoMenuRef = useRef(null);
+  
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [isElectron, setIsElectron] = useState(false);
+  const [logoMenuOpen, setLogoMenuOpen] = useState(false);
+  const [infoModalOpen, setInfoModalOpen] = useState(false);
+  const [infoModalType, setInfoModalType] = useState('about');
+
+  useEffect(() => {
+    const electronDetected = typeof window !== 'undefined' && !!window.electronAPI;
+    setIsElectron(electronDetected);
+    
+    if (electronDetected) {
+      window.electronAPI.isMaximized().then(setIsMaximized);
+      
+      window.electronAPI.onMaximize(() => setIsMaximized(true));
+      window.electronAPI.onUnmaximize(() => setIsMaximized(false));
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (logoMenuRef.current && !logoMenuRef.current.contains(event.target)) {
+        setLogoMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const handleMenuShortcut = (e) => {
@@ -167,7 +204,7 @@ function Toolbar({
     },
     {
       label: msg('menu.plugins') || '插件管理',
-      icon: <IconSettings className="menu-icon" />,
+      icon: <IconPuzzle className="menu-icon" />,
       onClick: onOpenPluginSettings
     }
   ];
@@ -181,58 +218,137 @@ function Toolbar({
     }
   ];
 
+  const handleMinimize = () => {
+    if (isElectron) {
+      window.electronAPI.minimize();
+    }
+  };
+
+  const handleMaximize = () => {
+    if (isElectron) {
+      window.electronAPI.maximize();
+    }
+  };
+
+  const handleClose = () => {
+    if (isElectron) {
+      window.electronAPI.close();
+    }
+  };
+
+  const handleLogoClick = (e) => {
+    if (e.altKey && isElectron) {
+      window.electronAPI.openGame();
+    } else {
+      setLogoMenuOpen(!logoMenuOpen);
+    }
+  };
+
+  const handleLogoMenuItemClick = (action) => {
+    setLogoMenuOpen(false);
+    if (action === 'source') {
+      window.open('https://github.com/LanwyWriteXU/Astra3DEngine', '_blank');
+    } else {
+      setInfoModalType(action);
+      setInfoModalOpen(true);
+    }
+  };
+
   return (
-    <div className="toolbar">
-      <div className="toolbar-left">
-        <div className="toolbar-logo">
-          <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink"
-              height="24" viewBox="0,0,69.99346,66.43688">
-              <g transform="translate(-205.00327,-146.78156)">
-                  <g stroke="#000000" strokeWidth="0" strokeMiterlimit="10">
-                      <path d="M274.99673,190.93032l-11.95866,22.28812h-44.44009l13.31277,-22.10459z"
-                          fill="#0073bf" />
-                      <path d="M216.31868,212.14198l-11.31541,-21.28864l24.21416,-0.00471z" fill="#66ccff" />
-                      <path d="M227.50821,146.78156l23.50249,0.00667l23.98603,44.14209l-11.95866,22.28812z"
-                          fill="#0099ff" />
-                      <path d="M205.06042,188.54619l22.44779,-41.76463l23.50249,0.00667l-20.58917,41.73314z"
-                          fill="#66ccff" />
+    <>
+      <div className={`toolbar ${isElectron ? 'toolbar-electron' : ''}`}>
+        <div className="toolbar-left">
+          <div className="toolbar-logo-wrapper" ref={logoMenuRef}>
+            <button className="toolbar-logo-btn" onClick={handleLogoClick}>
+              <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink"
+                  height="24" viewBox="0,0,69.99346,66.43688">
+                  <g transform="translate(-205.00327,-146.78156)">
+                      <g stroke="#000000" strokeWidth="0" strokeMiterlimit="10">
+                          <path d="M274.99673,190.93032l-11.95866,22.28812h-44.44009l13.31277,-22.10459z"
+                              fill="#0073bf" />
+                          <path d="M216.31868,212.14198l-11.31541,-21.28864l24.21416,-0.00471z" fill="#66ccff" />
+                          <path d="M227.50821,146.78156l23.50249,0.00667l23.98603,44.14209l-11.95866,22.28812z"
+                              fill="#0099ff" />
+                          <path d="M205.06042,188.54619l22.44779,-41.76463l23.50249,0.00667l-20.58917,41.73314z"
+                              fill="#66ccff" />
+                      </g>
                   </g>
-              </g>
-          </svg>
-        </div>
-        <div className="toolbar-menus">
-          <DropdownMenu 
-            ref={fileMenuRef}
-            label={msg('menu.file')} 
-            items={fileMenuItems}
-            roundedCorners="bottom"
-          />
-          <DropdownMenu 
-            ref={editMenuRef}
-            label={msg('menu.edit')} 
-            items={editMenuItems}
-            roundedCorners="bottom"
-          />
-          <DropdownMenu 
-            ref={viewMenuRef}
-            label={msg('menu.view')} 
-            items={viewMenuItems}
-            roundedCorners="bottom"
-          />
-          <DropdownMenu 
-            ref={runMenuRef}
-            label={msg('menu.run')} 
-            items={runMenuItems}
-            roundedCorners="bottom"
-          />
-        </div>
-        {projectFileName && (
-          <div className="toolbar-filename">
-            <span className="filename-text">{projectFileName}</span>
+              </svg>
+            </button>
+            {logoMenuOpen && (
+              <div className="logo-dropdown-menu">
+                <button className="logo-menu-item" onClick={() => handleLogoMenuItemClick('privacy')}>
+                  隐私政策
+                </button>
+                <button className="logo-menu-item" onClick={() => handleLogoMenuItemClick('source')}>
+                  源代码
+                </button>
+                <button className="logo-menu-item" onClick={() => handleLogoMenuItemClick('update')}>
+                  检查更新
+                </button>
+                <button className="logo-menu-item" onClick={() => handleLogoMenuItemClick('about')}>
+                  关于
+                </button>
+              </div>
+            )}
           </div>
+          <div className="toolbar-menus">
+            <DropdownMenu 
+              ref={fileMenuRef}
+              label={msg('menu.file')} 
+              items={fileMenuItems}
+              roundedCorners="bottom"
+            />
+            <DropdownMenu 
+              ref={editMenuRef}
+              label={msg('menu.edit')} 
+              items={editMenuItems}
+              roundedCorners="bottom"
+            />
+            <DropdownMenu 
+              ref={viewMenuRef}
+              label={msg('menu.view')} 
+              items={viewMenuItems}
+              roundedCorners="bottom"
+            />
+            <DropdownMenu 
+              ref={runMenuRef}
+              label={msg('menu.run')} 
+              items={runMenuItems}
+              roundedCorners="bottom"
+            />
+          </div>
+          {projectFileName && (
+            <div className="toolbar-filename">
+              <span className="filename-text">{projectFileName}</span>
+            </div>
+          )}
+        </div>
+        
+        {isElectron && (
+          <>
+            <div className="toolbar-spacer"></div>
+            <div className="toolbar-window-controls">
+              <button className="window-control-btn minimize" onClick={handleMinimize} title="最小化">
+                <IconWindowMinimize />
+              </button>
+              <button className="window-control-btn maximize" onClick={handleMaximize} title={isMaximized ? "还原" : "最大化"}>
+                {isMaximized ? <IconWindowRestore /> : <IconWindowMaximize />}
+              </button>
+              <button className="window-control-btn close" onClick={handleClose} title="关闭">
+                <IconWindowClose />
+              </button>
+            </div>
+          </>
         )}
       </div>
-    </div>
+      
+      <InfoModal 
+        isOpen={infoModalOpen} 
+        onClose={() => setInfoModalOpen(false)} 
+        type={infoModalType}
+      />
+    </>
   );
 }
 

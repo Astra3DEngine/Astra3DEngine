@@ -14,12 +14,14 @@
 .plugin-settings-modal {
   background: var(--bg-panel);
   border-radius: 8px;
-  width: 600px;
+  width: 700px;
   max-width: 90vw;
-  max-height: 80vh;
+  height: 500px;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
 }
 
 .plugin-settings-header {
@@ -32,7 +34,7 @@
 
 .plugin-settings-header h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -57,37 +59,172 @@
   color: var(--text-primary);
 }
 
-.plugin-settings-search-bar {
-  padding: 12px 20px;
+.plugin-settings-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.plugin-settings-sidebar {
+  width: 180px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-dark);
+}
+
+.plugin-settings-search {
+  padding: 12px;
   border-bottom: 1px solid var(--border);
 }
 
-.plugin-settings-search-bar input {
+.plugin-settings-search input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background: var(--bg-dark);
+  background: var(--bg-panel);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 12px;
 }
 
-.plugin-settings-search-bar input:focus {
+.plugin-settings-search input:focus {
   outline: none;
   border-color: var(--accent-active);
+}
+
+.plugin-settings-search input::placeholder {
+  color: var(--text-muted);
+}
+
+.plugin-settings-tags {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.plugin-settings-tag-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 12px;
+  transition: all 0.15s ease;
+  gap: 8px;
+}
+
+.plugin-settings-tag-btn:hover {
+  background: var(--accent);
+  color: var(--text-primary);
+}
+
+.plugin-settings-tag-btn.active {
+  background: var(--accent);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.plugin-settings-tag-btn.tag-new {
+  color: #ff3333;
+}
+
+.plugin-settings-tag-btn.tag-new.active {
+  background: rgba(255, 51, 51, 0.15);
+  color: #ff3333;
+}
+
+.plugin-settings-tag-btn.tag-recommended {
+  color: #66ccff;
+}
+
+.plugin-settings-tag-btn.tag-recommended.active {
+  background: rgba(102, 204, 255, 0.15);
+  color: #66ccff;
+}
+
+.plugin-settings-tag-btn.tag-theme {
+  color: #c084fc;
+}
+
+.plugin-settings-tag-btn.tag-theme.active {
+  background: rgba(192, 132, 252, 0.15);
+  color: #c084fc;
+}
+
+.plugin-settings-tag-btn.tag-debug {
+  color: #4ade80;
+}
+
+.plugin-settings-tag-btn.tag-debug.active {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+}
+
+.plugin-settings-tag-btn.tag-danger {
+  color: #e11d48;
+}
+
+.plugin-settings-tag-btn.tag-danger.active {
+  background: rgba(225, 29, 72, 0.15);
+  color: #e11d48;
+}
+
+.plugin-settings-tag-btn .tag-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plugin-settings-tag-btn .tag-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.plugin-settings-tag-btn .tag-label {
+  flex: 1;
+  text-align: left;
+}
+
+.plugin-settings-tag-btn .tag-count {
+  font-size: 11px;
+  background: var(--bg-panel);
+  padding: 2px 6px;
+  border-radius: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.plugin-settings-tag-btn.active .tag-count {
+  background: var(--bg-dark);
+  color: var(--text-secondary);
+}
+
+.plugin-settings-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .plugin-settings-plugin-list {
   flex: 1;
   overflow-y: auto;
   padding: 8px 0;
+  min-height: 0;
 }
 
 .plugin-settings-plugin-item {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 12px 20px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -110,11 +247,11 @@
 .plugin-settings-plugin-name {
   font-weight: 600;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .plugin-settings-plugin-version {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
   background: var(--accent);
   padding: 2px 6px;
@@ -122,15 +259,68 @@
 }
 
 .plugin-settings-plugin-description {
-  margin: 0 0 4px 0;
-  font-size: 13px;
+  margin: 0 0 6px 0;
+  font-size: 12px;
   color: var(--text-secondary);
   line-height: 1.4;
 }
 
+.plugin-settings-plugin-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .plugin-settings-plugin-author {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
+}
+
+.plugin-settings-plugin-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.plugin-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--text-secondary);
+}
+
+.plugin-tag-icon {
+  width: 10px;
+  height: 10px;
+}
+
+.plugin-tag-new {
+  background: rgba(255, 51, 51, 0.15);
+  color: #ff3333;
+}
+
+.plugin-tag-recommended {
+  background: rgba(102, 204, 255, 0.15);
+  color: #66ccff;
+}
+
+.plugin-tag-theme {
+  background: rgba(192, 132, 252, 0.15);
+  color: #c084fc;
+}
+
+.plugin-tag-debug {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+}
+
+.plugin-tag-danger {
+  background: rgba(225, 29, 72, 0.15);
+  color: #e11d48;
 }
 
 .plugin-settings-plugin-controls {
@@ -141,8 +331,8 @@
 .plugin-settings-switch {
   position: relative;
   display: inline-block;
-  width: 44px;
-  height: 24px;
+  width: 40px;
+  height: 22px;
 }
 
 .plugin-settings-switch input {
@@ -160,14 +350,14 @@
   bottom: 0;
   background-color: var(--accent);
   transition: 0.3s;
-  border-radius: 24px;
+  border-radius: 22px;
 }
 
 .plugin-settings-slider:before {
   position: absolute;
   content: "";
-  height: 18px;
-  width: 18px;
+  height: 16px;
+  width: 16px;
   left: 3px;
   bottom: 3px;
   background-color: var(--text-primary);
@@ -180,7 +370,7 @@
 }
 
 .plugin-settings-switch input:checked + .plugin-settings-slider:before {
-  transform: translateX(20px);
+  transform: translateX(18px);
 }
 
 .plugin-settings-empty-message {
@@ -196,7 +386,7 @@
 
 .plugin-settings-hint {
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 

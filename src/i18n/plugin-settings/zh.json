@@ -4,5 +4,11 @@
   "noPlugins": "没有可用的插件",
   "noResults": "没有找到匹配的插件",
   "author": "作者: {0}",
-  "hint": "插件存放在 src/plugins/plugins/ 目录下"
+  "hint": "插件存放在 src/plugins/plugins/ 目录下",
+  "tagAll": "全部",
+  "tagNew": "最新",
+  "tagRecommended": "推荐",
+  "tagTheme": "主题",
+  "tagDebug": "调试",
+  "tagDanger": "危险"
 }
