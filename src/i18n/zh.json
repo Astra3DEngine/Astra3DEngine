@@ -46,6 +46,8 @@
   "hierarchy.title": "层级",
   "hierarchy.empty": "场景中没有对象。",
   "hierarchy.emptyHint": "点击右上角 + 按钮创建。",
+  "hierarchy.searchPlaceholder": "搜索...",
+  "hierarchy.noResults": "未找到匹配对象",
   "hierarchy.addObject": "添加对象",
   "hierarchy.cube": "立方体",
   "hierarchy.sphere": "球体",

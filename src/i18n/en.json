@@ -46,6 +46,8 @@
   "hierarchy.title": "Hierarchy",
   "hierarchy.empty": "No objects in scene.",
   "hierarchy.emptyHint": "Click + button to create one.",
+  "hierarchy.searchPlaceholder": "Search...",
+  "hierarchy.noResults": "No matching objects found",
   "hierarchy.addObject": "Add Object",
   "hierarchy.cube": "Cube",
   "hierarchy.sphere": "Sphere",

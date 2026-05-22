@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { msg } from '../i18n/index.js';
 import CollapsiblePanel from './CollapsiblePanel.jsx';
 import IconCube from '../icons/cube.svg?react';
@@ -13,6 +13,7 @@ import IconPaste from '../icons/paste.svg?react';
 import IconDuplicate from '../icons/duplicate.svg?react';
 import IconRename from '../icons/rename.svg?react';
 import IconPlus from '../icons/plus.svg?react';
+import IconSearch from '../icons/search.svg?react';
 
 function HierarchyPanel({ 
   objects, 
@@ -40,9 +41,11 @@ function HierarchyPanel({
   const [dropTarget, setDropTarget] = useState(null);
   const [dropPosition, setDropPosition] = useState(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [searchText, setSearchText] = useState('');
   const addMenuRef = useRef(null);
   const contextMenuRef = useRef(null);
   const renameInputRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -316,7 +319,13 @@ function HierarchyPanel({
     );
   };
 
-  const rootObjects = objects.filter(obj => !obj.parentId);
+  const filteredObjects = useMemo(() => {
+    if (!searchText.trim()) return objects;
+    const lowerSearch = searchText.toLowerCase().trim();
+    return objects.filter(obj => obj.name.toLowerCase().includes(lowerSearch));
+  }, [objects, searchText]);
+
+  const isSearching = searchText.trim().length > 0;
 
   const headerRight = (
     <div className="add-menu-container" ref={addMenuRef}>
@@ -364,23 +373,50 @@ function HierarchyPanel({
       onCollapseChange={onCollapseChange}
       headerRight={headerRight}
     >
+      <div className="hierarchy-search">
+        <IconSearch className="hierarchy-search-icon" />
+        <input
+          ref={searchInputRef}
+          type="text"
+          className="hierarchy-search-input"
+          placeholder={msg('hierarchy.searchPlaceholder')}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+        />
+        {searchText && (
+          <button
+            className="hierarchy-search-clear"
+            onClick={() => setSearchText('')}
+          >
+            ×
+          </button>
+        )}
+      </div>
       <div 
         className="panel-content"
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDropOnEmpty}
       >
-        {objects.length === 0 ? (
+        {filteredObjects.length === 0 ? (
           <div style={{
             color: 'var(--text-secondary)',
             textAlign: 'center',
             padding: '20px',
             fontSize: '12px'
           }}>
-            {msg('hierarchy.empty')}<br />
-            <span style={{ opacity: 0.7 }}>{msg('hierarchy.emptyHint')}</span>
+            {objects.length === 0 ? (
+              <>
+                {msg('hierarchy.empty')}<br />
+                <span style={{ opacity: 0.7 }}>{msg('hierarchy.emptyHint')}</span>
+              </>
+            ) : (
+              msg('hierarchy.noResults')
+            )}
           </div>
+        ) : isSearching ? (
+          filteredObjects.map(obj => renderObject(obj))
         ) : (
-          rootObjects.map(obj => renderObject(obj))
+          filteredObjects.filter(obj => !obj.parentId).map(obj => renderObject(obj))
         )}
       </div>
 

@@ -9,6 +9,58 @@
   min-height: 0 !important;
 }
 
+.hierarchy-search {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  gap: 6px;
+}
+
+.hierarchy-search-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.hierarchy-search-input {
+  flex: 1;
+  background-color: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 4px 6px;
+  color: var(--text-primary);
+  font-size: 12px;
+  min-width: 0;
+}
+
+.hierarchy-search-input:focus {
+  outline: none;
+  border-color: var(--accent-active);
+}
+
+.hierarchy-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.hierarchy-search-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 14px;
+  line-height: 1;
+  border-radius: 2px;
+}
+
+.hierarchy-search-clear:hover {
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
+}
+
 .hierarchy-item {
   display: flex;
   align-items: center;
