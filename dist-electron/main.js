@@ -131,7 +131,7 @@ function createGameWindow() {
     height: 360,
     minWidth: 400,
     minHeight: 300,
-    title: "小游戏 - Astra 3D Engine",
+    title: "Astra 3D Engine",
     frame: true,
     resizable: true,
     parent: BrowserWindow.getFocusedWindow(),

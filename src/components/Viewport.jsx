@@ -13,6 +13,16 @@ import IconScale from '../icons/scale.svg?react';
 import IconUniformScale from '../icons/uniform-scale.svg?react';
 import IconChevronDown from '../icons/chevron-down.svg?react';
 
+import IconMouseLeft from '../icons/mouse-left.svg?react';
+import IconMouseRight from '../icons/mouse-right.svg?react';
+import IconKeyShift from '../icons/key-shift.svg?react';
+import IconKeyW from '../icons/key-w.svg?react';
+import IconKeyA from '../icons/key-a.svg?react';
+import IconKeyS from '../icons/key-s.svg?react';
+import IconKeyD from '../icons/key-d.svg?react';
+import IconKeyQ from '../icons/key-q.svg?react';
+import IconKeyE from '../icons/key-e.svg?react';
+
 function Viewport({ 
   objects, 
   assets, 
@@ -55,6 +65,7 @@ function Viewport({
   const orthographicCameraRef = useRef(null);
   const [cameraType, setCameraType] = useState(() => initialCameraType || 'perspective');
   const cameraTypeRef = useRef(initialCameraType || 'perspective');
+  const [isFPSMode, setIsFPSMode] = useState(false);
 
   useEffect(() => {
     cameraTypeRef.current = cameraType;
@@ -125,6 +136,11 @@ function Viewport({
 
     const orbitControls = new OrbitControls(camera, renderer.domElement);
     orbitControls.enableDamping = false;
+    orbitControls.mouseButtons = {
+      LEFT: THREE.MOUSE.ROTATE,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: null
+    };
     orbitControlsRef.current = orbitControls;
 
     const transformControls = new TransformControls(camera, renderer.domElement);
@@ -135,10 +151,160 @@ function Viewport({
     let isTransformDragging = false;
     let hasDragged = false;
     let lastScale = new THREE.Vector3();
+    
+    let isShiftPressed = false;
+    let isRightMouseDown = false;
+    let isLeftMouseDown = false;
+    let isPanning = false;
+    const keysPressed = { w: false, a: false, s: false, d: false, q: false, e: false };
+    const fpsMoveSpeed = 0.1;
+    const fpsLookSpeed = 0.002;
+    const panSpeed = 0.01;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let isPointerLocked = false;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Shift' && !isRightMouseDown) {
+        isShiftPressed = true;
+      }
+      if (isRightMouseDown) {
+        const key = e.key.toLowerCase();
+        if (key in keysPressed) {
+          keysPressed[key] = true;
+        }
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.key === 'Shift') {
+        isShiftPressed = false;
+        if (isPanning) {
+          isPanning = false;
+          isLeftMouseDown = false;
+          orbitControls.enabled = !isTransformDragging;
+          renderer.domElement.style.cursor = 'default';
+        }
+      }
+      const key = e.key.toLowerCase();
+      if (key in keysPressed) {
+        keysPressed[key] = false;
+      }
+    };
+
+    const handleMouseDown = (e) => {
+      if (e.button === 0 && isShiftPressed && !isRightMouseDown) {
+        isLeftMouseDown = true;
+        isPanning = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        orbitControls.enabled = false;
+        renderer.domElement.style.cursor = 'grabbing';
+      }
+      if (e.button === 2) {
+        e.preventDefault();
+        isRightMouseDown = true;
+        setIsFPSMode(true);
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        renderer.domElement.style.cursor = 'none';
+        orbitControls.enabled = false;
+        
+        if (renderer.domElement.requestPointerLock) {
+          renderer.domElement.requestPointerLock();
+        }
+      }
+    };
+
+    const handleMouseUp = (e) => {
+      if (e.button === 0 && isPanning) {
+        isLeftMouseDown = false;
+        isPanning = false;
+        orbitControls.enabled = !isTransformDragging;
+        renderer.domElement.style.cursor = 'default';
+      }
+      if (e.button === 2) {
+        isRightMouseDown = false;
+        setIsFPSMode(false);
+        Object.keys(keysPressed).forEach(k => keysPressed[k] = false);
+        renderer.domElement.style.cursor = 'default';
+        orbitControls.enabled = !isTransformDragging;
+        
+        if (document.exitPointerLock) {
+          document.exitPointerLock();
+        }
+      }
+    };
+
+    const handleMouseMove = (e) => {
+      if (isPanning) {
+        const deltaX = e.clientX - lastMouseX;
+        const deltaY = e.clientY - lastMouseY;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3(0, 1, 0);
+        const forward = new THREE.Vector3();
+        
+        camera.getWorldDirection(forward);
+        right.crossVectors(forward, up).normalize();
+        
+        const panOffset = new THREE.Vector3();
+        panOffset.addScaledVector(right, -deltaX * panSpeed);
+        panOffset.addScaledVector(up, deltaY * panSpeed);
+        
+        camera.position.add(panOffset);
+        orbitControls.target.add(panOffset);
+      }
+      
+      if (isRightMouseDown) {
+        let deltaX, deltaY;
+        
+        if (isPointerLocked) {
+          deltaX = e.movementX || 0;
+          deltaY = e.movementY || 0;
+        } else {
+          deltaX = e.clientX - lastMouseX;
+          deltaY = e.clientY - lastMouseY;
+          lastMouseX = e.clientX;
+          lastMouseY = e.clientY;
+        }
+        
+        const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+        euler.setFromQuaternion(camera.quaternion);
+        euler.y -= deltaX * fpsLookSpeed;
+        euler.x -= deltaY * fpsLookSpeed;
+        euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
+        camera.quaternion.setFromEuler(euler);
+        
+        orbitControls.target.copy(camera.position).add(
+          new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).multiplyScalar(5)
+        );
+      }
+    };
+
+    const handlePointerLockChange = () => {
+      isPointerLocked = document.pointerLockElement === renderer.domElement;
+    };
+
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    renderer.domElement.addEventListener('mousedown', handleMouseDown);
+    renderer.domElement.addEventListener('mouseup', handleMouseUp);
+    renderer.domElement.addEventListener('mousemove', handleMouseMove);
+    renderer.domElement.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('pointerlockchange', handlePointerLockChange);
 
     transformControls.addEventListener('dragging-changed', (event) => {
       isTransformDragging = event.value;
-      orbitControls.enabled = !event.value;
+      if (!isRightMouseDown) {
+        orbitControls.enabled = !event.value;
+      }
       
       if (event.value) {
         hasDragged = true;
@@ -203,6 +369,38 @@ function Viewport({
         }
       }
 
+      if (isRightMouseDown) {
+        const direction = new THREE.Vector3();
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3(0, 1, 0);
+        
+        camera.getWorldDirection(direction);
+        right.crossVectors(direction, up).normalize();
+        
+        if (keysPressed.w) {
+          camera.position.addScaledVector(direction, fpsMoveSpeed);
+        }
+        if (keysPressed.s) {
+          camera.position.addScaledVector(direction, -fpsMoveSpeed);
+        }
+        if (keysPressed.a) {
+          camera.position.addScaledVector(right, -fpsMoveSpeed);
+        }
+        if (keysPressed.d) {
+          camera.position.addScaledVector(right, fpsMoveSpeed);
+        }
+        if (keysPressed.q) {
+          camera.position.y -= fpsMoveSpeed;
+        }
+        if (keysPressed.e) {
+          camera.position.y += fpsMoveSpeed;
+        }
+        
+        orbitControls.target.copy(camera.position).add(
+          new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).multiplyScalar(5)
+        );
+      }
+
       orbitControls.update();
       
       orthographicCamera.position.copy(camera.position);
@@ -261,6 +459,16 @@ function Viewport({
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      renderer.domElement.removeEventListener('mousedown', handleMouseDown);
+      renderer.domElement.removeEventListener('mouseup', handleMouseUp);
+      renderer.domElement.removeEventListener('mousemove', handleMouseMove);
+      renderer.domElement.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('pointerlockchange', handlePointerLockChange);
+      if (document.pointerLockElement === renderer.domElement) {
+        document.exitPointerLock();
+      }
       resizeObserver.disconnect();
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -929,6 +1137,43 @@ function Viewport({
               className="camera-mode-dropdown"
               position="top"
             />
+          </div>
+          <div className="viewport-control-hint">
+            {isFPSMode ? (
+              <>
+                <span className="hint-group">
+                  <IconKeyW className="hint-icon" /><IconKeyA className="hint-icon" /><IconKeyS className="hint-icon" /><IconKeyD className="hint-icon" />
+                  <span className="hint-text">{msg('viewport.hint.move')}</span>
+                </span>
+                <span className="hint-separator">|</span>
+                <span className="hint-group">
+                  <IconKeyQ className="hint-icon" /><IconKeyE className="hint-icon" />
+                  <span className="hint-text">{msg('viewport.hint.updown')}</span>
+                </span>
+                <span className="hint-separator">|</span>
+                <span className="hint-group">
+                  <IconMouseRight className="hint-icon" />
+                  <span className="hint-text">{msg('viewport.hint.look')}</span>
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="hint-group">
+                  <IconMouseLeft className="hint-icon" />
+                  <span className="hint-text">{msg('viewport.hint.rotate')}</span>
+                </span>
+                <span className="hint-separator">|</span>
+                <span className="hint-group">
+                  <IconKeyShift className="hint-icon" /><IconMouseLeft className="hint-icon" />
+                  <span className="hint-text">{msg('viewport.hint.pan')}</span>
+                </span>
+                <span className="hint-separator">|</span>
+                <span className="hint-group">
+                  <IconMouseRight className="hint-icon" />
+                  <span className="hint-text">{msg('viewport.hint.immersive')}</span>
+                </span>
+              </>
+            )}
           </div>
         </div>
       )}
