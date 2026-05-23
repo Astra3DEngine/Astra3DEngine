@@ -82,6 +82,7 @@
   "inspector.face.front": "前面",
   "inspector.face.back": "后面",
   "inspector.noTexture": "无贴图",
+  "inspector.texture": "贴图",
 
   "viewport.perspective": "透视",
   "viewport.orthographic": "正交",

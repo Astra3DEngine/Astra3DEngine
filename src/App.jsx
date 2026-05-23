@@ -248,7 +248,8 @@ function AppContent() {
           bottom: null,
           front: null,
           back: null
-        } : undefined
+        } : undefined,
+        textureId: (type === 'sphere' || type === 'plane') ? null : undefined
       };
       setSceneObjectsWithHistory(prev => [...prev, newObject]);
     }

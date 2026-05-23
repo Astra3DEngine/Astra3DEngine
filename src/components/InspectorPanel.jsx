@@ -39,6 +39,11 @@ function InspectorPanel({
     onUpdateObject(selectedObject.id, { faceTextures: newFaceTextures });
   };
 
+  const handleTextureChange = (textureId) => {
+    if (!selectedObject) return;
+    onUpdateObject(selectedObject.id, { textureId: textureId || null });
+  };
+
   const textureAssets = (assets || []).filter(a => a.assetType === 'texture' && a.texture);
 
   const getPrefab = () => {
@@ -157,6 +162,21 @@ function InspectorPanel({
                   </select>
                 </div>
               ))}
+            </div>
+          )}
+          {(selectedObject.type === 'sphere' || selectedObject.type === 'plane') && (
+            <div className="inspector-row">
+              <label className="inspector-label">{msg('inspector.texture')}</label>
+              <select
+                className="inspector-input inspector-select"
+                value={selectedObject.textureId || ''}
+                onChange={(e) => handleTextureChange(e.target.value ? parseInt(e.target.value) : null)}
+              >
+                <option value="">{msg('inspector.noTexture')}</option>
+                {textureAssets.map(asset => (
+                  <option key={asset.id} value={asset.id}>{asset.name}</option>
+                ))}
+              </select>
             </div>
           )}
         </div>

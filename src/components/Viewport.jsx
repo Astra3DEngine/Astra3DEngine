@@ -943,6 +943,22 @@ function Viewport({
                 mesh.material[index].needsUpdate = true;
               }
             });
+          } else if ((obj.type === 'sphere' || obj.type === 'plane') && mesh.material) {
+            mesh.material.color.setStyle(obj.color || '#4a90d9');
+            
+            if (obj.textureId) {
+              const textureAsset = assetsRef.current.find(a => a.id === obj.textureId);
+              if (textureAsset && textureAsset.texture) {
+                mesh.material.map = textureAsset.texture;
+                mesh.material.needsUpdate = true;
+              } else {
+                mesh.material.map = null;
+                mesh.material.needsUpdate = true;
+              }
+            } else if (mesh.material.map) {
+              mesh.material.map = null;
+              mesh.material.needsUpdate = true;
+            }
           } else if (mesh.material && mesh.material.color) {
             mesh.material.color.setStyle(obj.color || '#4a90d9');
           }
@@ -1010,6 +1026,22 @@ function Viewport({
             }
           });
           material = materials;
+        } else if ((obj.type === 'sphere' || obj.type === 'plane') && obj.textureId) {
+          const textureAsset = assetsRef.current.find(a => a.id === obj.textureId);
+          if (textureAsset && textureAsset.texture) {
+            material = new THREE.MeshStandardMaterial({
+              map: textureAsset.texture,
+              color: obj.color || 0x4a90d9,
+              metalness: 0.3,
+              roughness: 0.7
+            });
+          } else {
+            material = new THREE.MeshStandardMaterial({
+              color: obj.color || 0x4a90d9,
+              metalness: 0.3,
+              roughness: 0.7
+            });
+          }
         } else {
           material = new THREE.MeshStandardMaterial({
             color: obj.color || 0x4a90d9,

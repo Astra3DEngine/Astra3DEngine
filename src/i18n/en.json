@@ -82,6 +82,7 @@
   "inspector.face.front": "Front",
   "inspector.face.back": "Back",
   "inspector.noTexture": "No Texture",
+  "inspector.texture": "Texture",
 
   "viewport.perspective": "Perspective",
   "viewport.orthographic": "Orthographic",
