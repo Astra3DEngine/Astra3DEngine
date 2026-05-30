@@ -1,8 +1,29 @@
+/**
+ * @file components/PreferencesModal.jsx
+ * @description 首选项模态框组件，管理应用偏好设置
+ * @module components/PreferencesModal
+ */
+
 import React, { useState, useEffect } from 'react';
 import { msg, getLocale, languages } from '../i18n/index.js';
 import IconClose from '../icons/close.svg?react';
 import { getAllThemes, subscribe } from '../utils/themeManager.js';
 
+/**
+ * 设置模态框组件
+ * @param {Object} props - 组件属性
+ * @param {boolean} props.isOpen - 是否打开
+ * @param {Function} props.onClose - 关闭回调
+ * @param {string} props.theme - 当前主题
+ * @param {Function} props.onSetTheme - 设置主题回调
+ * @param {Function} props.onToggleLocale - 切换语言回调
+ * @param {Function} props.onSetLocale - 设置语言回调
+ * @param {boolean} props.autoSaveEnabled - 是否启用自动保存
+ * @param {Function} props.onToggleAutoSave - 切换自动保存回调
+ * @param {number} props.maxSnapshots - 最大快照数量
+ * @param {Function} props.onSetMaxSnapshots - 设置最大快照数量回调
+ * @returns {JSX.Element|null} 设置模态框组件
+ */
 function PreferencesModal({ 
   isOpen, 
   onClose, 

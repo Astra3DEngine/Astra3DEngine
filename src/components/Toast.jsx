@@ -1,6 +1,27 @@
+/**
+ * @file components/Toast.jsx
+ * @description Toast 通知组件，显示临时提示消息
+ * @module components/Toast
+ * 
+ * - 显示成功、错误、警告、信息类型的通知
+ * - 自动倒计时进度条
+ * - 支持手动关闭
+ * - 以及多个 Toast
+ */
+
 import React, { useState, useEffect } from 'react';
 import IconClose from '../icons/close.svg?react';
 
+/**
+ * Toast 通知组件
+ * @param {Object} props - 组件属性
+ * @param {number} props.id - Toast ID
+ * @param {string} props.message - 消息内容
+ * @param {string} props.type - 类型（success/error/warning/info）
+ * @param {number} props.duration - 显示时长（毫秒）
+ * @param {Function} props.onClose - 关闭回调
+ * @returns {JSX.Element} Toast 组件
+ */
 function Toast({ id, message, type = 'info', duration = 3000, onClose }) {
   const [progress, setProgress] = useState(100);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -44,6 +65,13 @@ function Toast({ id, message, type = 'info', duration = 3000, onClose }) {
   );
 }
 
+/**
+ * Toast 容器组件
+ * @param {Object} props - 组件属性
+ * @param {Array} props.toasts - Toast 列表
+ * @param {Function} props.onClose - 关闭回调
+ * @returns {JSX.Element} Toast 容器组件
+ */
 export function ToastContainer({ toasts, onClose }) {
   return (
     <div className="toast-container">

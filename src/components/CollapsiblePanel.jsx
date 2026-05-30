@@ -1,7 +1,29 @@
+/**
+ * @file components/CollapsiblePanel.jsx
+ * @description 可折叠面板组件，用于创建可展开/折叠的面板容器
+ * @module components/CollapsiblePanel
+ * 
+ * 你不觉得折叠的面板很几把酷炫吗？
+ * 反正扣式咯这辈子都学不会这个面板设计😋
+ */
+
 import React, { useState, useCallback } from 'react';
 import IconChevronDown from '../icons/chevron-down.svg?react';
 import IconChevronRight from '../icons/chevron-right.svg?react';
 
+/**
+ * 可折叠面板组件
+ * @param {Object} props - 组件属性
+ * @param {string} props.title - 面板标题
+ * @param {React.ReactNode} props.children - 面板内容
+ * @param {string} props.className - 自定义类名
+ * @param {boolean} props.defaultCollapsed - 默认折叠状态
+ * @param {React.ReactNode} props.headerRight - 标题栏右侧内容
+ * @param {string} props.storageKey - localStorage 键名（用于持久化折叠状态）
+ * @param {boolean} props.vertical - 是否垂直折叠
+ * @param {Function} props.onCollapseChange - 折叠状态变化回调
+ * @returns {JSX.Element} 可折叠面板组件
+ */
 function CollapsiblePanel({ 
   title, 
   children, 

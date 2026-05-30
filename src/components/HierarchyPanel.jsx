@@ -1,3 +1,9 @@
+/**
+ * @file components/HierarchyPanel.jsx
+ * @description 层级面板组件，显示和管理场景对象的层级结构
+ * @module components/HierarchyPanel
+ */
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { msg } from '../i18n/index.js';
 import CollapsiblePanel from './CollapsiblePanel.jsx';
@@ -16,6 +22,28 @@ import IconPlus from '../icons/plus.svg?react';
 import IconSearch from '../icons/search.svg?react';
 import IconChevronCollapsed from '../icons/chevron-collapsed.svg?react';
 
+/**
+ * 层级面板组件
+ * @param {Object} props - 组件属性
+ * @param {Array} props.objects - 场景对象列表
+ * @param {Object} props.selectedObject - 当前选中的对象
+ * @param {Array} props.selectedObjects - 多选对象列表
+ * @param {Function} props.onSelectObject - 选择对象回调
+ * @param {Function} props.onAddObject - 添加对象回调
+ * @param {Function} props.onDeleteObject - 删除对象回调
+ * @param {Function} props.onDeleteSelectedObjects - 删除选中对象回调
+ * @param {Function} props.onCreatePrefab - 创建预制件回调
+ * @param {Array} props.prefabs - 预制件列表
+ * @param {Function} props.onCopyObject - 复制对象回调
+ * @param {Function} props.onPasteObject - 粘贴对象回调
+ * @param {Function} props.onDuplicateObject - 复制对象回调
+ * @param {Function} props.onRenameObject - 重命名对象回调
+ * @param {Object} props.clipboard - 剪贴板内容
+ * @param {boolean} props.vertical - 是否垂直布局
+ * @param {Function} props.onCollapseChange - 折叠状态变化回调
+ * @param {Function} props.onReorderObjects - 重排序对象回调
+ * @returns {JSX.Element} 层级面板组件
+ */
 function HierarchyPanel({ 
   objects, 
   selectedObject, 
@@ -210,6 +238,18 @@ function HierarchyPanel({
     return <IconCube className="hierarchy-icon" />;
   };
 
+  /**
+   * 递归获取所有后代对象的 ID
+   * 
+   * 这个函数非常重要，用于防止循环父子关系，自己的儿子不能是自己的父亲。
+   * 傻逼。
+   * 
+   * 这个递归实现有点暴力，每次拖拽都要重新计算，但考虑到场景对象数量通常不多，
+   * 能跑就行，不肉，能跑就行。
+   * 
+   * @param {number} objId - 对象 ID
+   * @returns {Set<number>} 所有后代对象的 ID 集合
+   */
   const getAllDescendantIds = (objId) => {
     const descendants = new Set();
     const findDescendants = (id) => {
@@ -239,6 +279,19 @@ function HierarchyPanel({
     setDropPosition(null);
   };
 
+  /**
+   * 拖拽悬停事件处理
+   * 
+   * 这里实现了三种拖拽放置位置的判断：上方 1/3 是 before（插入到目标前面），
+   * 中间 1/3 是 inside（成为目标的子对象），下方 1/3 是 after（插入到目标后面）。
+   * 
+   * 用 1/3 分割而不是 1/2，是因为 "inside" 操作更重要，需要更大的触发区域，
+   * 用户创建父子关系的意图通常比排序更常见，这样设计可以让拖拽体验更流畅。
+   * 
+   * 关键检查：不能拖到自己身上（废话），不能拖到自己的后代身上。
+   * 
+   * HTML5 拖拽 API 看起来像个傻逼一样，dataTransfer.dropEffect 在不同浏览器表现不一致。
+   */
   const handleDragOver = (e, obj) => {
     e.preventDefault();
     

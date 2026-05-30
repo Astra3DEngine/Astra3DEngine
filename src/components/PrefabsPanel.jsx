@@ -9,6 +9,21 @@ import IconPrefab from '../icons/prefab.svg?react';
 import IconPlus from '../icons/plus.svg?react';
 import IconDelete from '../icons/delete.svg?react';
 
+/**
+ * 预制件面板组件
+ * 很多东西直接抄层级面板就可以了。
+ * 
+ * @param {Object} props - 组件属性
+ * @param {Array} props.prefabs - 预制件列表
+ * @param {Array} props.sceneObjects - 场景对象列表
+ * @param {Object} props.selectedPrefab - 当前选中的预制件
+ * @param {Function} props.onSelectPrefab - 选择预制件回调
+ * @param {Function} props.onInstantiatePrefab - 实例化预制件回调
+ * @param {Function} props.onDeletePrefab - 删除预制件回调
+ * @param {boolean} props.vertical - 是否垂直布局
+ * @param {Function} props.onCollapseChange - 折叠状态变化回调
+ * @returns {JSX.Element} 预制件面板组件
+ */
 function PrefabsPanel({ 
   prefabs, 
   sceneObjects,

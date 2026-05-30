@@ -1,3 +1,17 @@
+/**
+ * @file App.jsx
+ * @description Astra 3D Engine 主应用组件，整合所有编辑器功能模块
+ * @module App
+ * 
+ * 主要职责：
+ * - 状态管理：场景对象、资源、预制件、选择状态、主题、语言等
+ * - 文件操作：项目保存、加载、新建、导出/导入
+ * - 对象操作：添加、删除、更新、复制、粘贴、重命名
+ * - 预制件系统：创建、实例化、更新、断开连接
+ * - 快捷键处理：保存、撤销、重做、工具切换
+ * - 插件系统初始化
+ */
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -21,6 +35,11 @@ import { initPlugins, getPluginManager, setPluginLocale } from './plugins';
 import createPluginApi from './plugins/api.js';
 import { applyTheme } from './utils/themeManager.js';
 
+/**
+ * 应用核心内容组件
+ * @description 包含所有编辑器状态和功能的实际实现
+ * @returns {JSX.Element} 编辑器界面
+ */
 function AppContent() {
   const dialog = useDialog();
   const toast = useToast();
@@ -170,6 +189,18 @@ function AppContent() {
     initPluginSystem();
   }, []);
 
+  /**
+   * 对象选择处理
+   * 
+   * 这里实现了多选逻辑，支持 Ctrl+点击切换选中状态。如果对象已选中就取消选中，
+   * 如果对象未选中就添加到选中列表。这简直是天才般的逻辑。
+   * 
+   * 取消选中后，需要更新 selectedObject（单选状态），用 setTimeout 延迟更新，
+   * 避免 React 批量更新冲突，于是就 setSelectedObjects 和 setSelectedObject 在同一个函数里调用，
+   * WTF，批量处理的时候还可能导致 selectedObject 更新不及时。看来只能 setTimeout 0 强制在下一个事件循环更新。
+   * 
+   * 更好的方案是使用 useReducer 统一管理选中状态，但现在的更简单直观，毕竟秉持着能跑就行。
+   */
   const handleObjectSelect = useCallback((object, isMultiSelect = false) => {
     if (!object) return;
     if (isMultiSelect) {
@@ -231,6 +262,20 @@ function AppContent() {
 
   const textureLoaderRef = useRef(new THREE.TextureLoader());
 
+  /**
+   * 导入资源处理
+   * 
+   * 这里处理文件导入，支持两种类型。模型文件（GLTF/GLB）使用 GLTFLoader 加载，
+   * 计算模型边界盒和中心点。GLTF 加载是异步的，要用回调处理。
+   * 
+   * 图片文件（PNG/JPG/WebP 等）使用 TextureLoader 加载，设置正确的 colorSpace（SRGBColorSpace），
+   * 不设置 colorSpace 会导致颜色偏暗。
+   * 
+   * 使用 URL.createObjectURL 创建临时 URL，删除资源时要 URL.revokeObjectURL 释放内存，
+   * 不然内存泄漏了直接老冯飞天。
+   * 
+   * 文件类型判断很暴力：直接看扩展名。更好的方案是检查文件 MIME 类型，但浏览器是傻逼。
+   */
   const handleImportAsset = useCallback((file) => {
     const fileExt = file.name.split('.').pop().toLowerCase();
     const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'];
@@ -718,37 +763,6 @@ function AppContent() {
       scheduleSave();
     }
   }, [sceneObjects, prefabs, assets, autoSaveEnabled, scheduleSave]);
-
-  const snapshotsLoadedRef = useRef(false);
-
-  useEffect(() => {
-    if (snapshotsLoadedRef.current) return;
-    snapshotsLoadedRef.current = true;
-
-    const loadSavedSnapshots = async () => {
-      const snapshots = await loadSnapshots();
-      if (snapshots.length > 0) {
-        const latestSnapshot = snapshots[0];
-        const snapshotList = snapshots.slice(0, 5).map((snap, i) => 
-          `${snap.name} (${new Date(snap.savedAt).toLocaleString()})`
-        ).join('\n');
-        
-        const shouldRestore = await dialog.confirm(
-          snapshotList,
-          `发现 ${snapshots.length} 个快照，是否恢复？`,
-          { confirmText: msg('snapshots.restore'), cancelText: msg('dialog.cancel') }
-        );
-        if (shouldRestore) {
-          const snapshotData = latestSnapshot.data;
-          resetHistory(snapshotData.scene?.objects || []);
-          setPrefabs(snapshotData.prefabs || []);
-          setProjectFileName(snapshotData.name || null);
-          console.log('Restored snapshot:', latestSnapshot.name);
-        }
-      }
-    };
-    loadSavedSnapshots();
-  }, [loadSnapshots, resetHistory, dialog]);
 
   const writeToFile = async (handle, data) => {
     try {

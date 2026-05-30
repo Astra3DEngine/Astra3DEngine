@@ -1,3 +1,10 @@
+/**
+ * @file i18n/index.js
+ * @description 国际化（i18n）系统核心模块，提供多语言支持和语言切换功能
+ * @module i18n
+ * 兄弟兄弟~
+ */
+
 import en from './en.json';
 import zh from './zh.json';
 import ja from './ja.json';
@@ -7,6 +14,12 @@ import la from './la.json';
 import pluginSettingsEn from './plugin-settings/en.json';
 import pluginSettingsZh from './plugin-settings/zh.json';
 
+/**
+ * 合并基础翻译和插件设置翻译
+ * @param {Object} base - 基础翻译对象
+ * @param {Object} pluginSettings - 插件设置翻译对象
+ * @returns {Object} 合合后的翻译对象
+ */
 function mergeMessages(base, pluginSettings) {
   const merged = { ...base };
   Object.entries(pluginSettings).forEach(([key, value]) => {
@@ -33,6 +46,10 @@ export const languages = [
 
 const STORAGE_KEY = 'astra-locale';
 
+/**
+ * 从 localStorage 加载保存的语言设置，若未保存则根据浏览器语言自动选择
+ * @returns {string} 语言代码（如 'zh', 'en'）
+ */
 function loadLocaleFromStorage() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved && messages[saved]) {
@@ -49,11 +66,20 @@ function loadLocaleFromStorage() {
 let currentLocale = loadLocaleFromStorage();
 const localeListeners = new Set();
 
+/**
+ * 订阅语言变化事件
+ * @param {Function} callback - 语言变化时的回调函数
+ * @returns {Function} 取消订阅的函数
+ */
 export function subscribeLocale(callback) {
   localeListeners.add(callback);
   return () => localeListeners.delete(callback);
 }
 
+/**
+ * 设置当前语言
+ * @param {string} locale - 语言代码（如 'zh', 'en'）
+ */
 export function setLocale(locale) {
   if (messages[locale] && locale !== currentLocale) {
     currentLocale = locale;
@@ -62,10 +88,20 @@ export function setLocale(locale) {
   }
 }
 
+/**
+ * 获取当前语言代码
+ * @returns {string} 当前语言代码
+ */
 export function getLocale() {
   return currentLocale;
 }
 
+/**
+ * 获取翻译文本，支持参数替换
+ * @param {string} key - 翻译键
+ * @param {Object} params - 替换参数对象（如 { count: 5 }）
+ * @returns {string} 翻译后的文本
+ */
 export function msg(key, params = {}) {
   const locale = currentLocale;
   let text = messages[locale]?.[key] || messages['en']?.[key] || key;
@@ -77,6 +113,9 @@ export function msg(key, params = {}) {
   return text;
 }
 
+/**
+ * 循环切换到下一个语言
+ */
 export function toggleLocale() {
   const langCodes = Object.keys(messages);
   const currentIndex = langCodes.indexOf(currentLocale);

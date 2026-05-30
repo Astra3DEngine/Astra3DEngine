@@ -1,9 +1,30 @@
+/**
+ * @file components/InspectorPanel.jsx
+ * @description 属性面板组件，显示和编辑选中对象的属性
+ * @module components/InspectorPanel
+ */
+
 import React from 'react';
 import { msg } from '../i18n/index.js';
 import CollapsiblePanel from './CollapsiblePanel.jsx';
 import IconPrefabInstance from '../icons/prefab-instance.svg?react';
 import IconDelete from '../icons/delete.svg?react';
 
+/**
+ * 属性面板组件
+ * @param {Object} props - 组件属性
+ * @param {Object} props.selectedObject - 当前选中的对象
+ * @param {Function} props.onUpdateObject - 更新对象属性回调
+ * @param {Function} props.onDeleteObject - 删除对象回调
+ * @param {Array} props.prefabs - 预制件列表
+ * @param {Function} props.onDisconnectPrefab - 断开预制件连接回调
+ * @param {Function} props.onApplyToPrefab - 应用到预制件回调
+ * @param {boolean} props.vertical - 是否垂直布局
+ * @param {Function} props.onCollapseChange - 折叠状态变化回调
+ * @param {Array} props.assets - 资源列表
+ * @param {Array} props.objects - 场景对象列表
+ * @returns {JSX.Element} 属性面板组件
+ */
 function InspectorPanel({ 
   selectedObject, 
   onUpdateObject, 

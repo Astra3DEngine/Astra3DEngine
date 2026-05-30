@@ -1,5 +1,24 @@
+/**
+ * @file components/DropdownMenu.jsx
+ * @description 下拉菜单组件，支持子菜单和快捷键显示
+ * @module components/DropdownMenu
+ * 
+ * 我喜欢这个！
+ */
+
 import React, { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 
+/**
+ * 下拉菜单组件
+ * @param {Object} props - 组件属性
+ * @param {string} props.label - 菜单按钮标签
+ * @param {Array} props.items - 菜单项列表
+ * @param {string} props.className - 自定义类名
+ * @param {string|Object} props.roundedCorners - 圆角配置
+ * @param {string} props.position - 菜单位置（top/bottom）
+ * @param {Object} ref - 组件引用，提供 open/close/toggle 方法
+ * @returns {JSX.Element} 下拉菜单组件
+ */
 const DropdownMenu = forwardRef(function DropdownMenu({ label, items, className = '', roundedCorners = 'all', position = 'bottom' }, ref) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState(null);

@@ -18,6 +18,13 @@ const TAGS = [
   { id: 'danger', labelKey: 'tagDanger', Icon: IconTagDanger }
 ];
 
+/**
+ * 插件设置模态框组件，诶为什么你这么宽，诶不是你怎么这么高，我去你怎么到屏幕外面去了。
+ * @param {Object} props - 组件属性
+ * @param {boolean} props.isOpen - 是否打开
+ * @param {Function} props.onClose - 关闭回调
+ * @returns {JSX.Element|null} 插件设置模态框组件
+ */
 const PluginSettingsModal = ({ isOpen, onClose }) => {
   const [plugins, setPlugins] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,6 +54,7 @@ const PluginSettingsModal = ({ isOpen, onClose }) => {
     setPlugins(pluginManager.getPlugins());
   };
 
+  // 你看看，直接就可以获取插件元数据，爽炸了
   const getPluginName = (plugin) => {
     const l10nName = pluginMsg(plugin.id, 'name');
     return l10nName !== 'name' ? l10nName : plugin.manifest.name;

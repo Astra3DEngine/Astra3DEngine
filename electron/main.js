@@ -1,4 +1,11 @@
-import { app, BrowserWindow, ipcMain, shell, Tray, Menu, dialog, nativeImage } from 'electron';
+/**
+ * 依旧神秘 Electron ，看我可不可以驾驭一下。
+ * @file electron/main.js
+ * @description Electron 主进程入口，负责创建应用窗口、处理 IPC 通信和系统对话框
+ * @module electron/main
+ */
+
+import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -7,8 +14,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
 
 let mainWindow = null;
-let tray = null;
 
+/**
+ * 创建主应用窗口
+ * @description 创建无边框的主编辑器窗口，配置 Web 安全策略和预加载脚本
+ */
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -71,82 +81,9 @@ function createWindow() {
     mainWindow?.webContents.send('window:unmaximized');
   });
 
-  mainWindow.on('close', (event) => {
-    event.preventDefault();
-    mainWindow?.webContents.send('window:before-close');
-  });
-
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
-
-  setupApplicationMenu();
-}
-
-function createTray() {
-  const iconPath = path.join(__dirname, 'icon.png');
-  let trayIcon;
-  
-  try {
-    trayIcon = nativeImage.createFromPath(iconPath);
-    if (trayIcon.isEmpty()) {
-      trayIcon = nativeImage.createEmpty();
-    }
-  } catch {
-    trayIcon = nativeImage.createEmpty();
-  }
-
-  tray = new Tray(trayIcon);
-  
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: '显示主窗口',
-      click: () => {
-        if (mainWindow) {
-          mainWindow.show();
-          mainWindow.focus();
-        }
-      }
-    },
-    {
-      label: '新建项目',
-      click: () => {
-        if (mainWindow) {
-          mainWindow.show();
-          mainWindow.focus();
-          mainWindow.webContents.send('menu:new-project');
-        }
-      }
-    },
-    { type: 'separator' },
-    {
-      label: '打开开发者工具',
-      click: () => {
-        mainWindow?.webContents.openDevTools();
-      }
-    },
-    { type: 'separator' },
-    {
-      label: '退出',
-      click: () => {
-        app.exit(0);
-      }
-    }
-  ]);
-
-  tray.setToolTip('Astra 3D Engine');
-  tray.setContextMenu(contextMenu);
-
-  tray.on('double-click', () => {
-    if (mainWindow) {
-      mainWindow.show();
-      mainWindow.focus();
-    }
-  });
-}
-
-function setupApplicationMenu() {
-  Menu.setApplicationMenu(null);
 }
 
 function createGameWindow() {
@@ -195,7 +132,6 @@ ipcMain.handle('dialog:showMessage', async (event, options) => {
 
 app.whenReady().then(() => {
   createWindow();
-  createTray();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -205,18 +141,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  if (tray) {
-    tray.destroy();
-    tray = null;
-  }
   if (process.platform !== 'darwin') {
     app.quit();
-  }
-});
-
-app.on('before-quit', () => {
-  if (tray) {
-    tray.destroy();
-    tray = null;
   }
 });

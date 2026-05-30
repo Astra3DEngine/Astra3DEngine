@@ -1,3 +1,33 @@
+/**
+ * @file plugins/api.js
+ * @description 插件 API 创建函数，为插件提供访问编辑器核心功能的接口
+ * @module plugins/api
+ * 
+ * 现在，即刻创建插件！
+ */
+
+/**
+ * 创建插件 API
+ * @param {Object} options - API 配置选项
+ * @param {Array} options.sceneObjects - 场景对象列表
+ * @param {Function} options.setSceneObjects - 设置场景对象函数
+ * @param {number} options.selectedObjectId - 选中的对象 ID
+ * @param {Function} options.setSelectedObjectId - 设置选中对象函数
+ * @param {Array} options.assets - 资源列表
+ * @param {Function} options.setAssets - 设置资源函数
+ * @param {Array} options.prefabs - 预制件列表
+ * @param {Function} options.setPrefabs - 设置预制件函数
+ * @param {string} options.theme - 当前主题
+ * @param {Function} options.setTheme - 设置主题函数
+ * @param {string} options.locale - 当前语言
+ * @param {Function} options.setLocale - 设置语言函数
+ * @param {Function} options.showNotification - 显示通知函数
+ * @param {Object} options.viewportRef - 视口引用
+ * @param {Object} options.sceneRef - 场景引用
+ * @param {Object} options.cameraRef - 相机引用
+ * @param {Object} options.rendererRef - 渲染器引用
+ * @returns {Object} 插件 API 对象
+ */
 const createPluginApi = ({
   sceneObjects,
   setSceneObjects,
@@ -18,6 +48,9 @@ const createPluginApi = ({
   rendererRef,
 }) => {
   return {
+    /**
+     * 场景操作 API
+     */
     scene: {
       getObjects: () => sceneObjects,
       setObjects: setSceneObjects,
@@ -43,6 +76,9 @@ const createPluginApi = ({
       },
     },
     
+    /**
+     * 资源管理 API
+     */
     assets: {
       getAll: () => assets,
       setAll: setAssets,
@@ -60,6 +96,9 @@ const createPluginApi = ({
       },
     },
     
+    /**
+     * 预制件管理 API
+     */
     prefabs: {
       getAll: () => prefabs,
       setAll: setPrefabs,
@@ -77,6 +116,9 @@ const createPluginApi = ({
       },
     },
     
+    /**
+     * UI 操作 API
+     */
     ui: {
       getTheme: () => theme,
       setTheme: setTheme,
@@ -85,6 +127,9 @@ const createPluginApi = ({
       showNotification,
     },
     
+    /**
+     * 视口操作 API
+     */
     viewport: {
       getRef: () => viewportRef,
       getScene: () => sceneRef?.current,
@@ -92,6 +137,9 @@ const createPluginApi = ({
       getRenderer: () => rendererRef?.current,
     },
     
+    /**
+     * 工具函数 API
+     */
     utils: {
       generateId: () => Date.now() + Math.random(),
       
@@ -120,3 +168,5 @@ const createPluginApi = ({
 };
 
 export default createPluginApi;
+
+// 还有个有关主题的 API 不在这。

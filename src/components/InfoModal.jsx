@@ -1,3 +1,9 @@
+/**
+ * @file components/InfoModal.jsx
+ * @description 信息模态框组件，显示隐私政策、更新检查和关于信息
+ * @module components/InfoModal
+ */
+
 import React, { useState, useEffect } from 'react';
 import { msg } from '../i18n/index.js';
 import IconClose from '../icons/close.svg?react';
@@ -5,6 +11,14 @@ import IconClose from '../icons/close.svg?react';
 const CURRENT_VERSION = '0.1.0';
 const GITHUB_REPO = 'LanwyWriteXU/Astra3DEngine';
 
+/**
+ * 信息模态框组件
+ * @param {Object} props - 组件属性
+ * @param {boolean} props.isOpen - 是否打开
+ * @param {Function} props.onClose - 关闭回调
+ * @param {string} props.type - 类型（privacy/update/about）
+ * @returns {JSX.Element|null} 信息模态框组件
+ */
 function InfoModal({ isOpen, onClose, type }) {
   const [updateState, setUpdateState] = useState('idle');
   const [latestVersion, setLatestVersion] = useState(null);

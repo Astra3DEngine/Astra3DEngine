@@ -1,3 +1,11 @@
+/**
+ * @file components/MultiViewport.jsx
+ * @description 多视口布局组件，支持单视图和四视图切换
+ * @module components/MultiViewport
+ * 
+ * 复杂，复杂就是爽。
+ */
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Viewport from './Viewport.jsx';
 import { msg } from '../i18n/index.js';
@@ -31,6 +39,22 @@ const VIEW_CONFIGS = {
   }
 };
 
+/**
+ * 多视口布局组件
+ * @param {Object} props - 组件属性
+ * @param {Array} props.objects - 场景对象列表
+ * @param {Array} props.assets - 资源列表
+ * @param {Object} props.selectedObject - 当前选中的对象
+ * @param {Array} props.selectedObjects - 多选对象列表
+ * @param {Function} props.onSelectObject - 选择对象回调
+ * @param {string} props.currentTool - 当前工具
+ * @param {Function} props.onToolChange - 工具切换回调
+ * @param {boolean} props.isPlaying - 是否处于播放模式
+ * @param {Function} props.onUpdateObject - 更新对象回调
+ * @param {Function} props.onRecordHistory - 记录历史回调
+ * @param {string} props.theme - 主题
+ * @returns {JSX.Element} 多视口组件
+ */
 function MultiViewport({
   objects,
   assets,

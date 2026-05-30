@@ -1,3 +1,17 @@
+/**
+ * @file components/Viewport.jsx
+ * @description 3D 视口组件，负责渲染场景、处理用户交互和变换控制
+ * @module components/Viewport
+ * 
+ * 主要职责：
+ * - Three.js 场景初始化和管理
+ * - 相机控制（轨道控制、FPS 模式）
+ * - 变换控制（移动、旋转、缩放）
+ * - 对象选择和拾取
+ * - 多选和批量变换
+ * - 视口工具栏和视图立方体
+ */
+
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -23,6 +37,30 @@ import IconKeyD from '../icons/key-d.svg?react';
 import IconKeyQ from '../icons/key-q.svg?react';
 import IconKeyE from '../icons/key-e.svg?react';
 
+/**
+ * 3D 视口组件
+ * @param {Object} props - 组件属性
+ * @param {Array} props.objects - 场景对象列表
+ * @param {Array} props.assets - 资源列表
+ * @param {Object} props.selectedObject - 当前选中的对象
+ * @param {Array} props.selectedObjects - 多选对象列表
+ * @param {Function} props.onSelectObject - 选择对象回调
+ * @param {string} props.currentTool - 当前工具（select/translate/rotate/scale）
+ * @param {Function} props.onToolChange - 工具切换回调
+ * @param {boolean} props.isPlaying - 是否处于播放模式
+ * @param {Function} props.onUpdateObject - 更新对象回调
+ * @param {Function} props.onRecordHistory - 记录历史回调
+ * @param {string} props.theme - 主题（dark/light）
+ * @param {string} props.initialCameraType - 初始相机类型（perspective/orthographic）
+ * @param {Array} props.initialCameraPosition - 初始相机位置
+ * @param {Array} props.initialCameraLookAt - 初始相机看向点
+ * @param {boolean} props.showToolbar - 是否显示工具栏
+ * @param {boolean} props.showDock - 是否显示停靠栏
+ * @param {boolean} props.showViewCube - 是否显示视图立方体
+ * @param {string} props.viewLabel - 视图标签
+ * @param {Function} props.onCameraTypeChange - 相机类型变化回调
+ * @returns {JSX.Element} 视口组件
+ */
 function Viewport({ 
   objects, 
   assets, 
@@ -256,6 +294,20 @@ function Viewport({
       }
     };
 
+    /**
+     * 鼠标移动事件处理
+     * 
+     * 这里实现了两种特殊的相机控制模式。Shift + 左键拖拽是平移模式，
+     * 计算相机右方向和上方向，根据鼠标移动量平移相机和轨道控制目标点。
+     * OrbitControls 默认不支持左键平移，搞半天还得自己做。
+     * 
+     * 右键按住是超级控制模式，使用 Pointer Lock API 锁定鼠标，
+     * WASDQE 控制移动，鼠标控制视角。这个模式灵感来自游戏引擎，适合快速浏览场景。
+     * 
+     * 技术细节：使用 YXZ 顺序的欧拉角避免万向节锁（虽然看起来没有卵用），
+     * 限制 X 轴旋转范围防止相机翻转，
+     * 同步更新 orbitControls.target 保持一致性。
+     */
     const handleMouseMove = (e) => {
       if (isPanning) {
         const deltaX = e.clientX - lastMouseX;
@@ -320,6 +372,18 @@ function Viewport({
     renderer.domElement.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('pointerlockchange', handlePointerLockChange);
 
+    /**
+     * 递归获取所有后代对象
+     * 
+     * 这里的递归逻辑看起来很简单，但实际上处理的是一棵可能很深的树。
+     * 每次拖拽变换时都要重新计算，如果层级很深可能会有性能问题。
+     * 可是关我卵事，你自己塞这么多层。
+     * 
+     * 反正我也不会优化。
+     * 
+     * @param {number} parentId - 父对象 ID
+     * @returns {Array} 所有后代对象列表
+     */
     const getAllDescendants = (parentId) => {
       const descendants = [];
       const children = objectsRef.current.filter(o => o.parentId === parentId);
@@ -330,6 +394,17 @@ function Viewport({
       return descendants;
     };
 
+    /**
+     * 变换控制拖拽事件处理
+     * 
+     * 这是最复杂的部分！多选变换需要记录初始变换状态，
+     * 计算所有选中对象的中心点作为变换轴心，应用变换时同步更新所有对象，
+     * 还要考虑后代对象的跟随变换，好神经啊。
+     * 
+     * 说真的，这个逻辑写得乱的很，主要是因为 Three.js 的 TransformControls 不直接支持多选，
+     * 我们用一个隐藏的 pivot 对象作为变换轴心，变换时要手动计算每个对象的相对变换。
+     * 如果 Three.js 官方支持多选变换，那我就舒服了，可惜啥也没有。
+     */
     transformControls.addEventListener('dragging-changed', (event) => {
       isTransformDragging = event.value;
       if (!isRightMouseDown) {
@@ -498,6 +573,17 @@ function Viewport({
       }
     });
 
+    /**
+     * 变换控制实时更新事件
+     * 
+     * 这里处理的是拖拽过程中的实时变换同步。移动模式直接应用位移增量到所有对象，
+     * 旋转模式使用四元数计算旋转增量，围绕中心点旋转，缩放模式计算缩放比例，
+     * 从中心点向外缩放。
+     * 
+     * 缩放逻辑最复杂，马勒戈壁的得考虑对象相对于中心点的偏移，偏移也要随缩放比例变化，
+     * 还要区分等比缩放和自由缩放。缩放代码写得有点丑，但能跑就行，但是感觉过几天就跑不起来了。
+     * 我要让扣式咯给我改。
+     */
     transformControls.addEventListener('change', () => {
       if (!isTransformDragging) return;
       
@@ -628,6 +714,7 @@ function Viewport({
               pos.applyQuaternion(deltaQuat);
               pos.add(initial.center);
               descMesh.position.copy(pos);
+              // 这我不炸了？
               
               const descInitialQuat = new THREE.Quaternion().setFromEuler(descInitial.rotation);
               const newQuat = deltaQuat.clone().multiply(descInitialQuat);
@@ -858,6 +945,7 @@ function Viewport({
     directionalLight.position.set(1, 1, 1);
     viewCubeScene.add(directionalLight);
     
+    // 兄弟兄弟，手搓定向球，是不是很几把牛逼
     const createTruncatedCube = () => {
       const scale = 0.7;
       const t = 1/3;

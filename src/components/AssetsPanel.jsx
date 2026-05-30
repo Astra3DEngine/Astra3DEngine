@@ -9,6 +9,19 @@ import IconDelete from '../icons/delete.svg?react';
 import IconRename from '../icons/rename.svg?react';
 import IconPlus from '../icons/plus.svg?react';
 
+/**
+ * 资源面板组件
+ * 永远不要忘了我这东西有多屌。
+ * 
+ * @param {Object} props - 组件属性
+ * @param {Array} props.assets - 资源列表
+ * @param {Function} props.onImport - 导入资源回调
+ * @param {Function} props.onSelectAsset - 选择资源回调
+ * @param {Object} props.selectedAsset - 当前选中的资源
+ * @param {Function} props.onDeleteAsset - 删除资源回调
+ * @param {Function} props.onRenameAsset - 重命名资源回调
+ * @returns {JSX.Element} 资源面板组件
+ */
 function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteAsset, onRenameAsset }) {
   const fileInputRef = useRef(null);
   const contextMenuRef = useRef(null);

@@ -1,9 +1,29 @@
+/**
+ * @file components/SnapshotsModal.jsx
+ * @description 快照管理模态框组件，显示和管理自动保存的快照
+ * @module components/SnapshotsModal
+ * 
+ * 快照功能模仿 TurboWarp ，我觉得很有必要的东西。
+ */
+
 import React, { useState, useEffect } from 'react';
 import { msg } from '../i18n/index.js';
 import { useDialog } from '../hooks/useDialog.jsx';
 import IconClose from '../icons/close.svg?react';
 import IconDelete from '../icons/delete.svg?react';
 
+/**
+ * 快照管理模态框组件
+ * @param {Object} props - 组件属性
+ * @param {boolean} props.isOpen - 是否打开
+ * @param {Function} props.onClose - 关闭回调
+ * @param {Function} props.onLoadSnapshots - 加载快照列表回调
+ * @param {Function} props.onLoadSnapshot - 加载单个快照回调
+ * @param {Function} props.onDeleteSnapshot - 删除快照回调
+ * @param {Function} props.onClearAll - 清除所有快照回调
+ * @param {Function} props.onRestoreSnapshot - 恢复快照回调
+ * @returns {JSX.Element|null} 快照管理模态框组件
+ */
 function SnapshotsModal({ 
   isOpen, 
   onClose, 
