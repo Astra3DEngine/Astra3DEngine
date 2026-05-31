@@ -219,6 +219,7 @@ function Viewport({
     let lastMouseX = 0;
     let lastMouseY = 0;
     let isPointerLocked = false;
+    let fpsInitialTargetDistance = 5;
 
     const handleKeyDown = (e) => {
       if (e.key === 'Shift' && !isRightMouseDown) {
@@ -263,6 +264,7 @@ function Viewport({
         e.preventDefault();
         isRightMouseDown = true;
         setIsFPSMode(true);
+        fpsInitialTargetDistance = camera.position.distanceTo(orbitControls.target);
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
         renderer.domElement.style.cursor = 'none';
@@ -286,6 +288,11 @@ function Viewport({
         setIsFPSMode(false);
         Object.keys(keysPressed).forEach(k => keysPressed[k] = false);
         renderer.domElement.style.cursor = 'default';
+        
+        const forward = new THREE.Vector3(0, 0, -1);
+        forward.applyQuaternion(camera.quaternion);
+        orbitControls.target.copy(camera.position).add(forward.multiplyScalar(fpsInitialTargetDistance));
+        
         orbitControls.enabled = !isTransformDragging;
         
         if (document.exitPointerLock) {
@@ -315,12 +322,10 @@ function Viewport({
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
         
-        const right = new THREE.Vector3();
+        const right = new THREE.Vector3(1, 0, 0);
         const up = new THREE.Vector3(0, 1, 0);
-        const forward = new THREE.Vector3();
-        
-        camera.getWorldDirection(forward);
-        right.crossVectors(forward, up).normalize();
+        right.applyQuaternion(camera.quaternion);
+        up.applyQuaternion(camera.quaternion);
         
         const panOffset = new THREE.Vector3();
         panOffset.addScaledVector(right, -deltaX * panSpeed);
@@ -343,16 +348,27 @@ function Viewport({
           lastMouseY = e.clientY;
         }
         
-        const euler = new THREE.Euler(0, 0, 0, 'YXZ');
-        euler.setFromQuaternion(camera.quaternion);
-        euler.y -= deltaX * fpsLookSpeed;
-        euler.x -= deltaY * fpsLookSpeed;
-        euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
-        camera.quaternion.setFromEuler(euler);
+        const yawQuat = new THREE.Quaternion();
+        yawQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -deltaX * fpsLookSpeed);
+        camera.quaternion.premultiply(yawQuat);
         
-        orbitControls.target.copy(camera.position).add(
-          new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).multiplyScalar(5)
-        );
+        const right = new THREE.Vector3(1, 0, 0);
+        right.applyQuaternion(camera.quaternion);
+        const pitchQuat = new THREE.Quaternion();
+        pitchQuat.setFromAxisAngle(right, -deltaY * fpsLookSpeed);
+        
+        const forward = new THREE.Vector3(0, 0, -1);
+        forward.applyQuaternion(camera.quaternion);
+        const currentPitch = Math.atan2(forward.y, Math.sqrt(forward.x * forward.x + forward.z * forward.z));
+        const newPitch = currentPitch - deltaY * fpsLookSpeed;
+        
+        if (newPitch > -Math.PI / 2 + 0.01 && newPitch < Math.PI / 2 - 0.01) {
+          camera.quaternion.premultiply(pitchQuat);
+        }
+        
+        const finalForward = new THREE.Vector3(0, 0, -1);
+        finalForward.applyQuaternion(camera.quaternion);
+        orbitControls.target.copy(camera.position).add(finalForward.multiplyScalar(fpsInitialTargetDistance));
       }
     };
 
@@ -821,9 +837,9 @@ function Viewport({
           camera.position.y += fpsMoveSpeed;
         }
         
-        orbitControls.target.copy(camera.position).add(
-          new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).multiplyScalar(5)
-        );
+        const forward = new THREE.Vector3(0, 0, -1);
+        forward.applyQuaternion(camera.quaternion);
+        orbitControls.target.copy(camera.position).add(forward.multiplyScalar(fpsInitialTargetDistance));
       }
 
       orbitControls.update();

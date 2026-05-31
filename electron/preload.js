@@ -79,4 +79,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns {Promise<Object>} 用户的选择结果
    */
   showMessage: (options) => ipcRenderer.invoke('dialog:showMessage', options),
+  
+  /**
+   * 读取文件内容
+   * @param {string} filePath - 文件路径
+   * @returns {Promise<Object>} { success: boolean, content?: string, error?: string }
+   */
+  readFile: (filePath) => ipcRenderer.invoke('file:read', filePath),
+  
+  /**
+   * 写入文件内容
+   * @param {string} filePath - 文件路径
+   * @param {string} content - 文件内容
+   * @returns {Promise<Object>} { success: boolean, error?: string }
+   */
+  writeFile: (filePath, content) => ipcRenderer.invoke('file:write', filePath, content),
 });

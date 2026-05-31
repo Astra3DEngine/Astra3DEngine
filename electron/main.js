@@ -8,6 +8,7 @@
 import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { promises as fsp } from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -128,6 +129,24 @@ ipcMain.handle('dialog:showOpen', async (event, options) => {
 
 ipcMain.handle('dialog:showMessage', async (event, options) => {
   return await dialog.showMessageBox(mainWindow, options);
+});
+
+ipcMain.handle('file:read', async (event, filePath) => {
+  try {
+    const content = await fsp.readFile(filePath, 'utf-8');
+    return { success: true, content };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('file:write', async (event, filePath, content) => {
+  try {
+    await fsp.writeFile(filePath, content, 'utf-8');
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
 
 app.whenReady().then(() => {

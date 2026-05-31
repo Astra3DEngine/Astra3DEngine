@@ -35,6 +35,12 @@ import { initPlugins, getPluginManager, setPluginLocale } from './plugins';
 import createPluginApi from './plugins/api.js';
 import { applyTheme } from './utils/themeManager.js';
 
+const getBasename = (filePath) => {
+  if (!filePath) return '';
+  const parts = filePath.split(/[/\\]/);
+  return parts[parts.length - 1] || '';
+};
+
 /**
  * 应用核心内容组件
  * @description 包含所有编辑器状态和功能的实际实现
@@ -105,6 +111,7 @@ function AppContent() {
   const leftSidebarAllCollapsed = hierarchyCollapsed && prefabsCollapsed;
 
   const hasFileSystemAccess = 'showSaveFilePicker' in window && 'showOpenFilePicker' in window;
+  const isElectron = typeof window !== 'undefined' && !!window.electronAPI;
 
   const handleToggleLocale = useCallback(() => {
     toggleLocale();
@@ -780,6 +787,41 @@ function AppContent() {
   const handleSaveAsProject = useCallback(async () => {
     const projectData = getProjectData();
 
+    if (isElectron) {
+      try {
+        const result = await window.electronAPI.showSaveDialog({
+          title: '保存项目',
+          defaultPath: projectFileName || 'astra_project.json',
+          filters: [
+            { name: 'Astra Project', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] }
+          ]
+        });
+        
+        if (result.canceled || !result.filePath) return;
+        
+        const filePath = result.filePath;
+        const fileName = getBasename(filePath);
+        
+        const writeResult = await window.electronAPI.writeFile(filePath, JSON.stringify(projectData, null, 2));
+        
+        if (!writeResult.success) {
+          toast.error('保存失败: ' + writeResult.error);
+          return;
+        }
+        
+        fileHandleRef.current = filePath;
+        setProjectFileName(fileName);
+        setHasUnsavedChanges(false);
+        toast.success(`已保存: ${fileName}`);
+        console.log('Project saved as:', fileName);
+      } catch (error) {
+        console.error('Error saving file:', error);
+        toast.error('保存失败: ' + error.message);
+      }
+      return;
+    }
+
     if (hasFileSystemAccess) {
       try {
         const handle = await window.showSaveFilePicker({
@@ -816,7 +858,7 @@ function AppContent() {
       setHasUnsavedChanges(false);
       toast.success(`已保存: ${projectFileName || 'astra_project.json'}`);
     }
-  }, [getProjectData, hasFileSystemAccess, projectFileName, toast]);
+  }, [getProjectData, hasFileSystemAccess, isElectron, projectFileName, toast]);
 
   const verifyFileHandle = async (handle) => {
     try {
@@ -833,6 +875,21 @@ function AppContent() {
 
   const handleSaveProject = useCallback(async () => {
     const projectData = getProjectData();
+
+    if (isElectron && fileHandleRef.current) {
+      const filePath = fileHandleRef.current;
+      const writeResult = await window.electronAPI.writeFile(filePath, JSON.stringify(projectData, null, 2));
+      
+      if (!writeResult.success) {
+        toast.error('保存失败: ' + writeResult.error);
+        return;
+      }
+      
+      setHasUnsavedChanges(false);
+      toast.success(`已保存: ${projectFileName}`);
+      console.log('Project saved:', projectFileName);
+      return;
+    }
 
     if (hasFileSystemAccess && fileHandleRef.current) {
       const hasPermission = await verifyFileHandle(fileHandleRef.current);
@@ -874,9 +931,58 @@ function AppContent() {
     }
 
     handleSaveAsProject();
-  }, [getProjectData, hasFileSystemAccess, projectFileName, dialog, handleSaveAsProject, toast]);
+  }, [getProjectData, hasFileSystemAccess, isElectron, projectFileName, dialog, handleSaveAsProject, toast]);
 
   const handleLoadProject = useCallback(async () => {
+    if (isElectron) {
+      try {
+        const result = await window.electronAPI.showOpenDialog({
+          title: '打开项目',
+          filters: [
+            { name: 'Astra Project', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] }
+          ],
+          properties: ['openFile']
+        });
+        
+        if (result.canceled || !result.filePaths || result.filePaths.length === 0) return;
+        
+        const filePath = result.filePaths[0];
+        const readResult = await window.electronAPI.readFile(filePath);
+        
+        if (!readResult.success) {
+          toast.error('读取失败: ' + readResult.error);
+          return;
+        }
+        
+        const projectData = JSON.parse(readResult.content);
+        
+        if (projectData.version && projectData.scene) {
+          const fileName = getBasename(filePath);
+          const projectName = projectData.name || fileName.replace('.json', '');
+          
+          fileHandleRef.current = filePath;
+          setProjectFileName(projectName);
+          resetHistory(projectData.scene.objects || []);
+          setPrefabs(projectData.prefabs || []);
+          setSelectedObject(null);
+          setSelectedObjects([]);
+          setSelectedPrefab(null);
+          setAssets(projectData.assets || []);
+          setHasUnsavedChanges(false);
+          clearAutoSave();
+          toast.success(`已打开: ${projectName}`);
+          console.log('Project loaded:', projectName);
+        } else {
+          toast.error('无效的项目文件格式');
+        }
+      } catch (error) {
+        console.error('Error loading file:', error);
+        toast.error('打开失败: ' + error.message);
+      }
+      return;
+    }
+
     if (hasFileSystemAccess) {
       try {
         const [handle] = await window.showOpenFilePicker({
@@ -945,7 +1051,7 @@ function AppContent() {
       
       input.click();
     }
-  }, [hasFileSystemAccess, resetHistory, clearAutoSave, addRecentProject]);
+  }, [hasFileSystemAccess, isElectron, resetHistory, clearAutoSave, addRecentProject, toast]);
 
   const handleNewProject = useCallback(async () => {
     if (hasUnsavedChanges || sceneObjects.length > 0) {
