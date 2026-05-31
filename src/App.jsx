@@ -230,42 +230,99 @@ function AppContent() {
     }
   }, []);
 
-  const handleAddObject = useCallback((type, asset = null) => {
-    if (asset && (asset.type === 'gltf' || asset.type === 'glb')) {
-      const newObject = {
-        id: Date.now(),
-        name: asset.name,
-        type: 'model',
-        position: [0, 0, 0],
-        rotation: [0, 0, 0],
-        scale: [1, 1, 1],
-        color: '#ffffff',
-        assetId: asset.id,
-        isModel: true
-      };
-      setSceneObjectsWithHistory(prev => [...prev, newObject]);
-    } else {
-      const newObject = {
-        id: Date.now(),
-        name: `${type}_1`,
-        type: type,
-        position: [0, 0, 0],
-        rotation: [0, 0, 0],
-        scale: [1, 1, 1],
-        color: '#66ccff',
-        faceTextures: type === 'cube' ? {
-          right: null,
-          left: null,
-          top: null,
-          bottom: null,
-          front: null,
-          back: null
-        } : undefined,
-        textureId: (type === 'sphere' || type === 'plane') ? null : undefined
-      };
-      setSceneObjectsWithHistory(prev => [...prev, newObject]);
+  /**
+   * 生成唯一的对象名称
+   * 
+   * 如果名称已存在，会自动添加数字后缀，例如：
+   * - "Cube" -> "Cube_1"（如果"Cube"已存在）
+   * - "Cube_1" -> "Cube_2"（如果"Cube_1"已存在）
+   * 
+   * 这个函数确保每个对象的名称都是唯一的，避免在层级面板中混淆，
+   * 也防止基于名称的查找逻辑失效。
+   * 
+   * @param {string} baseName - 基础名称
+   * @param {Array} existingObjects - 已存在的对象列表
+   * @param {number} excludeId - 要排除的对象ID（用于重命名时排除自己）
+   * @returns {string} 唯一的名称
+   */
+  const generateUniqueName = useCallback((baseName, existingObjects, excludeId = null) => {
+    const existingNames = existingObjects
+      .filter(obj => obj.id !== excludeId)
+      .map(obj => obj.name);
+    
+    if (!existingNames.includes(baseName)) {
+      return baseName;
     }
-  }, [setSceneObjectsWithHistory]);
+    
+    const match = baseName.match(/^(.+?)_(\d+)$/);
+    if (match) {
+      const prefix = match[1];
+      const num = parseInt(match[2]);
+      let newName = `${prefix}_${num + 1}`;
+      while (existingNames.includes(newName)) {
+        newName = `${prefix}_${parseInt(newName.split('_').pop()) + 1}`;
+      }
+      return newName;
+    }
+    
+    let counter = 1;
+    let newName = `${baseName}_${counter}`;
+    while (existingNames.includes(newName)) {
+      counter++;
+      newName = `${baseName}_${counter}`;
+    }
+    return newName;
+  }, []);
+
+  const handleAddObject = useCallback((type, asset = null) => {
+    setSceneObjectsWithHistory(prev => {
+      let baseName;
+      let newObject;
+      
+      if (asset && (asset.type === 'gltf' || asset.type === 'glb')) {
+        baseName = asset.name.replace(/\.[^.]+$/, '');
+        const uniqueName = generateUniqueName(baseName, prev);
+        
+        newObject = {
+          id: Date.now(),
+          name: uniqueName,
+          type: 'model',
+          position: [0, 0, 0],
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1],
+          color: '#ffffff',
+          assetId: asset.id,
+          isModel: true
+        };
+      } else {
+        baseName = type.charAt(0).toUpperCase() + type.slice(1);
+        const uniqueName = generateUniqueName(baseName, prev);
+        
+        newObject = {
+          id: Date.now(),
+          name: uniqueName,
+          type: type,
+          position: [0, 0, 0],
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1],
+          color: '#66ccff',
+          faceTextures: type === 'cube' ? {
+            right: null,
+            left: null,
+            top: null,
+            bottom: null,
+            front: null,
+            back: null
+          } : undefined,
+          textureId: (type === 'sphere' || type === 'plane') ? null : undefined
+        };
+      }
+      
+      setSelectedObject(newObject);
+      setSelectedObjects([newObject]);
+      return [...prev, newObject];
+    });
+  }, [setSceneObjectsWithHistory, generateUniqueName]);
 
   const textureLoaderRef = useRef(new THREE.TextureLoader());
 
@@ -442,45 +499,66 @@ function AppContent() {
   const handlePasteObject = useCallback(() => {
     if (!clipboard) return null;
 
-    const newObj = {
-      ...clipboard,
-      id: Date.now(),
-      name: `${clipboard.name}_copy`,
-      position: [
-        clipboard.position[0] + 1,
-        clipboard.position[1],
-        clipboard.position[2]
-      ]
-    };
+    setSceneObjectsWithHistory(prev => {
+      const baseName = clipboard.name;
+      const uniqueName = generateUniqueName(baseName, prev);
 
-    setSceneObjectsWithHistory(prev => [...prev, newObj]);
-    setSelectedObject(newObj);
-    return newObj;
-  }, [clipboard, setSceneObjectsWithHistory]);
+      const newObj = {
+        ...clipboard,
+        id: Date.now(),
+        name: uniqueName,
+        position: [
+          clipboard.position[0] + 1,
+          clipboard.position[1],
+          clipboard.position[2]
+        ],
+        parentId: null
+      };
+
+      setSelectedObject(newObj);
+      setSelectedObjects([newObj]);
+      return [...prev, newObj];
+    });
+    return true;
+  }, [clipboard, setSceneObjectsWithHistory, generateUniqueName]);
 
   const handleDuplicateObject = useCallback((id) => {
-    const obj = sceneObjects.find(o => o.id === id);
-    if (!obj) return null;
+    setSceneObjectsWithHistory(prev => {
+      const obj = prev.find(o => o.id === id);
+      if (!obj) return prev;
 
-    const newObj = {
-      ...obj,
-      id: Date.now(),
-      name: `${obj.name}_copy`,
-      position: [
-        obj.position[0] + 1,
-        obj.position[1],
-        obj.position[2]
-      ]
-    };
+      const baseName = obj.name;
+      const uniqueName = generateUniqueName(baseName, prev);
 
-    setSceneObjectsWithHistory(prev => [...prev, newObj]);
-    setSelectedObject(newObj);
-    return newObj;
-  }, [sceneObjects, setSceneObjectsWithHistory]);
+      const newObj = {
+        ...obj,
+        id: Date.now(),
+        name: uniqueName,
+        position: [
+          obj.position[0] + 1,
+          obj.position[1],
+          obj.position[2]
+        ],
+        parentId: null
+      };
+
+      setSelectedObject(newObj);
+      setSelectedObjects([newObj]);
+      return [...prev, newObj];
+    });
+    return true;
+  }, [setSceneObjectsWithHistory, generateUniqueName]);
 
   const handleRenameObject = useCallback((id, newName) => {
-    handleUpdateObject(id, { name: newName });
-  }, [handleUpdateObject]);
+    setSceneObjectsWithHistory(prev => {
+      const uniqueName = generateUniqueName(newName, prev, id);
+      const updatedObjects = prev.map(obj =>
+        obj.id === id ? { ...obj, name: uniqueName } : obj
+      );
+      setSelectedObject(prev => prev && prev.id === id ? { ...prev, name: uniqueName } : prev);
+      return updatedObjects;
+    }, true);
+  }, [setSceneObjectsWithHistory, generateUniqueName]);
 
   const handleReorderObjects = useCallback((draggedId, targetId, position) => {
     console.log('=== handleReorderObjects ===');

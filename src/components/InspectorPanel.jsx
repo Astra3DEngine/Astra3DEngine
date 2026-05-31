@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import * as THREE from 'three';
 import { msg } from '../i18n/index.js';
 import CollapsiblePanel from './CollapsiblePanel.jsx';
 import IconPrefabInstance from '../icons/prefab-instance.svg?react';
@@ -37,12 +38,195 @@ function InspectorPanel({
   assets,
   objects
 }) {
+  /**
+   * 计算子对象相对于父对象的变换（使用四元数）
+   * 
+   * 正确的相对变换计算需要考虑父对象的旋转对位置的影响。
+   * 使用四元数来计算相对旋转，避免欧拉角的万向节锁问题。
+   * 
+   * 相对位置计算：
+   * 1. 先计算子对象相对于父对象位置的偏移
+   * 2. 将偏移反向应用父对象的旋转（得到在父对象局部坐标系中的位置）
+   * 3. 除以父对象的缩放（得到相对位置）
+   * 
+   * 相对旋转计算：
+   * 使用四元数：相对旋转 = 父对象旋转的逆 × 子对象旋转
+   * 
+   * 相对缩放计算：
+   * 子对象缩放 / 父对象缩放
+   * 
+   * @param {Object} child - 子对象数据
+   * @param {Object} parent - 父对象数据
+   * @returns {Object} 相对变换 { position, rotation, scale }
+   */
+  const computeRelativeTransform = (child, parent) => {
+    const childPos = new THREE.Vector3(child.position[0], child.position[1], child.position[2]);
+    const childRot = new THREE.Euler(
+      THREE.MathUtils.degToRad(child.rotation[0]),
+      THREE.MathUtils.degToRad(child.rotation[1]),
+      THREE.MathUtils.degToRad(child.rotation[2])
+    );
+    const childQuat = new THREE.Quaternion().setFromEuler(childRot);
+    const childScale = new THREE.Vector3(child.scale[0], child.scale[1], child.scale[2]);
+    
+    const parentPos = new THREE.Vector3(parent.position[0], parent.position[1], parent.position[2]);
+    const parentRot = new THREE.Euler(
+      THREE.MathUtils.degToRad(parent.rotation[0]),
+      THREE.MathUtils.degToRad(parent.rotation[1]),
+      THREE.MathUtils.degToRad(parent.rotation[2])
+    );
+    const parentQuat = new THREE.Quaternion().setFromEuler(parentRot);
+    const parentScale = new THREE.Vector3(parent.scale[0], parent.scale[1], parent.scale[2]);
+    
+    const relativePos = childPos.clone().sub(parentPos);
+    relativePos.applyQuaternion(parentQuat.clone().invert());
+    relativePos.divide(parentScale);
+    
+    const relativeQuat = parentQuat.clone().invert().multiply(childQuat);
+    const relativeEuler = new THREE.Euler().setFromQuaternion(relativeQuat);
+    
+    const relativeScale = new THREE.Vector3(
+      childScale.x / parentScale.x,
+      childScale.y / parentScale.y,
+      childScale.z / parentScale.z
+    );
+    
+    return {
+      position: [relativePos.x, relativePos.y, relativePos.z],
+      rotation: [
+        THREE.MathUtils.radToDeg(relativeEuler.x),
+        THREE.MathUtils.radToDeg(relativeEuler.y),
+        THREE.MathUtils.radToDeg(relativeEuler.z)
+      ],
+      scale: [relativeScale.x, relativeScale.y, relativeScale.z]
+    };
+  };
+
+  /**
+   * 根据父对象的世界变换计算子对象的世界变换（使用四元数）
+   * 
+   * 这是computeRelativeTransform的逆运算：
+   * 子对象世界变换 = 父对象世界变换 × 子对象相对变换
+   * 
+   * 世界位置计算：
+   * 1. 相对位置 × 父对象缩放
+   * 2. 应用父对象旋转
+   * 3. 加上父对象位置
+   * 
+   * 世界旋转计算：
+   * 使用四元数：世界旋转 = 父对象旋转 × 相对旋转
+   * 
+   * 世界缩放计算：
+   * 相对缩放 × 父对象缩放
+   * 
+   * @param {Object} relativeTransform - 子对象的相对变换
+   * @param {Object} parent - 父对象数据
+   * @returns {Object} 世界变换 { position, rotation, scale }
+   */
+  const computeWorldTransformFromRelative = (relativeTransform, parent) => {
+    const relativePos = new THREE.Vector3(
+      relativeTransform.position[0],
+      relativeTransform.position[1],
+      relativeTransform.position[2]
+    );
+    const relativeRot = new THREE.Euler(
+      THREE.MathUtils.degToRad(relativeTransform.rotation[0]),
+      THREE.MathUtils.degToRad(relativeTransform.rotation[1]),
+      THREE.MathUtils.degToRad(relativeTransform.rotation[2])
+    );
+    const relativeQuat = new THREE.Quaternion().setFromEuler(relativeRot);
+    const relativeScale = new THREE.Vector3(
+      relativeTransform.scale[0],
+      relativeTransform.scale[1],
+      relativeTransform.scale[2]
+    );
+    
+    const parentPos = new THREE.Vector3(parent.position[0], parent.position[1], parent.position[2]);
+    const parentRot = new THREE.Euler(
+      THREE.MathUtils.degToRad(parent.rotation[0]),
+      THREE.MathUtils.degToRad(parent.rotation[1]),
+      THREE.MathUtils.degToRad(parent.rotation[2])
+    );
+    const parentQuat = new THREE.Quaternion().setFromEuler(parentRot);
+    const parentScale = new THREE.Vector3(parent.scale[0], parent.scale[1], parent.scale[2]);
+    
+    const worldPos = relativePos.clone();
+    worldPos.multiply(parentScale);
+    worldPos.applyQuaternion(parentQuat);
+    worldPos.add(parentPos);
+    
+    const worldQuat = parentQuat.clone().multiply(relativeQuat);
+    const worldEuler = new THREE.Euler().setFromQuaternion(worldQuat);
+    
+    const worldScale = new THREE.Vector3(
+      relativeScale.x * parentScale.x,
+      relativeScale.y * parentScale.y,
+      relativeScale.z * parentScale.z
+    );
+    
+    return {
+      position: [worldPos.x, worldPos.y, worldPos.z],
+      rotation: [
+        THREE.MathUtils.radToDeg(worldEuler.x),
+        THREE.MathUtils.radToDeg(worldEuler.y),
+        THREE.MathUtils.radToDeg(worldEuler.z)
+      ],
+      scale: [worldScale.x, worldScale.y, worldScale.z]
+    };
+  };
+
+  /**
+   * 获取父对象数据
+   * 
+   * @returns {Object|null} 父对象数据，如果没有父对象则返回null
+   */
+  const getParentObject = () => {
+    if (!selectedObject || !selectedObject.parentId || !objects) return null;
+    return objects.find(obj => obj.id === selectedObject.parentId);
+  };
+
+  const parentObject = getParentObject();
+
+  /**
+   * 获取显示的变换值
+   * 
+   * 如果对象有父对象，显示相对于父对象的变换；
+   * 否则显示世界变换。
+   * 
+   * @returns {Object} 显示的变换 { position, rotation, scale }
+   */
+  const getDisplayTransform = () => {
+    if (!selectedObject) return { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] };
+    
+    if (parentObject) {
+      return computeRelativeTransform(selectedObject, parentObject);
+    }
+    
+    return {
+      position: selectedObject.position,
+      rotation: selectedObject.rotation,
+      scale: selectedObject.scale
+    };
+  };
+
+  const displayTransform = getDisplayTransform();
+
   const handleTransformChange = (property, index, value) => {
     if (!selectedObject) return;
     const newValue = parseFloat(value) || 0;
-    const newTransform = [...selectedObject[property]];
-    newTransform[index] = newValue;
-    onUpdateObject(selectedObject.id, { [property]: newTransform });
+    
+    if (parentObject) {
+      const newRelativeTransform = { ...displayTransform };
+      newRelativeTransform[property] = [...displayTransform[property]];
+      newRelativeTransform[property][index] = newValue;
+      
+      const worldTransform = computeWorldTransformFromRelative(newRelativeTransform, parentObject);
+      onUpdateObject(selectedObject.id, { [property]: worldTransform[property] });
+    } else {
+      const newTransform = [...selectedObject[property]];
+      newTransform[index] = newValue;
+      onUpdateObject(selectedObject.id, { [property]: newTransform });
+    }
   };
 
   const handleColorChange = (color) => {
@@ -279,7 +463,10 @@ function InspectorPanel({
         </div>
 
         <div className="inspector-section">
-          <div className="inspector-section-title">{msg('inspector.transform')}</div>
+          <div className="inspector-section-title">
+            {msg('inspector.transform')}
+            {parentObject && <span className="inspector-relative-hint"> (相对)</span>}
+          </div>
 
           <div className="inspector-row">
             <label className="inspector-label">{msg('inspector.position')}</label>
@@ -290,7 +477,7 @@ function InspectorPanel({
                   <input
                     type="number"
                     className="inspector-input"
-                    value={selectedObject.position[i]}
+                    value={displayTransform.position[i]}
                     onChange={(e) => handleTransformChange('position', i, e.target.value)}
                   />
                 </div>
@@ -307,7 +494,7 @@ function InspectorPanel({
                   <input
                     type="number"
                     className="inspector-input"
-                    value={selectedObject.rotation[i]}
+                    value={displayTransform.rotation[i]}
                     onChange={(e) => handleTransformChange('rotation', i, e.target.value)}
                   />
                 </div>
@@ -325,7 +512,7 @@ function InspectorPanel({
                     <input
                       type="number"
                       className="inspector-input"
-                      value={selectedObject.scale[i]}
+                      value={displayTransform.scale[i]}
                       onChange={(e) => handleTransformChange('scale', i, e.target.value)}
                       min="0.01"
                       step="0.1"

@@ -37,6 +37,13 @@
   text-transform: uppercase;
 }
 
+.inspector-relative-hint {
+  font-size: 10px;
+  font-weight: normal;
+  color: var(--accent);
+  margin-left: 4px;
+}
+
 .inspector-row {
   display: flex;
   align-items: center;
@@ -94,6 +101,7 @@
   display: flex;
   gap: 4px;
   flex: 1;
+  min-width: 0;
 }
 
 .vector-input {
@@ -101,11 +109,14 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
 }
 
 .vector-input input {
   flex: 1;
   text-align: center;
+  min-width: 0;
+  width: 100%;
 }
 
 .vector-label {

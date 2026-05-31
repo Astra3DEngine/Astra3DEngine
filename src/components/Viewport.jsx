@@ -411,6 +411,133 @@ function Viewport({
     };
 
     /**
+     * 计算子对象相对于父对象的相对变换
+     * 
+     * 父子变换的核心逻辑：子对象的世界变换 = 父对象的世界变换 * 子对象的相对变换
+     * 所以相对变换 = 父对象世界变换的逆 * 子对象的世界变换
+     * 
+     * 这个函数返回一个包含相对位置、相对旋转、相对缩放的对象，
+     * 用于在父对象变换时重新计算子对象的世界坐标。
+     * 
+     * @param {THREE.Object3D} parentMesh - 父对象的 mesh
+     * @param {THREE.Object3D} childMesh - 子对象的 mesh
+     * @returns {Object} 相对变换 { position, quaternion, scale }
+     */
+    const computeRelativeTransform = (parentMesh, childMesh) => {
+      const parentWorldQuat = new THREE.Quaternion();
+      const parentWorldScale = new THREE.Vector3();
+      parentMesh.matrixWorld.decompose(new THREE.Vector3(), parentWorldQuat, parentWorldScale);
+      
+      const childWorldPos = childMesh.position.clone();
+      const childWorldQuat = new THREE.Quaternion();
+      const childWorldScale = new THREE.Vector3();
+      childMesh.matrixWorld.decompose(new THREE.Vector3(), childWorldQuat, childWorldScale);
+      
+      const relativePos = childWorldPos.clone().sub(parentMesh.position);
+      relativePos.applyQuaternion(parentWorldQuat.clone().invert());
+      relativePos.divide(parentWorldScale);
+      
+      const relativeQuat = parentWorldQuat.clone().invert().multiply(childWorldQuat);
+      
+      const relativeScale = new THREE.Vector3(
+        childWorldScale.x / parentWorldScale.x,
+        childWorldScale.y / parentWorldScale.y,
+        childWorldScale.z / parentWorldScale.z
+      );
+      
+      return { position: relativePos, quaternion: relativeQuat, scale: relativeScale };
+    };
+
+    /**
+     * 根据父对象的新变换计算子对象的世界变换
+     * 
+     * 这是 computeRelativeTransform 的逆运算：
+     * 子对象世界变换 = 父对象新变换 * 子对象相对变换
+     * 
+     * @param {THREE.Object3D} parentMesh - 父对象的 mesh（已变换）
+     * @param {Object} relativeTransform - 子对象的相对变换
+     * @returns {Object} 世界变换 { position, quaternion, scale }
+     */
+    const computeWorldTransformFromRelative = (parentMesh, relativeTransform) => {
+      const parentWorldQuat = new THREE.Quaternion();
+      const parentWorldScale = new THREE.Vector3();
+      parentMesh.matrixWorld.decompose(new THREE.Vector3(), parentWorldQuat, parentWorldScale);
+      
+      const worldPos = relativeTransform.position.clone();
+      worldPos.multiply(parentWorldScale);
+      worldPos.applyQuaternion(parentWorldQuat);
+      worldPos.add(parentMesh.position);
+      
+      const worldQuat = parentWorldQuat.multiply(relativeTransform.quaternion);
+      
+      const worldScale = new THREE.Vector3(
+        relativeTransform.scale.x * parentWorldScale.x,
+        relativeTransform.scale.y * parentWorldScale.y,
+        relativeTransform.scale.z * parentWorldScale.z
+      );
+      
+      return { position: worldPos, quaternion: worldQuat, scale: worldScale };
+    };
+
+    /**
+     * 收集所有后代对象的相对变换
+     * 
+     * 递归遍历所有后代对象，计算每个后代相对于其直接父对象的相对变换。
+     * 这样在父对象变换时，可以逐层计算后代的世界变换，保持层级关系正确。
+     * 
+     * @param {number} parentId - 父对象 ID
+     * @returns {Map<number, Object>} 后代 ID -> 相对变换的映射
+     */
+    const collectDescendantRelativeTransforms = (parentId) => {
+      const transforms = new Map();
+      const children = objectsRef.current.filter(o => o.parentId === parentId);
+      
+      children.forEach(child => {
+        const childMesh = meshesRef.current[child.id];
+        const parentMesh = meshesRef.current[parentId];
+        
+        if (childMesh && parentMesh) {
+          transforms.set(child.id, computeRelativeTransform(parentMesh, childMesh));
+          
+          const childDescendants = collectDescendantRelativeTransforms(child.id);
+          childDescendants.forEach((transform, id) => transforms.set(id, transform));
+        }
+      });
+      
+      return transforms;
+    };
+
+    /**
+     * 应用父对象变换到所有后代对象
+     * 
+     * 根据之前收集的相对变换，重新计算每个后代的世界变换。
+     * 注意：必须按照层级顺序处理，从顶层到底层，
+     * 因为子对象的计算依赖于父对象的新变换。
+     * 
+     * @param {number} parentId - 父对象 ID
+     * @param {Map<number, Object>} relativeTransforms - 后代 ID -> 相对变换的映射
+     */
+    const applyTransformToDescendants = (parentId, relativeTransforms) => {
+      const children = objectsRef.current.filter(o => o.parentId === parentId);
+      
+      children.forEach(child => {
+        const childMesh = meshesRef.current[child.id];
+        const parentMesh = meshesRef.current[parentId];
+        const relative = relativeTransforms.get(child.id);
+        
+        if (childMesh && parentMesh && relative) {
+          const worldTransform = computeWorldTransformFromRelative(parentMesh, relative);
+          
+          childMesh.position.copy(worldTransform.position);
+          childMesh.quaternion.copy(worldTransform.quaternion);
+          childMesh.scale.copy(worldTransform.scale);
+          
+          applyTransformToDescendants(child.id, relativeTransforms);
+        }
+      });
+    };
+
+    /**
      * 变换控制拖拽事件处理
      * 
      * 这是最复杂的部分！多选变换需要记录初始变换状态，
@@ -479,7 +606,7 @@ function Viewport({
           allMeshes.forEach(m => center.add(m.position));
           center.divideScalar(allMeshes.length);
           
-          const descendants = getAllDescendants(attached.userData.id);
+          const descendantRelativeTransforms = collectDescendantRelativeTransforms(attached.userData.id);
           
           initialTransformsRef.current = {
             center: center.clone(),
@@ -490,7 +617,7 @@ function Viewport({
               scale: attached.scale.clone()
             },
             others: {},
-            descendants: {}
+            descendantRelativeTransforms: descendantRelativeTransforms
           };
           
           others.forEach(obj => {
@@ -501,17 +628,11 @@ function Viewport({
                 rotation: otherMesh.rotation.clone(),
                 scale: otherMesh.scale.clone()
               };
-            }
-          });
-          
-          descendants.forEach(desc => {
-            const descMesh = meshesRef.current[desc.id];
-            if (descMesh) {
-              initialTransformsRef.current.descendants[desc.id] = {
-                position: descMesh.position.clone(),
-                rotation: descMesh.rotation.clone(),
-                scale: descMesh.scale.clone()
-              };
+              
+              const otherDescendantTransforms = collectDescendantRelativeTransforms(obj.id);
+              otherDescendantTransforms.forEach((transform, id) => {
+                descendantRelativeTransforms.set(id, transform);
+              });
             }
           });
         } else {
@@ -569,8 +690,8 @@ function Viewport({
             }
           });
           
-          if (initialTransformsRef.current.descendants) {
-            Object.keys(initialTransformsRef.current.descendants).forEach(descId => {
+          if (initialTransformsRef.current.descendantRelativeTransforms) {
+            initialTransformsRef.current.descendantRelativeTransforms.forEach((_, descId) => {
               const descMesh = meshesRef.current[descId];
               if (descMesh) {
                 onUpdateObject(descId, {
@@ -686,13 +807,10 @@ function Viewport({
           }
         });
         
-        if (initial.descendants) {
-          Object.keys(initial.descendants).forEach(descId => {
-            const descMesh = meshesRef.current[descId];
-            const descInitial = initial.descendants[descId];
-            if (descMesh && descInitial) {
-              descMesh.position.copy(descInitial.position).add(deltaPos);
-            }
+        if (initial.descendantRelativeTransforms) {
+          applyTransformToDescendants(currentId, initial.descendantRelativeTransforms);
+          Object.keys(initial.others).forEach(objId => {
+            applyTransformToDescendants(parseInt(objId), initial.descendantRelativeTransforms);
           });
         }
       } else if (mode === 'rotate' && initial.primary && initial.center) {
@@ -721,21 +839,10 @@ function Viewport({
           }
         });
         
-        if (initial.descendants) {
-          Object.keys(initial.descendants).forEach(descId => {
-            const descMesh = meshesRef.current[descId];
-            const descInitial = initial.descendants[descId];
-            if (descMesh && descInitial) {
-              const pos = descInitial.position.clone().sub(initial.center);
-              pos.applyQuaternion(deltaQuat);
-              pos.add(initial.center);
-              descMesh.position.copy(pos);
-              // 这我不炸了？
-              
-              const descInitialQuat = new THREE.Quaternion().setFromEuler(descInitial.rotation);
-              const newQuat = deltaQuat.clone().multiply(descInitialQuat);
-              descMesh.quaternion.copy(newQuat);
-            }
+        if (initial.descendantRelativeTransforms) {
+          applyTransformToDescendants(currentId, initial.descendantRelativeTransforms);
+          Object.keys(initial.others).forEach(objId => {
+            applyTransformToDescendants(parseInt(objId), initial.descendantRelativeTransforms);
           });
         }
       } else if (mode === 'scale' && initial.primary && initial.center) {
@@ -779,22 +886,10 @@ function Viewport({
           }
         });
         
-        if (initial.descendants) {
-          Object.keys(initial.descendants).forEach(descId => {
-            const descMesh = meshesRef.current[descId];
-            const descInitial = initial.descendants[descId];
-            if (descMesh && descInitial) {
-              const pos = descInitial.position.clone().sub(initial.center);
-              pos.multiply(scaleRatio);
-              pos.add(initial.center);
-              descMesh.position.copy(pos);
-              
-              descMesh.scale.set(
-                descInitial.scale.x * scaleRatio.x,
-                descInitial.scale.y * scaleRatio.y,
-                descInitial.scale.z * scaleRatio.z
-              );
-            }
+        if (initial.descendantRelativeTransforms) {
+          applyTransformToDescendants(currentId, initial.descendantRelativeTransforms);
+          Object.keys(initial.others).forEach(objId => {
+            applyTransformToDescendants(parseInt(objId), initial.descendantRelativeTransforms);
           });
         }
       }
