@@ -203,7 +203,7 @@ function Viewport({
     pivotObject.name = 'multiSelectPivot';
     scene.add(pivotObject);
 
-    // 给我一个pivot，我可以转动整世界
+    // 给我一个pivot，我可以转动整个世界
     const singleSelectPivot = new THREE.Object3D();
     singleSelectPivot.name = 'singleSelectPivot';
     scene.add(singleSelectPivot);

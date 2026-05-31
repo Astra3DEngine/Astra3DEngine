@@ -7,7 +7,15 @@ node_modules/
 dist/
 dist-ssr/
 dist-electron/
+release/
 *.local
+
+# Generated icons (keep source SVG)
+electron/icon.ico
+electron/icon.iconset/
+electron/icons/
+electron/icon-*.png
+electron/icon.png
 
 # Editor directories and files
 .vscode/*

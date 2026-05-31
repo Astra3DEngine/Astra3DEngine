@@ -1,11 +1,14 @@
 /**
- * 依旧神秘 Electron ，看我可不可以驾驭一下。
+ * Electron 主进程入口
+ * 
+ * 负责创建应用窗口、处理 IPC 通信和系统对话框。
+ * 无边框窗口设计，提供自定义窗口控制按钮。
+ * 
  * @file electron/main.js
- * @description Electron 主进程入口，负责创建应用窗口、处理 IPC 通信和系统对话框
  * @module electron/main
  */
 
-import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog, nativeImage } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { promises as fsp } from 'fs';
@@ -16,11 +19,17 @@ const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
 
 let mainWindow = null;
 
-/**
- * 创建主应用窗口
- * @description 创建无边框的主编辑器窗口，配置 Web 安全策略和预加载脚本
- */
+function getIconPath() {
+  const iconPath = path.join(__dirname, 'icon.png');
+  if (VITE_DEV_SERVER_URL) {
+    return path.join(__dirname, 'icon.png');
+  }
+  return path.join(__dirname, '../electron/icon.png');
+}
+
 function createWindow() {
+  const icon = nativeImage.createFromPath(getIconPath());
+  
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -28,12 +37,14 @@ function createWindow() {
     minHeight: 600,
     title: 'Astra 3D Engine',
     frame: false,
-    icon: path.join(__dirname, 'icon.png'),
+    icon: icon,
+    backgroundColor: '#1a1a2e',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       webSecurity: true,
       preload: path.join(__dirname, 'preload.js'),
+      spellcheck: false,
     },
     show: false,
   });
@@ -133,8 +144,17 @@ ipcMain.handle('dialog:showMessage', async (event, options) => {
 
 ipcMain.handle('file:read', async (event, filePath) => {
   try {
-    const content = await fsp.readFile(filePath, 'utf-8');
-    return { success: true, content };
+    const ext = path.extname(filePath).toLowerCase();
+    const binaryExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.glb', '.gltf', '.obj', '.fbx', '.bin', '.astra'];
+    
+    if (binaryExtensions.includes(ext)) {
+      const buffer = await fsp.readFile(filePath);
+      const base64 = buffer.toString('base64');
+      return { success: true, content: base64, isBinary: true };
+    } else {
+      const content = await fsp.readFile(filePath, 'utf-8');
+      return { success: true, content, isBinary: false };
+    }
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -146,6 +166,124 @@ ipcMain.handle('file:write', async (event, filePath, content) => {
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('fs:listDirectory', async (event, dirPath) => {
+  try {
+    const entries = await fsp.readdir(dirPath, { withFileTypes: true });
+    const items = await Promise.all(entries.map(async (entry) => {
+      const fullPath = path.join(dirPath, entry.name);
+      let stats;
+      try {
+        stats = await fsp.stat(fullPath);
+      } catch (e) {
+        stats = null;
+      }
+      
+      return {
+        name: entry.name,
+        path: fullPath,
+        isDirectory: entry.isDirectory(),
+        isFile: entry.isFile(),
+        size: stats ? stats.size : 0,
+        modifiedTime: stats ? stats.mtime.getTime() : 0,
+        isHidden: entry.name.startsWith('.')
+      };
+    }));
+    
+    items.sort((a, b) => {
+      if (a.isDirectory && !b.isDirectory) return -1;
+      if (!a.isDirectory && b.isDirectory) return 1;
+      return a.name.localeCompare(b.name);
+    });
+    
+    return { success: true, items };
+  } catch (error) {
+    return { success: false, error: error.message, items: [] };
+  }
+});
+
+ipcMain.handle('fs:getHomeDir', () => {
+  return app.getPath('home');
+});
+
+ipcMain.handle('fs:getCommonDirs', () => {
+  return {
+    home: app.getPath('home'),
+    desktop: app.getPath('desktop'),
+    documents: app.getPath('documents'),
+    downloads: app.getPath('downloads'),
+    pictures: app.getPath('pictures'),
+    music: app.getPath('music'),
+    videos: app.getPath('videos'),
+    appData: app.getPath('appData'),
+    userData: app.getPath('userData')
+  };
+});
+
+ipcMain.handle('fs:pathExists', async (event, filePath) => {
+  try {
+    await fsp.access(filePath);
+    return { success: true, exists: true };
+  } catch {
+    return { success: true, exists: false };
+  }
+});
+
+ipcMain.handle('fs:getPathInfo', async (event, filePath) => {
+  try {
+    const stats = await fsp.stat(filePath);
+    return {
+      success: true,
+      info: {
+        name: path.basename(filePath),
+        path: filePath,
+        isDirectory: stats.isDirectory(),
+        isFile: stats.isFile(),
+        size: stats.size,
+        createdTime: stats.birthtime.getTime(),
+        modifiedTime: stats.mtime.getTime(),
+        accessedTime: stats.atime.getTime()
+      }
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('fs:createDirectory', async (event, dirPath) => {
+  try {
+    await fsp.mkdir(dirPath, { recursive: true });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('fs:getDrives', async () => {
+  if (process.platform === 'win32') {
+    try {
+      const { execSync } = require('child_process');
+      const output = execSync('wmic logicaldisk get name,volumename', { encoding: 'utf8' });
+      const lines = output.split('\n').filter(line => line.trim());
+      const drives = [];
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].trim().split(/\s+/);
+        if (parts[0]) {
+          drives.push({
+            name: parts[0],
+            label: parts[1] || parts[0],
+            path: parts[0] + '\\'
+          });
+        }
+      }
+      return { success: true, drives };
+    } catch (error) {
+      return { success: false, error: error.message, drives: [] };
+    }
+  } else {
+    return { success: true, drives: [{ name: '/', label: 'Root', path: '/' }] };
   }
 });
 

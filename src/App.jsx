@@ -25,6 +25,7 @@ import PreferencesModal from './components/PreferencesModal.jsx';
 import SnapshotsModal from './components/SnapshotsModal.jsx';
 import PluginSettingsModal from './components/PluginSettingsModal.jsx';
 import ResizablePanel from './components/ResizablePanel.jsx';
+import FileBrowserDialog from './components/FileBrowserDialog.jsx';
 import { msg, toggleLocale, getLocale, setLocale } from './i18n/index.js';
 import { useHistory } from './hooks/useHistory.js';
 import { useAutoSave } from './hooks/useAutoSave.js';
@@ -84,6 +85,9 @@ function AppContent() {
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [isSnapshotsOpen, setIsSnapshotsOpen] = useState(false);
   const [isPluginSettingsOpen, setIsPluginSettingsOpen] = useState(false);
+  const [isFileBrowserOpen, setIsFileBrowserOpen] = useState(false);
+  const [fileBrowserMode, setFileBrowserMode] = useState('open');
+  const [fileBrowserResolve, setFileBrowserResolve] = useState(null);
   const [isAssetsPanelCollapsed, setIsAssetsPanelCollapsed] = useState(() => {
     const saved = localStorage.getItem('astra-panel-assets-collapsed');
     return saved === 'true';
@@ -1095,12 +1099,37 @@ function AppContent() {
     }
   };
 
+  const openFileBrowser = useCallback((mode, options = {}) => {
+    setFileBrowserMode(mode);
+    setIsFileBrowserOpen(true);
+    
+    return new Promise((resolve) => {
+      setFileBrowserResolve(() => resolve);
+    });
+  }, []);
+  
+  const handleFileBrowserSelect = useCallback((filePath) => {
+    if (fileBrowserResolve) {
+      fileBrowserResolve(filePath);
+    }
+    setIsFileBrowserOpen(false);
+    setFileBrowserResolve(null);
+  }, [fileBrowserResolve]);
+  
+  const handleFileBrowserClose = useCallback(() => {
+    if (fileBrowserResolve) {
+      fileBrowserResolve(null);
+    }
+    setIsFileBrowserOpen(false);
+    setFileBrowserResolve(null);
+  }, [fileBrowserResolve]);
+
   const handleSaveAsProject = useCallback(async () => {
     const projectData = getProjectData();
 
     if (isElectron) {
       try {
-        const result = await window.electronAPI.showSaveDialog({
+        const filePath = await openFileBrowser('save', {
           title: '保存项目',
           defaultPath: projectFileName || 'astra_project.json',
           filters: [
@@ -1109,9 +1138,8 @@ function AppContent() {
           ]
         });
         
-        if (result.canceled || !result.filePath) return;
+        if (!filePath) return;
         
-        const filePath = result.filePath;
         const fileName = getBasename(filePath);
         
         const writeResult = await window.electronAPI.writeFile(filePath, JSON.stringify(projectData, null, 2));
@@ -1169,7 +1197,7 @@ function AppContent() {
       setHasUnsavedChanges(false);
       toast.success(`已保存: ${projectFileName || 'astra_project.json'}`);
     }
-  }, [getProjectData, hasFileSystemAccess, isElectron, projectFileName, toast]);
+  }, [getProjectData, hasFileSystemAccess, isElectron, projectFileName, toast, openFileBrowser]);
 
   const verifyFileHandle = async (handle) => {
     try {
@@ -1247,18 +1275,16 @@ function AppContent() {
   const handleLoadProject = useCallback(async () => {
     if (isElectron) {
       try {
-        const result = await window.electronAPI.showOpenDialog({
+        const filePath = await openFileBrowser('open', {
           title: '打开项目',
           filters: [
             { name: 'Astra Project', extensions: ['json'] },
             { name: 'All Files', extensions: ['*'] }
-          ],
-          properties: ['openFile']
+          ]
         });
         
-        if (result.canceled || !result.filePaths || result.filePaths.length === 0) return;
+        if (!filePath) return;
         
-        const filePath = result.filePaths[0];
         const readResult = await window.electronAPI.readFile(filePath);
         
         if (!readResult.success) {
@@ -1362,7 +1388,7 @@ function AppContent() {
       
       input.click();
     }
-  }, [hasFileSystemAccess, isElectron, resetHistory, clearAutoSave, addRecentProject, toast]);
+  }, [hasFileSystemAccess, isElectron, resetHistory, clearAutoSave, addRecentProject, toast, openFileBrowser]);
 
   const handleNewProject = useCallback(async () => {
     if (hasUnsavedChanges || sceneObjects.length > 0) {
@@ -1435,6 +1461,46 @@ function AppContent() {
   }, [getProjectData, dialog]);
 
   const handleImportAstra = useCallback(async () => {
+    if (isElectron) {
+      try {
+        const filePath = await openFileBrowser('open', {
+          title: msg('menu.importAstra'),
+          filters: [
+            { name: 'Astra Package', extensions: ['astra'] },
+            { name: 'All Files', extensions: ['*'] }
+          ]
+        });
+        
+        if (!filePath) return;
+        
+        const readResult = await window.electronAPI.readFile(filePath);
+        
+        if (!readResult.success) {
+          toast.error(msg('menu.importFailed') + ': ' + readResult.error);
+          return;
+        }
+        
+        const fileName = getBasename(filePath);
+        const file = new File([readResult.content], fileName, { type: 'application/octet-stream' });
+        const projectData = await importProjectFromAstra(file);
+        
+        setProjectFileName(projectData.name + '.astra');
+        resetHistory(projectData.scene.objects || []);
+        setPrefabs(projectData.prefabs || []);
+        setSelectedObject(null);
+        setSelectedObjects([]);
+        setSelectedPrefab(null);
+        setHasUnsavedChanges(false);
+        clearAutoSave();
+        toast.success(`已导入: ${projectData.name}.astra`);
+        console.log('Project imported from .astra:', fileName);
+      } catch (error) {
+        console.error('Import failed:', error);
+        toast.error(msg('menu.importFailed') + ': ' + error.message);
+      }
+      return;
+    }
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.astra';
@@ -1466,7 +1532,7 @@ function AppContent() {
     };
     
     input.click();
-  }, [resetHistory, clearAutoSave, addRecentProject, dialog]);
+  }, [resetHistory, clearAutoSave, addRecentProject, dialog, isElectron, openFileBrowser, toast]);
 
   const handleRestoreSnapshot = useCallback((snapshotData) => {
     if (snapshotData && snapshotData.scene) {
@@ -1579,6 +1645,18 @@ function AppContent() {
       <PluginSettingsModal
         isOpen={isPluginSettingsOpen}
         onClose={() => setIsPluginSettingsOpen(false)}
+      />
+
+      <FileBrowserDialog
+        isOpen={isFileBrowserOpen}
+        onClose={handleFileBrowserClose}
+        onSelect={handleFileBrowserSelect}
+        mode={fileBrowserMode}
+        title={fileBrowserMode === 'save' ? '保存项目' : '打开项目'}
+        filters={[
+          { name: 'Astra Project', extensions: ['json'] },
+          { name: 'All Files', extensions: ['*'] }
+        ]}
       />
 
       <div className="main-content-wrapper">

@@ -1,5 +1,69 @@
 # 更新日志
 
+## 2026-06-01 自定义文件浏览器
+
+### 新增功能
+- **自定义文件浏览器**：
+  - 创建 `FileBrowserDialog.jsx` 组件，替代系统文件选择对话框
+  - 支持导航功能：返回、前进、向上、主页
+  - 路径框支持点击跳转和直接输入路径
+  - 侧边栏显示快捷位置和硬盘列表
+  - 文件类型筛选功能
+  - 新建文件夹功能
+  - 支持单选和多选模式
+- **SVG图标系统**：
+  - 将EMOJI图标替换为SVG图标，统一界面风格
+  - 新增文件浏览器相关图标：folder、file、image-file、home、arrow-up、arrow-left、arrow-right
+  - 图标颜色支持明暗模式自动切换
+
+### 新增文件
+- `src/components/FileBrowserDialog.jsx` - 自定义文件浏览器组件
+- `src/styles/file-browser.css` - 文件浏览器样式
+- `src/icons/folder.svg` - 文件夹图标
+- `src/icons/file.svg` - 文件图标
+- `src/icons/image-file.svg` - 图片文件图标
+- `src/icons/home.svg` - 主页图标
+- `src/icons/arrow-up.svg` - 向上箭头图标
+- `src/icons/arrow-left.svg` - 向左箭头图标
+- `src/icons/arrow-right.svg` - 向右箭头图标
+
+### 修改文件
+- `electron/main.js` - 添加文件系统操作IPC处理函数，区分文本和二进制文件读取
+- `electron/preload.js` - 暴露文件系统操作API
+- `src/App.jsx` - 项目打开/保存功能改用自定义文件浏览器
+- `src/components/AssetsPanel.jsx` - 素材面板导入功能改用自定义文件浏览器
+- `src/styles/variables.css` - 添加缺失的CSS变量，添加图标颜色变量
+- `src/i18n/zh.json` - 添加文件浏览器中文翻译
+- `src/i18n/en.json` - 添加文件浏览器英文翻译
+
+### BUG修复
+- **路径拼接错误**：修复点击路径框文件夹名称生成错误路径（如 "D:\C:\awa\"）的问题
+  - 原因：Windows盘符路径拼接逻辑错误
+  - 解决：修改 `buildSubPath` 函数，正确处理盘符路径
+- **路径输入问题**：修复路径框无法输入其他路径的问题
+  - 添加路径编辑模式，支持直接输入路径
+  - 按 Enter 确认，按 Escape 取消
+- **硬盘访问问题**：修复无法到达其他硬盘的问题
+  - 在侧边栏添加硬盘列表，显示所有可用硬盘
+- **材质文件导入失败**：修复导入材质文件失败的问题
+  - 原因：Electron主进程使用文本方式读取二进制文件
+  - 解决：区分文本和二进制文件，使用Buffer读取二进制文件并转换为base64
+- **图片导入失败**：修复导入图片失败的问题
+  - 同上，使用二进制方式读取图片文件
+- **图标颜色问题**：修复图标颜色不能根据明暗模式自动改变的问题
+  - 添加 `--icon-filter` 和 `--icon-opacity` CSS变量
+  - 暗色模式使用 `invert(1)` 反转颜色
+- **文件类型筛选无效**：修复文件类型筛选功能无效的问题
+  - 原因：筛选逻辑使用所有筛选器而不是当前选中的筛选器
+  - 解决：添加 `activeFilterIndex` 状态，只使用当前选中的筛选器
+- **模态框样式不一致**：修复文件浏览器模态框与其他模态框样式不一致的问题
+  - 统一使用 `--bg-panel`、`--border` 等CSS变量
+  - 调整颜色、间距、边框样式
+
+### 新BUG
+
+- 路径问题还是没有被解决！怎么会这样！
+
 ## 2026-05-31 代码注释系统
 
 ### 新增

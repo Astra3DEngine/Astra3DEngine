@@ -1,6 +1,7 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
+import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { msg } from '../i18n/index.js';
 import CollapsiblePanel from './CollapsiblePanel.jsx';
+import FileBrowserDialog from './FileBrowserDialog.jsx';
 import IconModel from '../icons/cube.svg?react';
 import IconImage from '../icons/image.svg?react';
 import IconFile from '../icons/file.svg?react';
@@ -9,20 +10,28 @@ import IconDelete from '../icons/delete.svg?react';
 import IconRename from '../icons/rename.svg?react';
 import IconPlus from '../icons/plus.svg?react';
 
-/**
- * 资源面板组件
- * 永远不要忘了我这东西有多屌。
- * 
- * @param {Object} props - 组件属性
- * @param {Array} props.assets - 资源列表
- * @param {Function} props.onImport - 导入资源回调
- * @param {Function} props.onSelectAsset - 选择资源回调
- * @param {Object} props.selectedAsset - 当前选中的资源
- * @param {Function} props.onDeleteAsset - 删除资源回调
- * @param {Function} props.onRenameAsset - 重命名资源回调
- * @param {Function} props.onCollapseChange - 折叠状态变化回调
- * @returns {JSX.Element} 资源面板组件
- */
+const getMimeType = (filename) => {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  const mimeTypes = {
+    'gltf': 'model/gltf+json',
+    'glb': 'model/gltf-binary',
+    'obj': 'model/obj',
+    'png': 'image/png',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'webp': 'image/webp',
+    'gif': 'image/gif',
+    'bmp': 'image/bmp'
+  };
+  return mimeTypes[ext] || 'application/octet-stream';
+};
+
+const getBasename = (filePath) => {
+  if (!filePath) return '';
+  const parts = filePath.split(/[/\\]/);
+  return parts[parts.length - 1] || '';
+};
+
 function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteAsset, onRenameAsset, onCollapseChange }) {
   const fileInputRef = useRef(null);
   const contextMenuRef = useRef(null);
@@ -31,6 +40,9 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
   const [editingAsset, setEditingAsset] = useState(null);
   const [editName, setEditName] = useState('');
   const [filter, setFilter] = useState('all');
+  const [isFileBrowserOpen, setIsFileBrowserOpen] = useState(false);
+  
+  const isElectron = typeof window !== 'undefined' && window.electronAPI?.fs;
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -43,9 +55,48 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
+  const handleImportClick = useCallback(() => {
+    if (isElectron) {
+      setIsFileBrowserOpen(true);
+    } else {
+      fileInputRef.current?.click();
+    }
+  }, [isElectron]);
+
+  const handleFileBrowserSelect = useCallback(async (paths) => {
+    if (!paths) return;
+    
+    const filePaths = Array.isArray(paths) ? paths : [paths];
+    for (const filePath of filePaths) {
+      try {
+        const result = await window.electronAPI.readFile(filePath);
+        if (result.success) {
+          const fileName = getBasename(filePath);
+          let file;
+          
+          if (result.isBinary) {
+            const binaryString = atob(result.content);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            file = new File([bytes], fileName, {
+              type: getMimeType(filePath)
+            });
+          } else {
+            file = new File([result.content], fileName, {
+              type: getMimeType(filePath)
+            });
+          }
+          
+          onImport(file);
+        }
+      } catch (error) {
+        console.error('Failed to import file:', error);
+      }
+    }
+    setIsFileBrowserOpen(false);
+  }, [onImport]);
 
   const handleFileChange = (e) => {
     const files = e.target.files;
@@ -275,6 +326,20 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
           </div>
         </div>
       )}
+
+      <FileBrowserDialog
+        isOpen={isFileBrowserOpen}
+        onClose={() => setIsFileBrowserOpen(false)}
+        onSelect={handleFileBrowserSelect}
+        mode="open"
+        title={msg('assets.import')}
+        filters={[
+          { name: msg('assets.filterAll'), extensions: ['*'] },
+          { name: msg('assets.filterModels'), extensions: ['gltf', 'glb', 'obj'] },
+          { name: msg('assets.filterTextures'), extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }
+        ]}
+        allowMultiple={true}
+      />
     </CollapsiblePanel>
   );
 }
