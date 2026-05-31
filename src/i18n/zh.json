@@ -2,6 +2,13 @@
   "app.title": "Astra 3D 引擎",
   "app.version": "v0.1.0",
 
+  "importModel.title": "导入模型",
+  "importModel.description": "选择导入方式：",
+  "importModel.single": "单个模型",
+  "importModel.singleDesc": "将整个模型作为一个对象导入，保持模型完整性",
+  "importModel.parts": "部件层级",
+  "importModel.partsDesc": "将模型的每个部件作为单独的对象导入，可在层级面板中单独编辑",
+
   "menu.file": "文件(F)",
   "menu.edit": "编辑(E)",
   "menu.view": "视图(V)",
@@ -49,6 +56,7 @@
   "hierarchy.searchPlaceholder": "搜索...",
   "hierarchy.noResults": "未找到匹配对象",
   "hierarchy.addObject": "添加对象",
+  "hierarchy.folder": "文件夹",
   "hierarchy.cube": "立方体",
   "hierarchy.sphere": "球体",
   "hierarchy.plane": "平面",

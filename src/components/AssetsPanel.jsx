@@ -20,9 +20,10 @@ import IconPlus from '../icons/plus.svg?react';
  * @param {Object} props.selectedAsset - 当前选中的资源
  * @param {Function} props.onDeleteAsset - 删除资源回调
  * @param {Function} props.onRenameAsset - 重命名资源回调
+ * @param {Function} props.onCollapseChange - 折叠状态变化回调
  * @returns {JSX.Element} 资源面板组件
  */
-function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteAsset, onRenameAsset }) {
+function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteAsset, onRenameAsset, onCollapseChange }) {
   const fileInputRef = useRef(null);
   const contextMenuRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -149,6 +150,7 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
       title={msg('assets.title')} 
       className="assets-panel"
       storageKey="astra-panel-assets-collapsed"
+      onCollapseChange={onCollapseChange}
       headerRight={
         <>
           <div className="assets-filter">

@@ -6,10 +6,7 @@
 .assets-panel {
   display: flex;
   flex-direction: column;
-}
-
-.assets-panel:not(.collapsed) {
-  height: 160px;
+  height: 100%;
 }
 
 .assets-panel.collapsed {

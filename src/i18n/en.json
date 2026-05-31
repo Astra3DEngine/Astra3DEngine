@@ -2,6 +2,13 @@
   "app.title": "Astra 3D Engine",
   "app.version": "v0.1.0",
 
+  "importModel.title": "Import Model",
+  "importModel.description": "Choose import method:",
+  "importModel.single": "Single Model",
+  "importModel.singleDesc": "Import the entire model as one object, keeping model integrity",
+  "importModel.parts": "Parts Hierarchy",
+  "importModel.partsDesc": "Import each part as separate objects, editable individually in Hierarchy panel",
+
   "menu.file": "File(F)",
   "menu.edit": "Edit(E)",
   "menu.view": "View(V)",
@@ -49,6 +56,7 @@
   "hierarchy.searchPlaceholder": "Search...",
   "hierarchy.noResults": "No matching objects found",
   "hierarchy.addObject": "Add Object",
+  "hierarchy.folder": "Folder",
   "hierarchy.cube": "Cube",
   "hierarchy.sphere": "Sphere",
   "hierarchy.plane": "Plane",

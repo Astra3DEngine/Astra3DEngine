@@ -24,6 +24,7 @@ import Toolbar from './components/Toolbar.jsx';
 import PreferencesModal from './components/PreferencesModal.jsx';
 import SnapshotsModal from './components/SnapshotsModal.jsx';
 import PluginSettingsModal from './components/PluginSettingsModal.jsx';
+import ResizablePanel from './components/ResizablePanel.jsx';
 import { msg, toggleLocale, getLocale, setLocale } from './i18n/index.js';
 import { useHistory } from './hooks/useHistory.js';
 import { useAutoSave } from './hooks/useAutoSave.js';
@@ -83,6 +84,10 @@ function AppContent() {
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [isSnapshotsOpen, setIsSnapshotsOpen] = useState(false);
   const [isPluginSettingsOpen, setIsPluginSettingsOpen] = useState(false);
+  const [isAssetsPanelCollapsed, setIsAssetsPanelCollapsed] = useState(() => {
+    const saved = localStorage.getItem('astra-panel-assets-collapsed');
+    return saved === 'true';
+  });
   const pluginManagerRef = useRef(null);
   
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(() => {
@@ -207,9 +212,37 @@ function AppContent() {
    * WTF，批量处理的时候还可能导致 selectedObject 更新不及时。看来只能 setTimeout 0 强制在下一个事件循环更新。
    * 
    * 更好的方案是使用 useReducer 统一管理选中状态，但现在的更简单直观，毕竟秉持着能跑就行。
+   * 
+   * @param {Object} object - 要选中的对象
+   * @param {boolean} isMultiSelect - 是否多选模式
+   * @param {Array} objectsToSelect - 要选中的对象列表（用于文件夹选中所有子对象）
    */
-  const handleObjectSelect = useCallback((object, isMultiSelect = false) => {
+  const handleObjectSelect = useCallback((object, isMultiSelect = false, objectsToSelect = null) => {
     if (!object) return;
+    
+    if (objectsToSelect) {
+      if (isMultiSelect) {
+        setSelectedObjects(prev => {
+          const allIds = new Set(objectsToSelect.map(o => o.id));
+          const isAlreadySelected = prev.some(o => o && allIds.has(o.id));
+          if (isAlreadySelected) {
+            const newSelection = prev.filter(o => o && !allIds.has(o.id));
+            setTimeout(() => {
+              setSelectedObject(newSelection.length > 0 ? newSelection[0] : null);
+            }, 0);
+            return newSelection;
+          } else {
+            setSelectedObject(object);
+            return [...prev, ...objectsToSelect];
+          }
+        });
+      } else {
+        setSelectedObject(object);
+        setSelectedObjects(objectsToSelect);
+      }
+      return;
+    }
+    
     if (isMultiSelect) {
       setSelectedObjects(prev => {
         const isSelected = prev.some(o => o && o.id === object.id);
@@ -274,12 +307,39 @@ function AppContent() {
     return newName;
   }, []);
 
+  /**
+   * 添加对象到场景
+   * 
+   * 支持的对象类型：
+   * - cube：立方体
+   * - sphere：球体
+   * - plane：平面
+   * - folder：文件夹（用于组织对象）
+   * - model：模型（需要asset参数）
+   * 
+   * @param {string} type - 对象类型
+   * @param {Object} asset - 资源对象（模型时使用）
+   */
   const handleAddObject = useCallback((type, asset = null) => {
     setSceneObjectsWithHistory(prev => {
       let baseName;
       let newObject;
       
-      if (asset && (asset.type === 'gltf' || asset.type === 'glb')) {
+      if (type === 'folder') {
+        baseName = 'Folder';
+        const uniqueName = generateUniqueName(baseName, prev);
+        
+        newObject = {
+          id: Date.now(),
+          name: uniqueName,
+          type: 'folder',
+          position: [0, 0, 0],
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1],
+          isFolder: true,
+          children: []
+        };
+      } else if (asset && (asset.type === 'gltf' || asset.type === 'glb')) {
         baseName = asset.name.replace(/\.[^.]+$/, '');
         const uniqueName = generateUniqueName(baseName, prev);
         
@@ -411,12 +471,102 @@ function AppContent() {
     }
   }, []);
 
+  /**
+   * 选择资源时的处理
+   * 
+   * 如果选择的是模型资源，直接导入为部件层级。
+   */
   const handleSelectAsset = useCallback((asset) => {
     setSelectedAsset(asset);
-    if (asset.assetType === 'model') {
+    if (asset.assetType === 'model' && asset.gltfScene) {
+      handleImportModelParts(asset);
+    } else if (asset.assetType === 'model') {
       handleAddObject('model', asset);
     }
   }, [handleAddObject]);
+
+  /**
+   * 导入模型为部件层级
+   * 
+   * 解析GLTF模型的内部层级结构，将每个Mesh作为单独的对象添加到场景中。
+   * 创建一个根文件夹对象，然后将所有Mesh作为子对象添加到文件夹中。
+   * 
+   * 部件的位置是相对于模型中心点的偏移，这样移动文件夹时所有部件会一起移动。
+   * 
+   * @param {Object} asset - 模型资源
+   */
+  const handleImportModelParts = useCallback((asset) => {
+    if (!asset || !asset.gltfScene) return;
+
+    setSceneObjectsWithHistory(prev => {
+      const modelBaseName = asset.name.replace(/\.[^.]+$/, '');
+      const rootFolderName = generateUniqueName(modelBaseName, prev);
+      const rootFolderId = Date.now();
+      
+      const modelCenter = asset.center || new THREE.Vector3(0, 0, 0);
+      
+      const rootFolder = {
+        id: rootFolderId,
+        name: rootFolderName,
+        type: 'folder',
+        position: [0, 0, 0],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1],
+        isFolder: true,
+        children: [],
+        assetId: asset.id
+      };
+      
+      const meshObjects = [];
+      let meshCounter = 0;
+      
+      asset.gltfScene.traverse((child) => {
+        if (child.isMesh) {
+          const meshId = rootFolderId + 1 + meshCounter;
+          meshCounter++;
+          
+          const worldPos = new THREE.Vector3();
+          const worldQuat = new THREE.Quaternion();
+          const worldScale = new THREE.Vector3();
+          child.getWorldPosition(worldPos);
+          child.getWorldQuaternion(worldQuat);
+          child.getWorldScale(worldScale);
+          
+          const relativePos = worldPos.clone().sub(modelCenter);
+          
+          const worldEuler = new THREE.Euler().setFromQuaternion(worldQuat);
+          
+          const meshName = generateUniqueName(child.name || 'Mesh', [...prev, rootFolder, ...meshObjects]);
+          
+          const meshObj = {
+            id: meshId,
+            name: meshName,
+            type: 'mesh',
+            position: [relativePos.x, relativePos.y, relativePos.z],
+            rotation: [
+              THREE.MathUtils.radToDeg(worldEuler.x),
+              THREE.MathUtils.radToDeg(worldEuler.y),
+              THREE.MathUtils.radToDeg(worldEuler.z)
+            ],
+            scale: [worldScale.x, worldScale.y, worldScale.z],
+            parentId: rootFolderId,
+            assetId: asset.id,
+            meshPath: child.name
+          };
+          
+          meshObjects.push(meshObj);
+        }
+      });
+      
+      rootFolder.children = meshObjects.map(obj => obj.id);
+      
+      const allNewObjects = [rootFolder, ...meshObjects];
+      setSelectedObject(rootFolder);
+      setSelectedObjects(allNewObjects);
+      
+      return [...prev, ...allNewObjects];
+    });
+  }, [setSceneObjectsWithHistory, generateUniqueName]);
 
   const handleDeleteAsset = useCallback((asset) => {
     if (asset.url) {
@@ -493,65 +643,144 @@ function AppContent() {
 
   const [clipboard, setClipboard] = useState(null);
 
+  /**
+   * 复制对象到剪贴板
+   * 
+   * 支持单选和多选复制：
+   * - 单选：复制单个对象
+   * - 多选：复制所有选中的对象
+   * 
+   * @param {number} id - 要复制的对象ID（单选时使用）
+   */
   const handleCopyObject = useCallback((id) => {
-    const obj = sceneObjects.find(o => o.id === id);
-    if (obj) {
-      setClipboard({ ...obj });
+    if (selectedObjects && selectedObjects.length > 1) {
+      const objectsToCopy = selectedObjects.map(obj => ({ ...obj }));
+      setClipboard({ type: 'multi', objects: objectsToCopy });
+    } else {
+      const obj = sceneObjects.find(o => o.id === id);
+      if (obj) {
+        setClipboard({ type: 'single', object: { ...obj } });
+      }
     }
-  }, [sceneObjects]);
+  }, [sceneObjects, selectedObjects]);
 
+  /**
+   * 从剪贴板粘贴对象
+   * 
+   * 支持单选和多选粘贴：
+   * - 单选：粘贴单个对象，位置偏移1单位
+   * - 多选：粘贴所有对象，每个对象位置偏移1单位
+   * 
+   * 粘贴后会自动选中新创建的对象。
+   */
   const handlePasteObject = useCallback(() => {
     if (!clipboard) return null;
 
     setSceneObjectsWithHistory(prev => {
-      const baseName = clipboard.name;
-      const uniqueName = generateUniqueName(baseName, prev);
+      if (clipboard.type === 'multi') {
+        const newObjects = clipboard.objects.map((obj, index) => {
+          const baseName = obj.name;
+          const uniqueName = generateUniqueName(baseName, prev);
+          
+          return {
+            ...obj,
+            id: Date.now() + index,
+            name: uniqueName,
+            position: [
+              obj.position[0] + 1,
+              obj.position[1],
+              obj.position[2]
+            ],
+            parentId: null
+          };
+        });
+        
+        setSelectedObject(newObjects[0]);
+        setSelectedObjects(newObjects);
+        return [...prev, ...newObjects];
+      } else {
+        const baseName = clipboard.object.name;
+        const uniqueName = generateUniqueName(baseName, prev);
 
-      const newObj = {
-        ...clipboard,
-        id: Date.now(),
-        name: uniqueName,
-        position: [
-          clipboard.position[0] + 1,
-          clipboard.position[1],
-          clipboard.position[2]
-        ],
-        parentId: null
-      };
+        const newObj = {
+          ...clipboard.object,
+          id: Date.now(),
+          name: uniqueName,
+          position: [
+            clipboard.object.position[0] + 1,
+            clipboard.object.position[1],
+            clipboard.object.position[2]
+          ],
+          parentId: null
+        };
 
-      setSelectedObject(newObj);
-      setSelectedObjects([newObj]);
-      return [...prev, newObj];
+        setSelectedObject(newObj);
+        setSelectedObjects([newObj]);
+        return [...prev, newObj];
+      }
     });
     return true;
   }, [clipboard, setSceneObjectsWithHistory, generateUniqueName]);
 
+  /**
+   * 复制对象（原地复制）
+   * 
+   * 支持单选和多选复制：
+   * - 单选：复制单个对象，位置偏移1单位
+   * - 多选：复制所有选中的对象，每个对象位置偏移1单位
+   * 
+   * @param {number} id - 要复制的对象ID（单选时使用）
+   */
   const handleDuplicateObject = useCallback((id) => {
     setSceneObjectsWithHistory(prev => {
-      const obj = prev.find(o => o.id === id);
-      if (!obj) return prev;
+      if (selectedObjects && selectedObjects.length > 1 && 
+          selectedObjects.some(o => o && o.id === id)) {
+        const newObjects = selectedObjects.map((obj, index) => {
+          const baseName = obj.name;
+          const uniqueName = generateUniqueName(baseName, prev);
+          
+          return {
+            ...obj,
+            id: Date.now() + index,
+            name: uniqueName,
+            position: [
+              obj.position[0] + 1,
+              obj.position[1],
+              obj.position[2]
+            ],
+            parentId: null
+          };
+        });
+        
+        setSelectedObject(newObjects[0]);
+        setSelectedObjects(newObjects);
+        return [...prev, ...newObjects];
+      } else {
+        const obj = prev.find(o => o.id === id);
+        if (!obj) return prev;
 
-      const baseName = obj.name;
-      const uniqueName = generateUniqueName(baseName, prev);
+        const baseName = obj.name;
+        const uniqueName = generateUniqueName(baseName, prev);
 
-      const newObj = {
-        ...obj,
-        id: Date.now(),
-        name: uniqueName,
-        position: [
-          obj.position[0] + 1,
-          obj.position[1],
-          obj.position[2]
-        ],
-        parentId: null
-      };
+        const newObj = {
+          ...obj,
+          id: Date.now(),
+          name: uniqueName,
+          position: [
+            obj.position[0] + 1,
+            obj.position[1],
+            obj.position[2]
+          ],
+          parentId: null
+        };
 
-      setSelectedObject(newObj);
-      setSelectedObjects([newObj]);
-      return [...prev, newObj];
+        setSelectedObject(newObj);
+        setSelectedObjects([newObj]);
+        return [...prev, newObj];
+      }
     });
     return true;
-  }, [setSceneObjectsWithHistory, generateUniqueName]);
+  }, [setSceneObjectsWithHistory, generateUniqueName, selectedObjects]);
 
   const handleRenameObject = useCallback((id, newName) => {
     setSceneObjectsWithHistory(prev => {
@@ -1354,7 +1583,13 @@ function AppContent() {
 
       <div className="main-content-wrapper">
         <div className="main-content">
-          <div className={`left-sidebar ${leftSidebarAllCollapsed ? 'all-collapsed' : ''}`}>
+          <ResizablePanel 
+            side="left" 
+            minWidth={200} 
+            maxWidth={500} 
+            defaultWidth={280}
+            className={`left-sidebar ${leftSidebarAllCollapsed ? 'all-collapsed' : ''}`}
+          >
             <HierarchyPanel
               objects={sceneObjects}
               selectedObject={selectedObject}
@@ -1384,7 +1619,7 @@ function AppContent() {
               vertical={leftSidebarAllCollapsed}
               onCollapseChange={setPrefabsCollapsed}
             />
-          </div>
+          </ResizablePanel>
 
           <div className="center-area">
             <MultiViewport
@@ -1402,7 +1637,13 @@ function AppContent() {
             />
           </div>
 
-          <div className={`right-sidebar ${inspectorCollapsed ? 'all-collapsed' : ''}`}>
+          <ResizablePanel 
+            side="right" 
+            minWidth={200} 
+            maxWidth={500} 
+            defaultWidth={300}
+            className={`right-sidebar ${inspectorCollapsed ? 'all-collapsed' : ''}`}
+          >
             <InspectorPanel
               selectedObject={selectedObject}
               onUpdateObject={handleUpdateObject}
@@ -1415,10 +1656,17 @@ function AppContent() {
               assets={assets}
               objects={sceneObjects}
             />
-          </div>
+          </ResizablePanel>
         </div>
 
-        <div className="bottom-area">
+        <ResizablePanel 
+          direction="vertical"
+          minHeight={80} 
+          maxHeight={400} 
+          defaultHeight={150}
+          className="bottom-area"
+          collapsed={isAssetsPanelCollapsed}
+        >
           <AssetsPanel
             assets={assets}
             onImport={handleImportAsset}
@@ -1426,8 +1674,9 @@ function AppContent() {
             selectedAsset={selectedAsset}
             onDeleteAsset={handleDeleteAsset}
             onRenameAsset={handleRenameAsset}
+            onCollapseChange={setIsAssetsPanelCollapsed}
           />
-        </div>
+        </ResizablePanel>
       </div>
 
       <div className="status-bar">

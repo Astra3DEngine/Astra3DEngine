@@ -4,13 +4,14 @@
  * @module components/HierarchyPanel
  */
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { msg } from '../i18n/index.js';
 import CollapsiblePanel from './CollapsiblePanel.jsx';
 import IconCube from '../icons/cube.svg?react';
 import IconSphere from '../icons/sphere.svg?react';
 import IconPlane from '../icons/plane.svg?react';
 import IconModel from '../icons/model.svg?react';
+import IconFolder from '../icons/folder.svg?react';
 import IconPrefabInstance from '../icons/prefab-instance.svg?react';
 import IconDelete from '../icons/delete.svg?react';
 import IconPrefab from '../icons/prefab.svg?react';
@@ -80,6 +81,22 @@ function HierarchyPanel({
 
   useEffect(() => {
     objectsRef.current = objects;
+  }, [objects]);
+
+  /**
+   * 获取对象的所有后代对象（包括嵌套的子对象）
+   * @param {number} parentId - 父对象ID
+   * @returns {Array} 所有后代对象列表
+   */
+  const getAllDescendants = useCallback((parentId) => {
+    const descendants = [];
+    const children = objects.filter(o => o.parentId === parentId);
+    children.forEach(child => {
+      descendants.push(child);
+      const nestedChildren = getAllDescendants(child.id);
+      descendants.push(...nestedChildren);
+    });
+    return descendants;
   }, [objects]);
 
   const computedExpandedIds = useMemo(() => {
@@ -180,9 +197,20 @@ function HierarchyPanel({
     setContextMenu(null);
   };
 
+  /**
+   * 复制对象到剪贴板
+   * 
+   * 如果当前有多个选中对象，且右键菜单的对象在其中，
+   * 则复制所有选中的对象。否则只复制单个对象。
+   */
   const handleCopy = () => {
     if (contextMenu?.object) {
-      onCopyObject(contextMenu.object.id);
+      if (selectedObjects && selectedObjects.length > 1 && 
+          selectedObjects.some(o => o && o.id === contextMenu.object.id)) {
+        onCopyObject(contextMenu.object.id);
+      } else {
+        onCopyObject(contextMenu.object.id);
+      }
     }
     setContextMenu(null);
   };
@@ -192,6 +220,12 @@ function HierarchyPanel({
     setContextMenu(null);
   };
 
+  /**
+   * 复制对象（原地复制）
+   * 
+   * 如果当前有多个选中对象，且右键菜单的对象在其中，
+   * 则复制所有选中的对象。否则只复制单个对象。
+   */
   const handleDuplicate = () => {
     if (contextMenu?.object) {
       onDuplicateObject(contextMenu.object.id);
@@ -230,6 +264,8 @@ function HierarchyPanel({
   };
 
   const getObjectIcon = (obj) => {
+    if (obj.isFolder) return <IconFolder className="hierarchy-icon" />;
+    if (obj.type === 'mesh') return <IconModel className="hierarchy-icon" />;
     if (obj.prefabId) return <IconPrefabInstance className="hierarchy-icon" />;
     if (obj.type === 'cube') return <IconCube className="hierarchy-icon" />;
     if (obj.type === 'sphere') return <IconSphere className="hierarchy-icon" />;
@@ -432,7 +468,12 @@ function HierarchyPanel({
           style={{ paddingLeft: `${6 + depth * 16}px` }}
           onClick={(e) => {
             if (isRenaming) return;
-            onSelectObject(obj, e.ctrlKey || e.metaKey);
+            if (obj.isFolder) {
+              const descendants = getAllDescendants(obj.id);
+              onSelectObject(obj, e.ctrlKey || e.metaKey, [obj, ...descendants]);
+            } else {
+              onSelectObject(obj, e.ctrlKey || e.metaKey);
+            }
           }}
           onDoubleClick={(e) => {
             if (hasChildren) {
@@ -532,6 +573,14 @@ function HierarchyPanel({
       </button>
       {addMenuOpen && (
         <div className="add-menu-dropdown">
+          <div 
+            className="add-menu-item"
+            onClick={() => { onAddObject('folder'); setAddMenuOpen(false); }}
+          >
+            <IconFolder className="add-menu-item-icon" />
+            {msg('hierarchy.folder')}
+          </div>
+          <div className="add-menu-divider" />
           <div 
             className="add-menu-item"
             onClick={() => { onAddObject('cube'); setAddMenuOpen(false); }}

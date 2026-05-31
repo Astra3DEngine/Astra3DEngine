@@ -34,3 +34,7 @@ body {
   flex: 1;
   overflow: hidden;
 }
+
+.bottom-area {
+  flex-shrink: 0;
+}
