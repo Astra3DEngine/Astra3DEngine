@@ -83,61 +83,88 @@ const FileBrowserDialog = ({
   const [activeFilterIndex, setActiveFilterIndex] = useState(0);
   const [isEditingPath, setIsEditingPath] = useState(false);
   const [editedPath, setEditedPath] = useState('');
-  
+
+  // 规范化 Windows 路径：统一分隔符、去除重复盘符、确保末尾无斜杠
+  const normalizePath = useCallback((rawPath) => {
+    if (!rawPath) return rawPath;
+    let p = rawPath.replace(/\//g, '\\');
+    // 匹配 Windows 绝对路径: 盘符:\... 或 \\网络路径
+    const driveMatch = p.match(/^([A-Za-z]:)(.*)/);
+    if (driveMatch) {
+      const drive = driveMatch[1]; // e.g. "D:"
+      const rest = driveMatch[2].replace(/\\/g, '\\'); // 统一反斜杠
+      // 去除开头的多余斜杠，然后分割各段过滤空串
+      const segments = rest.replace(/^\\+/, '').split('\\').filter(Boolean);
+      return drive + '\\' + segments.join('\\');
+    }
+    // 非 Windows 盘符路径，只做简单清理
+    return p.replace(/\\+/g, '\\').replace(/\\$/, '');
+  }, []);
+
   const isElectron = typeof window !== 'undefined' && window.electronAPI?.fs;
   
   useEffect(() => {
     if (isOpen && isElectron) {
+      setIsLoading(true);
+      setItems([]);
+      setError(null);
       initBrowser();
     }
   }, [isOpen, isElectron]);
-  
+
   const initBrowser = async () => {
     try {
       const dirs = await window.electronAPI.fs.getCommonDirs();
       setCommonDirs(dirs);
-      
+
       const drivesResult = await window.electronAPI.fs.getDrives();
       if (drivesResult.success) {
         setDrives(drivesResult.drives);
       }
-      
+
       const initialPath = defaultPath || dirs.home || dirs.documents;
       if (initialPath) {
         navigateTo(initialPath, true);
+      } else {
+        setIsLoading(false);
       }
     } catch (e) {
-      console.error('Failed to initialize file browser:', e);
+      setIsLoading(false);
     }
   };
   
   const pathSeparator = useMemo(() => {
     return currentPath.includes('\\') ? '\\' : '/';
   }, [currentPath]);
-  
+
+  // 使用 navigator.userAgent 检测平台，不依赖异步数据
   const isWindows = useMemo(() => {
-    return drives.length > 0 && drives[0].path.includes('\\');
-  }, [drives]);
+    if (typeof navigator === 'undefined') return false;
+    return navigator.userAgent?.includes('Windows') || navigator.platform?.startsWith('Win');
+  }, []);
   
   const navigateTo = useCallback(async (path, addToHistory = true) => {
+    const normalizedPath = normalizePath(path);
+    if (!normalizedPath) return;
+
     setIsLoading(true);
     setError(null);
     setSelectedItems([]);
-    
+
     try {
-      const result = await window.electronAPI.fs.listDirectory(path);
-      
+      const result = await window.electronAPI.fs.listDirectory(normalizedPath);
+
       if (result.success) {
-        const filteredItems = showHiddenFiles 
-          ? result.items 
+        const filteredItems = showHiddenFiles
+          ? result.items
           : result.items.filter(item => !item.isHidden);
-        
+
         setItems(filteredItems);
-        setCurrentPath(path);
-        
+        setCurrentPath(normalizedPath);
+
         if (addToHistory) {
           const newHistory = history.slice(0, historyIndex + 1);
-          newHistory.push(path);
+          newHistory.push(normalizedPath);
           setHistory(newHistory);
           setHistoryIndex(newHistory.length - 1);
         }
@@ -147,9 +174,9 @@ const FileBrowserDialog = ({
     } catch (e) {
       setError(e.message);
     }
-    
+
     setIsLoading(false);
-  }, [showHiddenFiles, history, historyIndex]);
+  }, [showHiddenFiles, history, historyIndex, normalizePath]);
   
   const goBack = useCallback(() => {
     if (historyIndex > 0) {
@@ -168,11 +195,24 @@ const FileBrowserDialog = ({
   }, [history, historyIndex, navigateTo]);
   
   const goUp = useCallback(() => {
-    const parentPath = currentPath.split(/[\\/]/).slice(0, -1).join(pathSeparator) || (isWindows ? drives[0]?.path : '/');
-    if (parentPath) {
-      navigateTo(parentPath);
+    // 使用 normalizePath 解析当前路径后取父目录
+    const normalized = normalizePath(currentPath);
+    if (!normalized) return;
+
+    // 盘符根目录（如 D:\）不能再往上
+    const driveRootMatch = normalized.match(/^([A-Za-z]:\\?)$/);
+    if (driveRootMatch) return;
+
+    const lastSep = normalized.lastIndexOf('\\');
+    if (lastSep > 0) {
+      // "D:\foo\bar" → "D:\foo",  "D:\foo" → "D:\"
+      const parentPath = normalized.substring(0, lastSep);
+      navigateTo(parentPath || (isWindows ? drives[0]?.path : '/'));
+    } else if (lastSep === 0) {
+      // 根路径情况
+      navigateTo(isWindows ? drives[0]?.path : '/');
     }
-  }, [currentPath, drives, isWindows, pathSeparator, navigateTo]);
+  }, [currentPath, drives, isWindows, navigateTo, normalizePath]);
   
   const handlePathClick = useCallback(() => {
     setIsEditingPath(true);
@@ -187,17 +227,8 @@ const FileBrowserDialog = ({
     if (e.key === 'Enter') {
       setIsEditingPath(false);
       if (editedPath && editedPath !== currentPath) {
-        let normalizedPath = editedPath;
-        
-        if (isWindows) {
-          const driveRegex = /^([A-Za-z]:)(.*)$/;
-          const match = editedPath.match(driveRegex);
-          if (match && !match[2].startsWith('\\')) {
-            normalizedPath = match[1] + '\\' + match[2];
-          }
-        }
-        
-        await navigateTo(normalizedPath);
+        // navigateTo 内部会调用 normalizePath 规范化
+        await navigateTo(editedPath);
       }
     } else if (e.key === 'Escape') {
       setIsEditingPath(false);
@@ -304,24 +335,27 @@ const FileBrowserDialog = ({
   
   const pathParts = useMemo(() => {
     if (!currentPath) return [];
-    const parts = currentPath.split(/[\\/]/).filter(Boolean);
+    // 先规范化再分割，确保路径格式一致
+    const normalized = normalizePath(currentPath);
+    const parts = normalized.split('\\').filter(Boolean);
     return parts;
-  }, [currentPath]);
-  
+  }, [currentPath, normalizePath]);
+
+  // 根据点击的 index 构建子路径
   const buildSubPath = useCallback((index) => {
-    if (isWindows) {
-      const firstPart = pathParts[0];
-      if (firstPart && firstPart.endsWith(':')) {
-        if (index === 0) {
-          return firstPart + '\\';
-        }
-        return firstPart + '\\' + pathParts.slice(1, index + 1).join('\\');
+    if (pathParts.length === 0) return '';
+    const firstPart = pathParts[0];
+    // Windows 盘符路径 (D:, C: 等)
+    if (/^[A-Za-z]:$/.test(firstPart)) {
+      if (index === 0) {
+        return firstPart + '\\';
       }
-      return pathParts.slice(0, index + 1).join('\\');
-    } else {
-      return '/' + pathParts.slice(0, index + 1).join('/');
+      // 盘符 + \ + 后续段用 \ 连接
+      return firstPart + '\\' + pathParts.slice(1, index + 1).join('\\');
     }
-  }, [isWindows, pathParts]);
+    // 非 Windows 路径（Unix 风格）
+    return '/' + pathParts.slice(0, index + 1).join('/');
+  }, [pathParts]);
   
   if (!isOpen) return null;
   
@@ -344,7 +378,28 @@ const FileBrowserDialog = ({
       </div>
     );
   }
-  
+
+  // 初始化阶段：只显示 loading，隐藏所有 UI
+  if (isLoading && items.length === 0) {
+    return (
+      <div className="file-browser-overlay">
+        <div className="file-browser-dialog">
+          <div className="file-browser-header">
+            <h3>{title || (mode === 'save' ? msg('fileBrowser.saveTitle') : msg('fileBrowser.openTitle'))}</h3>
+            <button className="file-browser-close" onClick={onClose}>
+              <Icon src={CloseIcon} size={14} />
+            </button>
+          </div>
+          <div className="file-browser-body">
+            <div className="file-browser-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+              <div className="file-browser-loading">{msg('fileBrowser.loading')}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="file-browser-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="file-browser-dialog">
@@ -381,20 +436,6 @@ const FileBrowserDialog = ({
           </button>
           
           <div className="file-browser-path">
-            {isWindows && drives.length > 0 && (
-              <select 
-                className="file-browser-drive-select"
-                value={currentPath ? currentPath.split('\\')[0] + '\\' : drives[0]?.path || ''}
-                onChange={(e) => navigateTo(e.target.value)}
-              >
-                {drives.map(drive => (
-                  <option key={drive.path} value={drive.path}>
-                    {drive.label}
-                  </option>
-                ))}
-              </select>
-            )}
-            
             {isEditingPath ? (
               <input
                 type="text"
@@ -501,25 +542,25 @@ const FileBrowserDialog = ({
           </div>
           
           <div className="file-browser-content">
-            {isLoading && (
-              <div className="file-browser-loading">
-                {msg('fileBrowser.loading')}
-              </div>
-            )}
-            
             {error && (
               <div className="file-browser-error">
                 {error}
               </div>
             )}
-            
-            {!isLoading && !error && visibleItems.length === 0 && (
+
+            {!error && items.length > 0 && isLoading && (
+              <div className="file-browser-loading">
+                {msg('fileBrowser.loading')}
+              </div>
+            )}
+
+            {!error && !isLoading && visibleItems.length === 0 && (
               <div className="file-browser-empty">
                 {msg('fileBrowser.empty')}
               </div>
             )}
-            
-            {!isLoading && !error && visibleItems.length > 0 && (
+
+            {!error && !isLoading && visibleItems.length > 0 && (
               <div className="file-browser-list">
                 {visibleItems.map(item => (
                   <div

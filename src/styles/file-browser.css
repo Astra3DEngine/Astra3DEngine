@@ -93,23 +93,15 @@
 .file-browser-path {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 4px 8px;
+  padding: 0 8px;
   min-width: 0;
   overflow: hidden;
-}
-
-.file-browser-drive-select {
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-size: 12px;
-  cursor: pointer;
-  padding: 2px 4px;
+  height: 30px;
 }
 
 .file-browser-path-parts {
@@ -129,6 +121,7 @@
   font-size: 12px;
   outline: none;
   min-width: 0;
+  height: 100%;
 }
 
 .file-browser-path-part {

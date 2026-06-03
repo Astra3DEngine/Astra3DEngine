@@ -12,6 +12,8 @@ import { app, BrowserWindow, ipcMain, shell, dialog, nativeImage } from 'electro
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { promises as fsp } from 'fs';
+import { execSync } from 'child_process';
+import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -263,25 +265,50 @@ ipcMain.handle('fs:createDirectory', async (event, dirPath) => {
 
 ipcMain.handle('fs:getDrives', async () => {
   if (process.platform === 'win32') {
+    let drives = [];
+
+    // 策略1: PowerShell Get-Volume + ConvertTo-Json (Win8+)
+    // 用 Buffer 读取原始字节，再按 GBK(Windows中文系统默认) 解码为 UTF-8
     try {
-      const { execSync } = require('child_process');
-      const output = execSync('wmic logicaldisk get name,volumename', { encoding: 'utf8' });
-      const lines = output.split('\n').filter(line => line.trim());
-      const drives = [];
-      for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].trim().split(/\s+/);
-        if (parts[0]) {
+      const buf = execSync(
+        'powershell -NoProfile -Command "Get-Volume | Where-Object { $_.DriveLetter -ne $null } | Select-Object DriveLetter, FileSystemLabel | ConvertTo-Json -Compress"',
+        { timeout: 8000 }
+      );
+      // Windows 中文系统 PowerShell 默认输出 GBK 编码，用 TextDecoder 转码
+      const psOutput = new TextDecoder('gbk').decode(buf);
+      const parsed = JSON.parse(psOutput.trim());
+      const arr = Array.isArray(parsed) ? parsed : [parsed];
+      for (const item of arr) {
+        if (item.DriveLetter) {
+          const letter = item.DriveLetter.toUpperCase() + ':';
           drives.push({
-            name: parts[0],
-            label: parts[1] || parts[0],
-            path: parts[0] + '\\'
+            name: letter,
+            label: item.FileSystemLabel || letter,
+            path: letter + '\\'
           });
         }
       }
-      return { success: true, drives };
-    } catch (error) {
-      return { success: false, error: error.message, drives: [] };
+      if (drives.length > 0) {
+        console.log('[getDrives] 策略1成功, 找到:', drives.map(d => d.name + '(' + d.label + ')'));
+        return { success: true, drives };
+      }
+    } catch (e) {
+      console.log('[getDrives] 策略1失败:', e.message?.substring(0, 150));
     }
+
+    // 策略2: fs.existsSync 遍历 A-Z（纯Node兜底，无中文卷标）
+    console.log('[getDrives] 使用策略2(fs探测)...');
+    for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')) {
+      const p = letter + ':\\';
+      try {
+        if (fs.existsSync(p)) {
+          drives.push({ name: letter + ':', label: letter + ':', path: p });
+        }
+      } catch (_) {}
+    }
+    console.log('[getDrives] 策略2结果, 找到:', drives.map(d => d.name));
+
+    return { success: true, drives };
   } else {
     return { success: true, drives: [{ name: '/', label: 'Root', path: '/' }] };
   }
