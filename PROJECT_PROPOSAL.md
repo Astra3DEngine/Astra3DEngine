@@ -42,16 +42,17 @@ Astra 3D Engine 是一个基于Web的3D游戏引擎编辑器，灵感来源于Un
 
 ### 编辑器与运行时分离架构
 
-这是最关键的设计决策，保证导出的游戏不依赖编辑器代码：
+这是最关键的设计决策，保证导出的游戏不依赖编辑器代码。
+
+> **Home 工作台**（Phase 6+）：在编辑器上层增加统一入口，支持多工具界面切换（A3DE 编辑器、方块建模器、资源库等）。详见 [VOXEL_AND_ANIMATION_DESIGN.md](./VOXEL_AND_ANIMATION_DESIGN.md) 第二章。
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Editor UI (React)                     │
 │  ┌─────────┐  ┌─────────┐  ┌─────────┐                  │
-│  │Hierarchy│  │Inspector│  │  Tool   │                  │
-│  │ Panel   │  │ Panel   │  │  Bar    │                  │
+│  │Hierarchy│  │Inspector│  │Animation│ ← 动画面板 [P8+] │
+│  │ Panel   │  │ Panel   │  │  Panel  │                  │
 │  └────┬────┘  └────┬────┘  └────┬────┘                  │
-│       │            │            │                        │
 │       └────────────┼────────────┘                        │
 │                    │                                      │
 │            ┌───────▼───────┐                              │
@@ -262,6 +263,64 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 - [ ] 更多方块类型（水、岩浆等）
 - [ ] 物品栏持久化
 
+### 11. 方块建模器（Voxel Editor）
+
+> 详细设计见 [VOXEL_AND_ANIMATION_DESIGN.md](./VOXEL_AND_ANIMATION_DESIGN.md) 第三章节
+
+- [ ] Home 工作台下的独立界面
+- [ ] 通过固定大小方块搭建 GLTF 模型
+- [ ] 产出物存入全局资源库供所有项目引用
+- [ ] Three.js InstancedMesh 万级方块单 draw call 渲染
+- [ ] 空间哈希 / GPU Picker 实现方块拾取
+- [ ] 命令模式 (Command Pattern) + 快照压缩实现撤销重做
+- [ ] 3D 视口、画笔/橡皮擦工具
+- [ ] 选择 + 变换工具（选中 + TransformControls）
+- [ ] 调色板（颜色选择 UI）
+- [ ] 图层/分组（树形面板 + Group 管理）
+- [ ] GLTF/GLB 导出（合并几何体 + 导出）
+- [ ] 项目保存/打开（.avox 格式读写）
+- [ ] 正交三视图
+- [ ] PBR 材质系统
+- [ ] 纹理绘制
+
+### 12. 骨骼动画引擎（Animation Engine）
+
+> 详细设计见 [VOXEL_AND_ANIMATION_DESIGN.md](./VOXEL_AND_ANIMATION_DESIGN.md) 第四章节
+
+- [ ] 内置在 A3DE 主编辑器中的功能面板
+- [ ] 三层分离架构：UI 层 (React) / 状态层 (Store) / 引擎层 (Core)
+- [ ] AnimationManager 动画混合器管理（蓝本：Astral3D `AnimationManager.ts`）
+- [ ] KeyframeTrackFactory 轨道类型自动推断工厂
+- [ ] TimelineController Canvas 时间轴控制器 Dope Sheet（蓝本：Astral3D `TimelineTrack.ts`）
+- [ ] SkeletonManager 骨骼 CRUD + 从 Group 自动生成骨骼 + 蒙皮绑定
+- [ ] 动画列表与播放控制栏
+- [ ] 时间轴 Canvas 渲染 + 关键帧拖拽交互
+- [ ] 轨道树解析（Clip.tracks → 树形结构显示）
+- [ ] 关键帧 CRUD（添加/删除/拖动 + 双向绑定到 Three.js Track）
+- [ ] 播放头同步（Mixer 更新 → 播放头自动滚动）
+- [ ] 骨骼可视化（SkeletonHelper + 编辑面板）
+- [ ] SkinnedMesh 绑定（几何体 + 骨骼）
+- [ ] 自动蒙皮权重（距离衰减算法）
+- [ ] 曲线编辑器（贝塞尔插值可视化）
+- [ ] 动画混合/过渡（crossfade + layer blend）
+- [ ] IK/FK 支持
+- [ ] 动画导出
+
+### 13. Home 工作台与全局资源库
+
+> 详细设计见 [VOXEL_AND_ANIMATION_DESIGN.md](./VOXEL_AND_ANIMATION_DESIGN.md) 第五章节
+
+- [ ] 统一入口页面（React Router 多页面布局）
+- [ ] `/editor` — A3DE 编辑器路由
+- [ ] `/voxel-editor` — 方块建模器路由
+- [ ] `/settings` — 设置中心路由
+- [ ] `/resources` — 资源库管理器路由
+- [ ] 全局资源库存储目录（`~/Documents/Astra3DEngine/Resources/`）
+- [ ] models / materials / textures / animations 分类
+- [ ] 资源库缩略图预览
+- [ ] 标签系统
+- [ ] 资源搜索过滤
+
 ---
 
 ## 四、技术挑战与解决方案
@@ -345,7 +404,7 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 - [ ] 光照系统（烘焙）
 - [ ] 地形系统
 - [ ] 粒子系统
-- [ ] 动画系统
+- [ ] 动画系统（详见 [VOXEL_AND_ANIMATION_DESIGN.md](./VOXEL_AND_ANIMATION_DESIGN.md)）
 - [ ] 网络同步（多人）
 
 **目标**：能够制作功能完整的3D游戏
@@ -365,6 +424,69 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 - [ ] 文档完善
 
 **目标**：形成可持续发展的开源生态
+
+### Phase 6: Home 工作台与资源库
+
+> 详细设计见 [VOXEL_AND_ANIMATION_DESIGN.md](./VOXEL_AND_ANIMATION_DESIGN.md) 第五、七章节
+
+- [ ] Home 工作台框架（React Router 多页面布局）
+- [ ] A3DE 编辑器路由迁移（嵌入 /editor 路由）
+- [ ] 全局资源库骨架（存储目录 + 索引文件 + CRUD API）
+- [ ] 资源库 UI（缩略图、标签、搜索）
+
+**目标**：统一入口，支持多工具界面切换，建立跨项目资源共享机制
+
+### Phase 7: 方块建模器（Voxel Editor MVP）
+
+> 详细设计见 [VOXEL_AND_ANIMATION_DESIGN.md](./VOXEL_AND_ANIMATION_DESIGN.md) 第三、七章节
+
+- [ ] 建模器页面框架（独立 Three.js Scene + 基础布局）
+- [ ] InstancedMesh 渲染器（方块绘制 + 拾取）
+- [ ] 画笔/橡皮擦工具（基础绘制交互）
+- [ ] 选择 + 变换工具（选中 + TransformControls）
+- [ ] 调色板（颜色选择 UI）
+- [ ] 撤销/重做（命令模式历史栈）
+- [ ] 图层/分组（树形面板 + Group 管理）
+- [ ] GLTF/GLB 导出（合并几何体 + 导出）
+- [ ] 项目保存/打开（.avox 格式读写）
+
+**目标**：用户可以通过固定大小方块搭建模型并导出为 GLTF
+
+### Phase 8: 骨骼动画引擎 — 播放与编辑
+
+> 详细设计见 [VOXEL_AND_ANIMATION_DESIGN.md](./VOXEL_AND_ANIMATION_DESIGN.md) 第四、七章节
+
+- [ ] AnimationManager 核心（mixerMap/actionMap + KeyframeTrackFactory）
+- [ ] 动画面板 UI（播放控制栏 + 动画列表选择器）
+- [ ] 时间轴 Canvas（Dope Sheet 渲染 + 关键帧拖拽交互）
+- [ ] 轨道树解析（Clip.tracks → 树形结构显示）
+- [ ] 关键帧 CRUD（添加/删除/拖动 + 双向绑定到 Three.js Track）
+- [ ] 播放头同步（Mixer 更新 → 播放头自动滚动）
+
+**目标**：在 A3DE 内部可以加载带动画的模型、查看/编辑关键帧、播放预览
+
+### Phase 9: 骨骼系统
+
+> 详细设计见 [VOXEL_AND_ANIMATION_DESIGN.md](./VOXEL_AND_ANIMATION_DESIGN.md) 4.3.4 及第七章节
+
+- [ ] SkeletonManager（骨骼 CRUD + 层级管理）
+- [ ] 骨骼可视化（SkeletonHelper + 编辑面板）
+- [ ] 从方块建模器 Group 自动生成骨骼
+- [ ] SkinnedMesh 绑定（几何体 + 骨骼）
+- [ ] 自动蒙皮权重（距离衰减算法）
+- [ ] 骨骼变换 Gizmo（选中骨骼后姿态调整）
+
+**目标**：可以为静态模型创建骨骼、绑定蒙皮、编辑骨骼动画
+
+### Phase 10: 打磨与高级功能
+
+- [ ] 曲线编辑器（贝塞尔插值可视化）
+- [ ] 动画混合/过渡（crossfade + layer blend）
+- [ ] 建模器多视图（正交三视图）
+- [ ] 性能优化（Web Worker + GPU Picker）
+- [ ] 资源库完善（缩略图生成/标签系统/搜索）
+
+**目标**：完善体验，达到生产可用级别
 
 ---
 
