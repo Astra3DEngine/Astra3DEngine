@@ -1,6 +1,6 @@
 # 更新日志
 
-## 2026-06-04 文件浏览器优化 + 遗留待办清零
+## 2026-06-04 文件浏览器优化 + 遗留待办清零 + GitHub Actions CI/CD
 
 ### BUG修复
 - **文件浏览器打开时窗口卡死（无响应）**：
@@ -12,6 +12,9 @@
 - **盘符只显示字母编号**：
   - 无卷标的盘符之前只显示 `"C:"`
   - 修复为有卷标显示 `本地磁盘 (C:)`，无卷标保持 `C:`
+- **index.html 路径分隔符不兼容 Linux**：
+  - `.\\src\\main.jsx` 反斜杠在 Linux 上 Rollup 无法解析
+  - 修复为 `./src/main.jsx`
 
 ### 新增功能
 - **盘符列表缓存**：
@@ -28,6 +31,15 @@
 - **父子变换跟随代码验证通过**：
   - 移动/旋转/缩放三种模式均正确调用 `applyTransformToDescendants`
   - 单选 Pivot 模式和多选模式两条路径均覆盖
+
+### CI/CD 工作流
+- **新增 deploy-stable.yml**：push main → 自动构建部署到 `astra3d.cyberneko.cn/editor/`
+- **新增 deploy-preview.yml**：push develop → 自动构建部署到 `astra3d.cyberneko.cn/develop/`
+- **新增 release.yml**：push v* tag → 构建全平台桌面端产物 + 创建 GitHub Release
+  - 支持正式版（v0.1.0）和预发布版（v0.1.0-beta.1，tag 含连字符自动标记）
+  - 产物覆盖 Windows (NSIS+portable)、macOS (dmg+zip)、Linux (AppImage+deb+tar.gz)
+- Vite base 路径通过 CI 环境变量注入，本地开发不受影响
+- Pages 部署自动维护 CNAME 和 .nojekyll 文件
 - **UV 缩放/偏移功能确认已实现**（InspectorPanel + Viewport 双端齐全）
 
 ### 修改文件
