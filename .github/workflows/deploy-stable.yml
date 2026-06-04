@@ -32,7 +32,7 @@ jobs:
       - name: Checkout Pages repo
         uses: actions/checkout@v4
         with:
-          repository: LanwyWriteXU/astra3dengine.github.io
+          repository: Astra3DEngine/Astra3Dengine.github.io
           token: ${{ secrets.DEPLOY_TOKEN }}
           path: gh-pages
 
