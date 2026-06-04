@@ -1,0 +1,52 @@
+name: Deploy Stable (main)
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Astra3DEngine
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+        env:
+          BASE_URL: /Astra3DEngine/
+
+      - name: Checkout Pages repo
+        uses: actions/checkout@v4
+        with:
+          repository: LanwyWriteXU/astra3dengine.github.io
+          token: ${{ secrets.DEPLOY_TOKEN }}
+          path: gh-pages
+
+      - name: Deploy to /Astra3DEngine/
+        run: |
+          cd gh-pages
+          # 清空目标目录（保留 .git）
+          find Astra3DEngine -mindepth 1 -delete 2>/dev/null || mkdir -p Astra3DEngine
+          # 复制构建产物
+          cp -r $GITHUB_WORKSPACE/dist/* Astra3DEngine/
+          # 提交并推送
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --quiet && git diff --staged --quiet || \
+            git commit -m "Deploy Astra3DEngine stable ${GITHUB_SHA:0:7}"
+          git push
