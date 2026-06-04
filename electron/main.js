@@ -317,8 +317,60 @@ ipcMain.handle('fs:getDrives', async () => {
     _drivesCacheTime = Date.now();
 
     return { success: true, drives };
+  } else if (process.platform === 'darwin') {
+    // macOS: 读取 /Volumes/ 下的挂载点（外接磁盘、U盘等）
+    const drives = [{ name: '/', label: 'Macintosh HD', path: '/' }];
+    try {
+      const entries = await fsp.readdir('/Volumes', { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && entry.name !== 'Macintosh HD') {
+          drives.push({
+            name: entry.name,
+            label: entry.name,
+            path: '/Volumes/' + entry.name + '/'
+          });
+        }
+      }
+    } catch (_) {}
+
+    _drivesCache = drives;
+    _drivesCacheTime = Date.now();
+    return { success: true, drives };
   } else {
-    return { success: true, drives: [{ name: '/', label: 'Root', path: '/' }] };
+    // Linux: 解析 /proc/mounts 获取挂载点
+    const drives = [];
+    try {
+      const mounts = await fsp.readFile('/proc/mounts', 'utf-8');
+      // 跳过 tmpfs、proc、sysfs 等虚拟文件系统，只保留真实设备
+      const skipFs = new Set(['tmpfs', 'proc', 'sysfs', 'devtmpfs', 'cgroup', 'cgroup2', 'debugfs', 'securityfs', 'fusectl', 'configfs', 'pstore', 'hugetlbfs', 'mqueue', 'binfmt_misc']);
+      for (const line of mounts.split('\n')) {
+        if (!line.trim()) continue;
+        const parts = line.split(/\s+/);
+        const device = parts[0];
+        const mountPoint = parts[1];
+        const fsType = parts[2];
+        if (!mountPoint || mountPoint === '/') continue;
+        if (skipFs.has(fsType)) continue;
+        // 排除用户目录下的一些自动挂载
+        if (mountPoint.startsWith('/run/user/') || mountPoint.startsWith('/snap/')) continue;
+
+        const label = mountPoint.split('/').filter(Boolean).pop() || mountPoint;
+        drives.push({
+          name: label,
+          label: label,
+          path: mountPoint + (mountPoint.endsWith('/') ? '' : '/')
+        });
+      }
+    } catch (_) {}
+
+    // 至少保证有根目录
+    if (drives.length === 0 || !drives.some(d => d.path === '/')) {
+      drives.unshift({ name: '/', label: 'Root (/)', path: '/' });
+    }
+
+    _drivesCache = drives;
+    _drivesCacheTime = Date.now();
+    return { success: true, drives };
   }
 });
 

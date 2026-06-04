@@ -57,6 +57,17 @@ const getFileIcon = (filename) => {
   return iconMap[ext] || FileIcon;
 };
 
+// 记忆上次打开的路径（跨对话框复用，跨会话持久化）
+const LAST_PATH_KEY = 'a3de_last_filebrowser_path';
+
+function getLastPath() {
+  try { return localStorage.getItem(LAST_PATH_KEY); } catch (_) { return null; }
+}
+
+function saveLastPath(p) {
+  try { localStorage.setItem(LAST_PATH_KEY, p); } catch (_) {}
+}
+
 const FileBrowserDialog = ({
   isOpen,
   onClose,
@@ -122,7 +133,7 @@ const FileBrowserDialog = ({
         setDrives(drivesResult.drives);
       }
 
-      const initialPath = defaultPath || dirs.home || dirs.documents;
+      const initialPath = defaultPath || getLastPath() || dirs.home || dirs.documents;
       if (initialPath) {
         navigateTo(initialPath, true);
       } else {
@@ -161,6 +172,7 @@ const FileBrowserDialog = ({
 
         setItems(filteredItems);
         setCurrentPath(normalizedPath);
+        saveLastPath(normalizedPath);
 
         if (addToHistory) {
           const newHistory = history.slice(0, historyIndex + 1);

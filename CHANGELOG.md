@@ -1,5 +1,41 @@
 # 更新日志
 
+## 2026-06-04 文件浏览器优化 + 遗留待办清零
+
+### BUG修复
+- **文件浏览器打开时窗口卡死（无响应）**：
+  - 原因：`execSync` 同步阻塞 Electron 主进程事件循环
+  - 修复：改为异步 `exec` + Promise 包装，主进程不再冻结
+- **调试日志残留**：
+  - App.jsx `handleReorderObjects` 移除 ~25 条 console.log
+  - InspectorPanel.jsx `handleParentChange` 移除 8 条 console.log
+- **盘符只显示字母编号**：
+  - 无卷标的盘符之前只显示 `"C:"`
+  - 修复为有卷标显示 `本地磁盘 (C:)`，无卷标保持 `C:`
+
+### 新增功能
+- **盘符列表缓存**：
+  - 模块级 TTL 缓存（60 秒），避免重复执行 PowerShell
+- **跨平台盘符支持**：
+  - macOS：读取 `/Volumes/` 目录获取挂载点
+  - Linux：解析 `/proc/mounts` 获取挂载点（过滤虚拟文件系统）
+- **文件浏览器路径记忆**：
+  - localStorage 持久化记住上次浏览的目录
+  - 每次打开自动跳转到上次位置，跨会话有效
+  - 优先级：调用方指定 > 上次路径 > 用户主目录
+
+### 功能验证
+- **父子变换跟随代码验证通过**：
+  - 移动/旋转/缩放三种模式均正确调用 `applyTransformToDescendants`
+  - 单选 Pivot 模式和多选模式两条路径均覆盖
+- **UV 缩放/偏移功能确认已实现**（InspectorPanel + Viewport 双端齐全）
+
+### 修改文件
+- `electron/main.js` — execSync→async exec + TTL缓存 + macOS/Linux跨平台 + label格式
+- `src/App.jsx` — handleReorderObjects 清理调试日志
+- `src/components/InspectorPanel.jsx` — handleParentChange 清理调试日志
+- `src/components/FileBrowserDialog.jsx` — 路径记忆功能（getLastPath/saveLastPath）
+
 ## 2026-06-01 自定义文件浏览器
 
 ### 新增功能
