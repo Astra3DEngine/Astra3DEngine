@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "A joking 3D engine",
   "type": "module",
-  "main": "electron/main.js",
+  "main": "dist-electron/main.js",
   "author": "Cyberexplorer",
   "homepage": "https://github.com/LanwyWriteXU/Astra3DEngine",
   "scripts": {
