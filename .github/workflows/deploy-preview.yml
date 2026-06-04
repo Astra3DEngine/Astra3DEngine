@@ -39,6 +39,10 @@ jobs:
       - name: Deploy to /develop/
         run: |
           cd gh-pages
+          # 确保 CNAME 文件存在（自定义域名必须）
+          echo "astra3d.cyberneko.cn" > CNAME
+          # 禁用 Jekyll 处理（避免子路径 404 问题）
+          touch .nojekyll
           # 清空目标目录（保留 .git）
           find develop -mindepth 1 -delete 2>/dev/null || mkdir -p develop
           # 复制构建产物
