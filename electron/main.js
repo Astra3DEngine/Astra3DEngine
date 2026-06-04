@@ -12,7 +12,7 @@ import { app, BrowserWindow, ipcMain, shell, dialog, nativeImage } from 'electro
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { promises as fsp } from 'fs';
-import { execSync } from 'child_process';
+import { exec } from 'child_process';
 import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -263,50 +263,58 @@ ipcMain.handle('fs:createDirectory', async (event, dirPath) => {
   }
 });
 
+// 盘符列表缓存（避免每次打开文件浏览器都执行 PowerShell）
+let _drivesCache = null;
+let _drivesCacheTime = 0;
+const DRIVES_CACHE_TTL = 60 * 1000; // 缓存 60 秒
+
 ipcMain.handle('fs:getDrives', async () => {
+  // 检查缓存是否有效
+  if (_drivesCache && (Date.now() - _drivesCacheTime) < DRIVES_CACHE_TTL) {
+    return { success: true, drives: _drivesCache };
+  }
+
   if (process.platform === 'win32') {
     let drives = [];
 
-    // 策略1: PowerShell Get-Volume + ConvertTo-Json (Win8+)
-    // 用 Buffer 读取原始字节，再按 GBK(Windows中文系统默认) 解码为 UTF-8
     try {
-      const buf = execSync(
-        'powershell -NoProfile -Command "Get-Volume | Where-Object { $_.DriveLetter -ne $null } | Select-Object DriveLetter, FileSystemLabel | ConvertTo-Json -Compress"',
-        { timeout: 8000 }
-      );
-      // Windows 中文系统 PowerShell 默认输出 GBK 编码，用 TextDecoder 转码
+      const buf = await new Promise((resolve, reject) => {
+        exec(
+          'powershell -NoProfile -Command "Get-Volume | Where-Object { $_.DriveLetter -ne $null } | Select-Object DriveLetter, FileSystemLabel | ConvertTo-Json -Compress"',
+          { timeout: 8000 },
+          (error, stdout) => error ? reject(error) : resolve(Buffer.from(stdout, 'binary'))
+        );
+      });
       const psOutput = new TextDecoder('gbk').decode(buf);
       const parsed = JSON.parse(psOutput.trim());
       const arr = Array.isArray(parsed) ? parsed : [parsed];
       for (const item of arr) {
         if (item.DriveLetter) {
           const letter = item.DriveLetter.toUpperCase() + ':';
+          const rawLabel = (item.FileSystemLabel || '').trim();
           drives.push({
             name: letter,
-            label: item.FileSystemLabel || letter,
+            label: rawLabel ? `${rawLabel} (${letter})` : letter,
             path: letter + '\\'
           });
         }
       }
-      if (drives.length > 0) {
-        console.log('[getDrives] 策略1成功, 找到:', drives.map(d => d.name + '(' + d.label + ')'));
-        return { success: true, drives };
+    } catch (_) {}
+
+    if (drives.length === 0) {
+      for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')) {
+        const p = letter + ':\\';
+        try {
+          if (fs.existsSync(p)) {
+            drives.push({ name: letter + ':', label: letter + ':', path: p });
+          }
+        } catch (_) {}
       }
-    } catch (e) {
-      console.log('[getDrives] 策略1失败:', e.message?.substring(0, 150));
     }
 
-    // 策略2: fs.existsSync 遍历 A-Z（纯Node兜底，无中文卷标）
-    console.log('[getDrives] 使用策略2(fs探测)...');
-    for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')) {
-      const p = letter + ':\\';
-      try {
-        if (fs.existsSync(p)) {
-          drives.push({ name: letter + ':', label: letter + ':', path: p });
-        }
-      } catch (_) {}
-    }
-    console.log('[getDrives] 策略2结果, 找到:', drives.map(d => d.name));
+    // 写入缓存
+    _drivesCache = drives;
+    _drivesCacheTime = Date.now();
 
     return { success: true, drives };
   } else {

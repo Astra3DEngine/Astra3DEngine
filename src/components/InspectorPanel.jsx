@@ -270,22 +270,11 @@ function InspectorPanel({
   };
 
   const handleParentChange = (parentId) => {
-    console.log('=== handleParentChange ===');
-    console.log('parentId:', parentId, 'selectedObject:', selectedObject?.id);
-    
-    if (!selectedObject) {
-      console.log('SKIP: no selectedObject');
-      return;
-    }
-    
+    if (!selectedObject) return;
+
     const newParentId = parentId === '' ? null : parentId;
-    console.log('newParentId:', newParentId);
-    
-    if (newParentId === selectedObject.id) {
-      console.log('SKIP: same id');
-      return;
-    }
-    
+    if (newParentId === selectedObject.id) return;
+
     const getAllDescendantIds = (objId) => {
       const descendants = new Set([objId]);
       const children = (objects || []).filter(o => o.parentId === objId);
@@ -295,16 +284,10 @@ function InspectorPanel({
       });
       return descendants;
     };
-    
+
     const descendants = getAllDescendantIds(selectedObject.id);
-    console.log('descendants:', Array.from(descendants));
-    
-    if (newParentId && descendants.has(newParentId)) {
-      console.log('SKIP: newParentId is descendant');
-      return;
-    }
-    
-    console.log('Calling onUpdateObject with parentId:', newParentId);
+    if (newParentId && descendants.has(newParentId)) return;
+
     onUpdateObject(selectedObject.id, { parentId: newParentId });
   };
 

@@ -798,23 +798,14 @@ function AppContent() {
   }, [setSceneObjectsWithHistory, generateUniqueName]);
 
   const handleReorderObjects = useCallback((draggedId, targetId, position) => {
-    console.log('=== handleReorderObjects ===');
-    console.log('draggedId:', draggedId, 'targetId:', targetId, 'position:', position);
-    
     setSceneObjectsWithHistory(prev => {
-      console.log('prev objects:', prev.map(o => ({ id: o.id, name: o.name, parentId: o.parentId })));
-      
       const objects = [...prev];
-      
+
       const draggedIndex = objects.findIndex(o => o.id === draggedId);
-      if (draggedIndex === -1) {
-        console.log('ERROR: draggedIndex not found');
-        return prev;
-      }
-      
+      if (draggedIndex === -1) return prev;
+
       const draggedObj = { ...objects[draggedIndex] };
-      console.log('draggedObj:', { id: draggedObj.id, name: draggedObj.name, parentId: draggedObj.parentId });
-      
+
       const getAllDescendantIds = (parentId) => {
         const descendants = new Set([parentId]);
         objects.filter(o => o.parentId === parentId).forEach(child => {
@@ -823,88 +814,58 @@ function AppContent() {
         });
         return descendants;
       };
-      
+
       const draggedDescendants = getAllDescendantIds(draggedId);
-      console.log('draggedDescendants:', Array.from(draggedDescendants));
-      
+
       if (targetId === null) {
-        console.log('targetId is null, moving to end');
         draggedObj.parentId = null;
         objects.splice(draggedIndex, 1);
         objects.push(draggedObj);
-        console.log('result objects:', objects.map(o => ({ id: o.id, name: o.name, parentId: o.parentId })));
         return objects;
       }
-      
-      if (draggedDescendants.has(targetId)) {
-        console.log('ERROR: targetId is descendant of draggedId');
-        return prev;
-      }
-      
+
+      if (draggedDescendants.has(targetId)) return prev;
+
       const targetIndex = objects.findIndex(o => o.id === targetId);
-      if (targetIndex === -1) {
-        console.log('ERROR: targetIndex not found');
-        return prev;
-      }
-      
+      if (targetIndex === -1) return prev;
+
       const targetObj = objects[targetIndex];
-      console.log('targetObj:', { id: targetObj.id, name: targetObj.name, parentId: targetObj.parentId });
-      
+
       if (position === 'inside') {
         draggedObj.parentId = targetId;
-        console.log('Setting parentId to targetId:', targetId);
       } else {
         draggedObj.parentId = targetObj.parentId || null;
-        console.log('Setting parentId to targetObj.parentId:', targetObj.parentId);
       }
-      
+
       objects.splice(draggedIndex, 1);
-      console.log('After splice, objects length:', objects.length);
-      
+
       const newTargetIndex = objects.findIndex(o => o.id === targetId);
       if (newTargetIndex === -1) {
-        console.log('ERROR: newTargetIndex not found after splice, pushing to end');
         objects.push(draggedObj);
-        console.log('result objects:', objects.map(o => ({ id: o.id, name: o.name, parentId: o.parentId })));
         return objects;
       }
-      
-      console.log('newTargetIndex:', newTargetIndex);
-      
+
       let insertIndex;
       if (position === 'inside') {
         insertIndex = newTargetIndex + 1;
         for (let i = newTargetIndex + 1; i < objects.length; i++) {
-          if (objects[i].parentId === targetId) {
-            insertIndex = i + 1;
-          } else {
-            break;
-          }
+          if (objects[i].parentId === targetId) insertIndex = i + 1;
+          else break;
         }
-        console.log('inside: insertIndex:', insertIndex);
       } else if (position === 'before') {
         insertIndex = newTargetIndex;
-        console.log('before: insertIndex:', insertIndex);
       } else {
         insertIndex = newTargetIndex + 1;
-        
         const targetParentId = targetObj.parentId;
         if (targetParentId) {
           for (let i = newTargetIndex + 1; i < objects.length; i++) {
-            if (objects[i].parentId === targetParentId) {
-              insertIndex = i + 1;
-            } else {
-              break;
-            }
+            if (objects[i].parentId === targetParentId) insertIndex = i + 1;
+            else break;
           }
         }
-        console.log('after: insertIndex:', insertIndex);
       }
-      
+
       objects.splice(insertIndex, 0, draggedObj);
-      
-      console.log('result objects:', objects.map(o => ({ id: o.id, name: o.name, parentId: o.parentId })));
-      
       return objects;
     });
   }, [setSceneObjectsWithHistory]);
