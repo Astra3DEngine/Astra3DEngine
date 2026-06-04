@@ -27,7 +27,7 @@ jobs:
       - name: Build
         run: pnpm run build
         env:
-          BASE_URL: /Astra3DEngine/
+          BASE_URL: /editor/
 
       - name: Checkout Pages repo
         uses: actions/checkout@v4
@@ -36,13 +36,13 @@ jobs:
           token: ${{ secrets.DEPLOY_TOKEN }}
           path: gh-pages
 
-      - name: Deploy to /Astra3DEngine/
+      - name: Deploy to /editor/
         run: |
           cd gh-pages
           # 清空目标目录（保留 .git）
-          find Astra3DEngine -mindepth 1 -delete 2>/dev/null || mkdir -p Astra3DEngine
+          find editor -mindepth 1 -delete 2>/dev/null || mkdir -p editor
           # 复制构建产物
-          cp -r $GITHUB_WORKSPACE/dist/* Astra3DEngine/
+          cp -r $GITHUB_WORKSPACE/dist/* editor/
           # 提交并推送
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
