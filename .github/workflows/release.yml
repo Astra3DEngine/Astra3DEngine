@@ -44,7 +44,6 @@ jobs:
           path: |
             dist/
             dist-electron/
-            node_modules/
             package.json
             pnpm-lock.yaml
             electron/
@@ -83,8 +82,14 @@ jobs:
         with:
           node-version: 20
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
       - name: Package Linux ${{ matrix.target }}
-        run: npx electron-builder ${{ matrix.args }}
+        run: pnpm exec electron-builder ${{ matrix.args }}
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
@@ -133,8 +138,11 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
       - name: Package macOS ${{ matrix.target }}
-        run: npx electron-builder ${{ matrix.args }}
+        run: pnpm exec electron-builder ${{ matrix.args }}
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
@@ -179,8 +187,11 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
       - name: Package Windows ${{ matrix.target }}
-        run: npx electron-builder ${{ matrix.args }}
+        run: pnpm exec electron-builder ${{ matrix.args }}
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
