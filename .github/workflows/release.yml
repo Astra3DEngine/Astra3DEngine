@@ -111,16 +111,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: dmg-x64
-            args: '--mac --x64'
-          - target: dmg-arm64
-            args: '--mac --arm64'
-          - target: dmg-universal
+          - target: modern
             args: '--mac --universal'
-          - target: zip-x64
-            args: '--mac zip --x64'
-          - target: zip-arm64
-            args: '--mac zip --arm64'
+          - target: legacy-10.13-10.14
+            args: '--mac-legacy-10.13-10.14 --x64'
+          - target: legacy-10.15
+            args: '--mac-legacy-10.15 --x64'
+          - target: legacy-11
+            args: '--mac-legacy-11 --universal'
     env:
       GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
     steps:
