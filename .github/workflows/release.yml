@@ -60,11 +60,11 @@ jobs:
       matrix:
         include:
           - target: AppImage
-            args: '--linux --x64 --target AppImage'
+            args: '--linux AppImage --x64'
           - target: deb
-            args: '--linux --x64 --target deb'
+            args: '--linux deb --x64'
           - target: tar.gz
-            args: '--linux --x64 --target tar.gz'
+            args: '--linux tar.gz --x64'
     env:
       GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
     steps:
@@ -109,15 +109,15 @@ jobs:
       matrix:
         include:
           - target: dmg-x64
-            args: '--mac --x64 --dmg'
+            args: '--mac --x64'
           - target: dmg-arm64
-            args: '--mac --arm64 --dmg'
+            args: '--mac --arm64'
           - target: dmg-universal
-            args: '--mac --universal --dmg'
+            args: '--mac --universal'
           - target: zip-x64
-            args: '--mac --x64 --zip'
+            args: '--mac zip --x64'
           - target: zip-arm64
-            args: '--mac --arm64 --zip'
+            args: '--mac zip --arm64'
     env:
       GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
     steps:
@@ -166,7 +166,7 @@ jobs:
           - target: nsis-ia32
             args: '--win --ia32'
           - target: portable-x64
-            args: '--win --x64 --target portable'
+            args: '--win portable --x64'
     env:
       GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
     steps:
