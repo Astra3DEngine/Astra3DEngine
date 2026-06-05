@@ -30,7 +30,6 @@ jobs:
 
       - name: Build all assets
         run: pnpm run desktop:build -- --dir
-        # --dir 只生成 unpacked 目录，不打包安装包（后续各平台分别打包）
 
       - name: Upload prepared assets
         uses: actions/upload-artifact@v4
@@ -45,51 +44,9 @@ jobs:
             pnpm-lock.yaml
           retention-days: 1
 
-  # 第二步：按平台分别打包（并行）
-  package:
+  # 第二步：各平台独立打包（并行执行，各自为独立 job）
+  build-windows:
     needs: prepare
-    strategy:
-      matrix:
-        include:
-          # Windows
-          - platform: win
-            arch: x64
-            target: nsis
-          - platform: win
-            arch: ia32
-            target: nsis
-          - platform: win
-            arch: x64
-            target: portable
-          # macOS
-          - platform: mac
-            arch: x64
-            universal: false
-            target: dmg
-          - platform: mac
-            arch: arm64
-            universal: false
-            target: dmg
-          - platform: mac
-            arch: universal
-            universal: true
-            target: dmg
-          - platform: mac
-            arch: x64
-            target: zip
-          - platform: mac
-            arch: arm64
-            target: zip
-          # Linux
-          - platform: linux
-            arch: x64
-            target: AppImage
-          - platform: linux
-            arch: x64
-            target: deb
-          - platform: linux
-            arch: x64
-            target: tar.gz
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
@@ -108,38 +65,128 @@ jobs:
         with:
           node-version: 20
 
-      - name: Package ${{ matrix.platform }}-${{ matrix.arch }} (${{ matrix.target }})
-        run: |
-          npx electron-builder \
-            --${{ matrix.platform }} \
-            --${{ matrix.arch }} \
-            --${{ matrix.target }}
+      - name: Package Windows x64 NSIS
+        run: npx electron-builder --win --x64 --nsis
 
-      - name: Upload release artifact
+      - name: Package Windows ia32 NSIS
+        run: npx electron-builder --win --ia32 --nsis
+
+      - name: Package Windows x64 Portable
+        run: npx electron-builder --win --x64 --portable
+
+      - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-${{ matrix.platform }}-${{ matrix.arch }}-${{ matrix.target }}
+          name: release-windows
           path: release/*
           retention-days: 1
-          if-no-files-found: warn
+
+  build-macos:
+    needs: prepare
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download prepared assets
+        uses: actions/download-artifact@v4
+        with:
+          name: prepared-assets
+          path: .
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Package macOS x64 DMG
+        run: npx electron-builder --mac --x64 --dmg
+
+      - name: Package macOS arm64 DMG
+        run: npx electron-builder --mac --arm64 --dmg
+
+      - name: Package macOS universal DMG
+        run: npx electron-builder --mac --universal --dmg
+
+      - name: Package macOS x64 ZIP
+        run: npx electron-builder --mac --x64 --zip
+
+      - name: Package macOS arm64 ZIP
+        run: npx electron-builder --mac --arm64 --zip
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: release/*
+          retention-days: 1
+
+  build-linux:
+    needs: prepare
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download prepared assets
+        uses: actions/download-artifact@v4
+        with:
+          name: prepared-assets
+          path: .
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Package Linux AppImage
+        run: npx electron-builder --linux --x64 --AppImage
+
+      - name: Package Linux deb
+        run: npx electron-builder --linux --x64 --deb
+
+      - name: Package Linux tar.gz
+        run: npx electron-builder --linux --x64 --tar.gz
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux
+          path: release/*
+          retention-days: 1
 
   # 第三步：合并所有产物，创建 Release
   release:
-    needs: package
+    needs: [build-windows, build-macos, build-linux]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download all release artifacts
+      - name: Download Windows artifacts
         uses: actions/download-artifact@v4
         with:
+          name: release-windows
           path: artifacts
-          pattern: release-*
-          merge-multiple: true
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-macos
+          path: artifacts
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-linux
+          path: artifacts
 
       - name: List release artifacts
-        run: ls -lh artifacts/ || echo "No artifacts found"
+        run: ls -lh artifacts/
 
       - name: Extract version from tag
         id: version
