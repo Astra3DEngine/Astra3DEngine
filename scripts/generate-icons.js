@@ -80,10 +80,23 @@ async function generateMacIconset(pngBuffers) {
     console.log(`  Created: ${mapping.name}`);
   }
   
-  console.log('\n  Note: To create .icns file, run on macOS:');
-  console.log('    iconutil -c icns electron/icon.iconset');
-  console.log('\n  Or use online tools like:');
-  console.log('    https://cloudconvert.com/png-to-icns');
+  // 在 macOS 上自动生成 .icns 文件
+  if (process.platform === 'darwin') {
+    console.log('\n  Converting iconset to .icns using iconutil...');
+    const icnsPath = path.join(ELECTRON_DIR, 'icon.icns');
+    const { execSync } = require('child_process');
+    try {
+      execSync(`iconutil -c icns "${iconsetDir}" -o "${icnsPath}"`);
+      console.log(`  Created: icon.icns`);
+    } catch (error) {
+      console.error('  Warning: Failed to create .icns file:', error.message);
+    }
+  } else {
+    console.log('\n  Note: To create .icns file, run on macOS:');
+    console.log('    iconutil -c icns electron/icon.iconset');
+    console.log('\n  Or use online tools like:');
+    console.log('    https://cloudconvert.com/png-to-icns');
+  }
 }
 
 async function generateLinuxIcons(pngBuffers) {
