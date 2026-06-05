@@ -137,7 +137,7 @@
       "maintainer": "Astra 3D Team",
       "desktop": {
         "Name": "Astra 3D Engine",
-        "Comment": "A 3D engine for creative projects",
+        "Comment": "A Joking 3D Engine",
         "Categories": "Development;3DGraphics;Graphics"
       },
       "artifactName": "${productName}-v${version}-linux-${arch}.${ext}"
