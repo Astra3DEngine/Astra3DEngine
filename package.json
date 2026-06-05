@@ -97,11 +97,11 @@
           "target": "zip",
           "arch": ["x64", "arm64"]
         }
-      ]
+      ],
+      "artifactName": "${productName}-v${version}-macos-${arch}.${ext}"
     },
     "dmg": {
       "icon": "electron/icon.icns",
-      "artifactName": "${productName}-v${version}-macos-${arch}.dmg",
       "contents": [
         {
           "x": 130,
@@ -114,9 +114,6 @@
           "path": "/Applications"
         }
       ]
-    },
-    "zip": {
-      "artifactName": "${productName}-v${version}-macos-${arch}.zip"
     },
     "linux": {
       "icon": "electron/icons",
