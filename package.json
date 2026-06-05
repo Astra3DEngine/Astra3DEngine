@@ -78,10 +78,10 @@
       "shortcutName": "Astra 3D Engine",
       "include": "electron/installer.nsh",
       "license": "LICENSE",
-      "artifactName": "${productName}-${version}-${arch}-setup.exe"
+      "artifactName": "${productName}-v${version}-windows-${arch}-setup.exe"
     },
     "portable": {
-      "artifactName": "${productName}-${version}-${arch}-portable.exe"
+      "artifactName": "${productName}-v${version}-windows-${arch}-portable.exe"
     },
     "mac": {
       "icon": "electron/icon.icns",
@@ -101,7 +101,7 @@
     },
     "dmg": {
       "icon": "electron/icon.icns",
-      "artifactName": "${productName}-${version}-${arch}.dmg",
+      "artifactName": "${productName}-v${version}-macos-${arch}.dmg",
       "contents": [
         {
           "x": 130,
@@ -114,6 +114,9 @@
           "path": "/Applications"
         }
       ]
+    },
+    "zip": {
+      "artifactName": "${productName}-v${version}-macos-${arch}.zip"
     },
     "linux": {
       "icon": "electron/icons",
@@ -140,11 +143,14 @@
       }
     },
     "appImage": {
-      "artifactName": "${productName}-${version}-${arch}.AppImage"
+      "artifactName": "${productName}-v${version}-linux-${arch}.AppImage"
     },
     "deb": {
-      "artifactName": "${productName}-${version}-${arch}.deb",
+      "artifactName": "${productName}-v${version}-linux-${arch}.deb",
       "depends": ["gconf2", "gconf-service", "libnotify4", "libappindicator1"]
+    },
+    "tar.gz": {
+      "artifactName": "${productName}-v${version}-linux-${arch}.tar.gz"
     }
   },
   "packageManager": "pnpm@8.15.0"
