@@ -12,6 +12,7 @@
 import sharp from 'sharp';
 import pngToIco from 'png-to-ico';
 import { promises as fs } from 'fs';
+import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -84,7 +85,6 @@ async function generateMacIconset(pngBuffers) {
   if (process.platform === 'darwin') {
     console.log('\n  Converting iconset to .icns using iconutil...');
     const icnsPath = path.join(ELECTRON_DIR, 'icon.icns');
-    const { execSync } = require('child_process');
     try {
       execSync(`iconutil -c icns "${iconsetDir}" -o "${icnsPath}"`);
       console.log(`  Created: icon.icns`);
