@@ -68,6 +68,8 @@ jobs:
             args: '--linux deb --x64'
           - target: tar.gz
             args: '--linux tar.gz --x64'
+          - target: pacman
+            args: '--linux --x64 --pacman'
     env:
       GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
     steps:
