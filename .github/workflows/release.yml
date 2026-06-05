@@ -33,6 +33,9 @@ jobs:
       - name: Build web assets
         run: pnpm run build --config vite.config.desktop.js
 
+      - name: Generate icons
+        run: pnpm run icon:generate
+
       - name: Build electron main/preload
         run: |
           npx vite build --config vite.config.desktop.js --outDir dist-electron || true
