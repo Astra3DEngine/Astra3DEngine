@@ -73,6 +73,8 @@
       "installerIcon": "electron/icon.ico",
       "uninstallerIcon": "electron/icon.ico",
       "installerHeaderIcon": "electron/icon.ico",
+      "installerSidebar": "electron/installerSidebar.bmp",
+      "uninstallerSidebar": "electron/installerSidebar.bmp",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Astra 3D Engine",
