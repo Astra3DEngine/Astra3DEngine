@@ -1,25 +1,19 @@
-!macro customHeader
-  !system "echo 'Custom NSIS Header'"
-!endmacro
-
 !macro preInit
   ; Custom initialization
-!endmacro
+!macroend
 
 !macro customInit
   ; Custom initialization code
-!endmacro
+!macroend
 
 !macro customInstall
   ; Custom install actions
-  ; Create additional shortcuts or registry entries if needed
-!endmacro
+!macroend
 
 !macro customUnInstall
   ; Custom uninstall actions
-  ; Clean up any additional files or registry entries
-!endmacro
+!macroend
 
 !macro customRemoveFiles
-  ; Remove any additional files not handled by default uninstaller
-!endmacro
+  ; Remove any additional files
+!macroend
