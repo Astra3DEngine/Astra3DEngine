@@ -9,10 +9,9 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  # 第一步：构建通用资源（只做一次）
+  prepare:
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,8 +28,118 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build desktop app
-        run: pnpm run desktop:build
+      - name: Build all assets
+        run: pnpm run desktop:build -- --dir
+        # --dir 只生成 unpacked 目录，不打包安装包（后续各平台分别打包）
+
+      - name: Upload prepared assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: prepared-assets
+          path: |
+            dist/
+            dist-electron/
+            release/linux-unpacked/
+            node_modules/
+            package.json
+            pnpm-lock.yaml
+          retention-days: 1
+
+  # 第二步：按平台分别打包（并行）
+  package:
+    needs: prepare
+    strategy:
+      matrix:
+        include:
+          # Windows
+          - platform: win
+            arch: x64
+            target: nsis
+          - platform: win
+            arch: ia32
+            target: nsis
+          - platform: win
+            arch: x64
+            target: portable
+          # macOS
+          - platform: mac
+            arch: x64
+            universal: false
+            target: dmg
+          - platform: mac
+            arch: arm64
+            universal: false
+            target: dmg
+          - platform: mac
+            arch: universal
+            universal: true
+            target: dmg
+          - platform: mac
+            arch: x64
+            target: zip
+          - platform: mac
+            arch: arm64
+            target: zip
+          # Linux
+          - platform: linux
+            arch: x64
+            target: AppImage
+          - platform: linux
+            arch: x64
+            target: deb
+          - platform: linux
+            arch: x64
+            target: tar.gz
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download prepared assets
+        uses: actions/download-artifact@v4
+        with:
+          name: prepared-assets
+          path: .
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Package ${{ matrix.platform }}-${{ matrix.arch }} (${{ matrix.target }})
+        run: |
+          npx electron-builder \
+            --${{ matrix.platform }} \
+            --${{ matrix.arch }} \
+            --${{ matrix.target }}
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}-${{ matrix.arch }}-${{ matrix.target }}
+          path: release/*
+          retention-days: 1
+          if-no-files-found: warn
+
+  # 第三步：合并所有产物，创建 Release
+  release:
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: release-*
+          merge-multiple: true
+
+      - name: List release artifacts
+        run: ls -lh artifacts/ || echo "No artifacts found"
 
       - name: Extract version from tag
         id: version
@@ -41,13 +150,7 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Astra3DEngine ${{ steps.version.outputs.tag }}
-          files: |
-            release/*.exe
-            release/*.zip
-            release/*.dmg
-            release/*.AppImage
-            release/*.deb
-            release/*.tar.gz
+          files: artifacts/*
           draft: false
           prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
           generate_release_notes: true
