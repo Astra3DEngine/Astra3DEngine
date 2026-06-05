@@ -140,7 +140,8 @@
         "Name": "Astra 3D Engine",
         "Comment": "A 3D engine for creative projects",
         "Categories": "Development;3DGraphics;Graphics"
-      }
+      },
+      "artifactName": "${productName}-v${version}-linux-${arch}.${ext}"
     },
     "appImage": {
       "artifactName": "${productName}-v${version}-linux-${arch}.AppImage"
@@ -148,9 +149,6 @@
     "deb": {
       "artifactName": "${productName}-v${version}-linux-${arch}.deb",
       "depends": ["gconf2", "gconf-service", "libnotify4", "libappindicator1"]
-    },
-    "tar.gz": {
-      "artifactName": "${productName}-v${version}-linux-${arch}.tar.gz"
     }
   },
   "packageManager": "pnpm@8.15.0"
