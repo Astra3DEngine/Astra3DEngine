@@ -230,6 +230,78 @@ jobs:
         id: version
         run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
+      - name: Generate version.json
+        id: generate_version
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          VERSION="${TAG#v}"
+          
+          # 收集所有文件名
+          cd artifacts
+          
+          # Windows 文件
+          WIN_SETUP_X64=$(ls *windows*x64*setup*.exe 2>/dev/null | head -1 || echo "")
+          WIN_SETUP_IA32=$(ls *windows*ia32*setup*.exe 2>/dev/null | head -1 || echo "")
+          WIN_PORTABLE_X64=$(ls *windows*x64*portable*.exe 2>/dev/null | head -1 || echo "")
+          
+          # macOS 文件
+          MAC_DMG_X64=$(ls *macos*x64*.dmg 2>/dev/null | head -1 || echo "")
+          MAC_DMG_ARM64=$(ls *macos*arm64*.dmg 2>/dev/null | head -1 || echo "")
+          MAC_ZIP_X64=$(ls *macos*x64*.zip 2>/dev/null | head -1 || echo "")
+          MAC_ZIP_ARM64=$(ls *macos*arm64*.zip 2>/dev/null | head -1 || echo "")
+          
+          # Linux 文件
+          LINUX_APPIMAGE_X64=$(ls *linux*x64*.AppImage 2>/dev/null | head -1 || echo "")
+          LINUX_DEB_X64=$(ls *linux*x64*.deb 2>/dev/null | head -1 || echo "")
+          LINUX_TARBALL_X64=$(ls *linux*x64*.tar.gz 2>/dev/null | head -1 || echo "")
+          
+          # 生成 version.json
+          cat > version.json << EOF
+          {
+            "latest": "${VERSION}",
+            "tag": "${TAG}",
+            "assets": {
+              "windows": {
+                "setup": {
+                  "x64": "${WIN_SETUP_X64}",
+                  "ia32": "${WIN_SETUP_IA32}"
+                },
+                "portable": {
+                  "x64": "${WIN_PORTABLE_X64}"
+                }
+              },
+              "macos": {
+                "dmg": {
+                  "x64": "${MAC_DMG_X64}",
+                  "arm64": "${MAC_DMG_ARM64}"
+                },
+                "zip": {
+                  "x64": "${MAC_ZIP_X64}",
+                  "arm64": "${MAC_ZIP_ARM64}"
+                }
+              },
+              "linux": {
+                "appimage": {
+                  "x64": "${LINUX_APPIMAGE_X64}"
+                },
+                "deb": {
+                  "x64": "${LINUX_DEB_X64}"
+                },
+                "tarball": {
+                  "x64": "${LINUX_TARBALL_X64}"
+                }
+              }
+            },
+            "download_base": "https://github.com/Astra3DEngine/Astra3DEngine/releases/download"
+          }
+          EOF
+          
+          echo "Generated version.json:"
+          cat version.json
+          
+          # 保存文件路径供后续使用
+          echo "version_json_path=$(pwd)/version.json" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -247,3 +319,19 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+
+      - name: Push version.json to website repo
+        run: |
+          # Clone website repo
+          git clone https://x-access-token:${{ secrets.DEPLOY_TOKEN }}@github.com/Astra3DEngine/astra3dengine.github.io.git website
+          
+          # Copy version.json
+          cp artifacts/version.json website/version.json
+          
+          # Commit and push
+          cd website
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.json
+          git commit -m "Update version.json for ${{ steps.version.outputs.tag }}" || echo "No changes to commit"
+          git push
