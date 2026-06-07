@@ -235,7 +235,15 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Astra3DEngine ${{ steps.version.outputs.tag }}
-          files: artifacts/*
+          files: |
+            artifacts/*.exe
+            artifacts/*.dmg
+            artifacts/*.zip
+            artifacts/*.deb
+            artifacts/*.tar.gz
+            artifacts/*.AppImage
           draft: false
           prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
           generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
