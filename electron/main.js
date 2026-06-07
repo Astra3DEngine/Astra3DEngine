@@ -327,7 +327,7 @@ ipcMain.handle('fs:getDrives', async () => {
           drives.push({
             name: entry.name,
             label: entry.name,
-            path: '/Volumes/' + entry.name + '/'
+            path: '/Volumes/' + entry.name  // 不带末尾斜杠，与前端 normalizePath 保持一致
           });
         }
       }
@@ -358,7 +358,7 @@ ipcMain.handle('fs:getDrives', async () => {
         drives.push({
           name: label,
           label: label,
-          path: mountPoint + (mountPoint.endsWith('/') ? '' : '/')
+          path: mountPoint  // 不带末尾斜杠，与前端 normalizePath 保持一致
         });
       }
     } catch (_) {}

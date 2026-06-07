@@ -95,21 +95,41 @@ const FileBrowserDialog = ({
   const [isEditingPath, setIsEditingPath] = useState(false);
   const [editedPath, setEditedPath] = useState('');
 
-  // 规范化 Windows 路径：统一分隔符、去除重复盘符、确保末尾无斜杠
+  // 规范化路径：统一分隔符、去除重复斜杠、确保末尾无斜杠（跨平台支持）
   const normalizePath = useCallback((rawPath) => {
     if (!rawPath) return rawPath;
-    let p = rawPath.replace(/\//g, '\\');
-    // 匹配 Windows 绝对路径: 盘符:\... 或 \\网络路径
-    const driveMatch = p.match(/^([A-Za-z]:)(.*)/);
-    if (driveMatch) {
-      const drive = driveMatch[1]; // e.g. "D:"
-      const rest = driveMatch[2].replace(/\\/g, '\\'); // 统一反斜杠
-      // 去除开头的多余斜杠，然后分割各段过滤空串
-      const segments = rest.replace(/^\\+/, '').split('\\').filter(Boolean);
-      return drive + '\\' + segments.join('\\');
+    
+    // 检测是否为 Windows 路径（盘符开头或网络路径）
+    const isWindowsPath = /^[A-Za-z]:/.test(rawPath) || rawPath.startsWith('\\\\');
+    
+    if (isWindowsPath) {
+      // Windows 路径：统一使用反斜杠
+      let p = rawPath.replace(/\//g, '\\');
+      const driveMatch = p.match(/^([A-Za-z]:)(.*)/);
+      if (driveMatch) {
+        const drive = driveMatch[1]; // e.g. "D:"
+        const rest = driveMatch[2].replace(/\\+/g, '\\'); // 统一反斜杠
+        // 去除开头的多余斜杠，然后分割各段过滤空串
+        const segments = rest.replace(/^\\+/, '').split('\\').filter(Boolean);
+        return drive + '\\' + segments.join('\\');
+      }
+      // 网络路径 \\server\share
+      return p.replace(/\\+/g, '\\').replace(/\\$/, '');
+    } else {
+      // Unix 路径（Linux/macOS）：统一使用正斜杠
+      let p = rawPath.replace(/\\/g, '/');
+      // 确保以 / 开头（绝对路径）
+      if (!p.startsWith('/')) {
+        p = '/' + p;
+      }
+      // 去除重复斜杠，保留开头的 /
+      p = '/' + p.slice(1).replace(/\/+/g, '/');
+      // 去除末尾斜杠（但保留根路径 /）
+      if (p.length > 1) {
+        p = p.replace(/\/$/, '');
+      }
+      return p;
     }
-    // 非 Windows 盘符路径，只做简单清理
-    return p.replace(/\\+/g, '\\').replace(/\\$/, '');
   }, []);
 
   const isElectron = typeof window !== 'undefined' && window.electronAPI?.fs;
@@ -143,16 +163,17 @@ const FileBrowserDialog = ({
       setIsLoading(false);
     }
   };
-  
-  const pathSeparator = useMemo(() => {
-    return currentPath.includes('\\') ? '\\' : '/';
-  }, [currentPath]);
 
   // 使用 navigator.userAgent 检测平台，不依赖异步数据
   const isWindows = useMemo(() => {
     if (typeof navigator === 'undefined') return false;
     return navigator.userAgent?.includes('Windows') || navigator.platform?.startsWith('Win');
   }, []);
+
+  // 根据平台判断路径分隔符
+  const pathSeparator = useMemo(() => {
+    return isWindows ? '\\' : '/';
+  }, [isWindows]);
   
   const navigateTo = useCallback(async (path, addToHistory = true) => {
     const normalizedPath = normalizePath(path);
@@ -207,22 +228,33 @@ const FileBrowserDialog = ({
   }, [history, historyIndex, navigateTo]);
   
   const goUp = useCallback(() => {
-    // 使用 normalizePath 解析当前路径后取父目录
     const normalized = normalizePath(currentPath);
     if (!normalized) return;
 
-    // 盘符根目录（如 D:\）不能再往上
-    const driveRootMatch = normalized.match(/^([A-Za-z]:\\?)$/);
-    if (driveRootMatch) return;
+    // Windows: 盘符根目录（如 D:\）不能再往上
+    if (isWindows) {
+      const driveRootMatch = normalized.match(/^([A-Za-z]:\\?)$/);
+      if (driveRootMatch) return;
 
-    const lastSep = normalized.lastIndexOf('\\');
-    if (lastSep > 0) {
-      // "D:\foo\bar" → "D:\foo",  "D:\foo" → "D:\"
-      const parentPath = normalized.substring(0, lastSep);
-      navigateTo(parentPath || (isWindows ? drives[0]?.path : '/'));
-    } else if (lastSep === 0) {
-      // 根路径情况
-      navigateTo(isWindows ? drives[0]?.path : '/');
+      const lastSep = normalized.lastIndexOf('\\');
+      if (lastSep > 0) {
+        // "D:\foo\bar" → "D:\foo",  "D:\foo" → "D:\"
+        const parentPath = normalized.substring(0, lastSep);
+        navigateTo(parentPath || drives[0]?.path);
+      }
+    } else {
+      // Unix (Linux/macOS): 根目录 / 不能再往上
+      if (normalized === '/') return;
+
+      const lastSep = normalized.lastIndexOf('/');
+      if (lastSep > 0) {
+        // "/home/user" → "/home", "/home" → "/"
+        const parentPath = normalized.substring(0, lastSep);
+        navigateTo(parentPath || '/');
+      } else if (lastSep === 0) {
+        // 已经是根目录的直接子目录，如 "/home" → "/"
+        navigateTo('/');
+      }
     }
   }, [currentPath, drives, isWindows, navigateTo, normalizePath]);
   
@@ -349,9 +381,11 @@ const FileBrowserDialog = ({
     if (!currentPath) return [];
     // 先规范化再分割，确保路径格式一致
     const normalized = normalizePath(currentPath);
-    const parts = normalized.split('\\').filter(Boolean);
+    // 根据平台使用正确的分隔符
+    const sep = isWindows ? '\\' : '/';
+    const parts = normalized.split(sep).filter(Boolean);
     return parts;
-  }, [currentPath, normalizePath]);
+  }, [currentPath, normalizePath, isWindows]);
 
   // 根据点击的 index 构建子路径
   const buildSubPath = useCallback((index) => {
@@ -539,16 +573,23 @@ const FileBrowserDialog = ({
             {drives.length > 0 && (
               <div className="file-browser-drives">
                 <h4>{msg('fileBrowser.drives')}</h4>
-                {drives.map(drive => (
-                  <div 
-                    key={drive.path}
-                    className={`file-browser-quick-item ${currentPath.startsWith(drive.path) ? 'active' : ''}`}
-                    onClick={() => navigateTo(drive.path)}
-                  >
-                    <Icon src={DesktopIcon} size={16} />
-                    <span>{drive.label}</span>
-                  </div>
-                ))}
+                {drives.map(drive => {
+                  // 去掉末尾斜杠进行比较，避免路径格式不一致导致判断失败
+                  const drivePathNormalized = drive.path.replace(/[\/\\]$/, '');
+                  const currentPathNormalized = currentPath.replace(/[\/\\]$/, '');
+                  const isActive = currentPathNormalized === drivePathNormalized || 
+                                   currentPathNormalized.startsWith(drivePathNormalized + (isWindows ? '\\' : '/'));
+                  return (
+                    <div 
+                      key={drive.path}
+                      className={`file-browser-quick-item ${isActive ? 'active' : ''}`}
+                      onClick={() => navigateTo(drive.path)}
+                    >
+                      <Icon src={DesktopIcon} size={16} />
+                      <span>{drive.label}</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
