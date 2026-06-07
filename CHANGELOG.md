@@ -1,5 +1,27 @@
 # 更新日志
 
+## 2026-06-07 文件浏览器跨平台修复 + Electron 图标路径修复
+
+### BUG修复
+- **文件浏览器 Linux/macOS 路径错误**：
+  - 原因：路径处理逻辑只针对 Windows 设计（使用 `\` 分隔符）
+  - 修复：`normalizePath` 支持跨平台路径格式，自动检测并规范化
+  - 修复：`pathSeparator` 根据平台判断分隔符
+  - 修复：`goUp` 支持 Unix 路径向上导航
+  - 修复：`pathParts` 根据平台使用正确的分隔符
+  - 修复：盘符高亮判断去掉末尾斜杠比较
+- **Electron 开发模式图标不显示**：
+  - 原因：Vite 编译后 `__dirname` 是 `dist-electron`，而不是 `electron` 源目录
+  - 修复：开发模式下路径从 `dist-electron` 指向 `electron` 目录
+  - 改进：Windows 优先使用 `.ico` 格式（任务栏支持更好）
+
+### 改进
+- `electron/main.js`：macOS/Linux 盘符路径不带末尾斜杠，与前端保持一致
+
+### 修改文件
+- `src/components/FileBrowserDialog.jsx` — 跨平台路径支持
+- `electron/main.js` — 图标路径修复 + 盘符路径格式统一
+
 ## 2026-06-04 文件浏览器优化 + 遗留待办清零 + GitHub Actions CI/CD
 
 ### BUG修复

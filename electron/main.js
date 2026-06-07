@@ -22,15 +22,32 @@ const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
 let mainWindow = null;
 
 function getIconPath() {
-  const iconPath = path.join(__dirname, 'icon.png');
+  // 开发模式：__dirname 是 dist-electron，需要指向源 electron 目录
+  // 生产模式：打包后 __dirname 在 resources/app.asar 或 resources 目录
+  let basePath;
   if (VITE_DEV_SERVER_URL) {
-    return path.join(__dirname, 'icon.png');
+    // 开发模式：从 dist-electron 回到项目根目录，再进入 electron
+    basePath = path.join(__dirname, '../electron');
+  } else {
+    // 生产模式：electron 目录内容会被复制到 resources 目录
+    basePath = __dirname;
   }
-  return path.join(__dirname, '../electron/icon.png');
+  
+  // Windows 优先使用 .ico 格式（任务栏图标支持更好）
+  if (process.platform === 'win32') {
+    const icoPath = path.join(basePath, 'icon.ico');
+    if (fs.existsSync(icoPath)) {
+      return icoPath;
+    }
+  }
+  
+  // 其他平台使用 PNG
+  return path.join(basePath, 'icon.png');
 }
 
 function createWindow() {
-  const icon = nativeImage.createFromPath(getIconPath());
+  const iconPath = getIconPath();
+  const icon = nativeImage.createFromPath(iconPath);
   
   mainWindow = new BrowserWindow({
     width: 1280,
