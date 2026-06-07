@@ -30,6 +30,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Update package.json version from tag
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "Updating package.json version to ${VERSION}"
+          jq ".version = \"${VERSION}\"" package.json > package.json.tmp && mv package.json.tmp package.json
+
       - name: Build web assets
         run: pnpm run build --config vite.config.desktop.js
 
