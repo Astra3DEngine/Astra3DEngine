@@ -77,7 +77,8 @@ const FileBrowserDialog = ({
   defaultPath,
   filters = [],
   allowMultiple = false,
-  showHiddenFiles = false
+  showHiddenFiles = false,
+  allowSelectFolder = false
 }) => {
   const [currentPath, setCurrentPath] = useState('');
   const [items, setItems] = useState([]);
@@ -287,7 +288,22 @@ const FileBrowserDialog = ({
   
   const handleItemClick = useCallback((item, e) => {
     if (item.isDirectory) {
-      navigateTo(item.path);
+      // 如果允许选择文件夹，Ctrl+点击可以选中文件夹
+      if (allowSelectFolder && allowMultiple && e.ctrlKey) {
+        setSelectedItems(prev => {
+          const exists = prev.some(i => i.path === item.path);
+          if (exists) {
+            return prev.filter(i => i.path !== item.path);
+          }
+          return [...prev, item];
+        });
+      } else if (allowSelectFolder && !allowMultiple) {
+        // 单选模式下，点击文件夹选中它
+        setSelectedItems([item]);
+      } else {
+        // 默认行为：进入文件夹
+        navigateTo(item.path);
+      }
     } else {
       if (allowMultiple && e.ctrlKey) {
         setSelectedItems(prev => {
@@ -299,10 +315,9 @@ const FileBrowserDialog = ({
         });
       } else {
         setSelectedItems([item]);
-        setFilename(item.name);
       }
     }
-  }, [navigateTo, allowMultiple]);
+  }, [navigateTo, allowMultiple, allowSelectFolder]);
   
   const handleConfirm = useCallback(() => {
     if (mode === 'save') {

@@ -16,8 +16,8 @@
 
 .assets-content {
   flex: 1;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 8px 12px;
   transition: background-color 0.2s;
 }
@@ -39,8 +39,9 @@
 
 .assets-grid {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  height: 100%;
+  align-content: flex-start;
 }
 
 .asset-item {
@@ -49,7 +50,8 @@
   align-items: center;
   justify-content: center;
   width: 80px;
-  height: 100%;
+  height: 80px;
+  flex-shrink: 0;
   background-color: var(--bg-dark);
   border: 1px solid var(--border);
   border-radius: 4px;

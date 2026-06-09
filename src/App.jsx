@@ -15,6 +15,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import MultiViewport from './components/MultiViewport.jsx';
 import HierarchyPanel from './components/HierarchyPanel.jsx';
 import InspectorPanel from './components/InspectorPanel.jsx';
@@ -75,6 +76,7 @@ function AppContent() {
   const [prefabs, setPrefabs] = useState([]);
   const [selectedPrefab, setSelectedPrefab] = useState(null);
   const gltfLoaderRef = useRef(new GLTFLoader());
+  const objLoaderRef = useRef(new OBJLoader());
   const fileHandleRef = useRef(null);
   const [projectFileName, setProjectFileName] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -395,21 +397,20 @@ function AppContent() {
   /**
    * 导入资源处理
    * 
-   * 这里处理文件导入，支持两种类型。模型文件（GLTF/GLB）使用 GLTFLoader 加载，
-   * 计算模型边界盒和中心点。GLTF 加载是异步的，要用回调处理。
+   * 这里处理文件导入，支持三种类型：
+   * - GLTF/GLB 模型：使用 GLTFLoader 加载，计算边界盒和中心点
+   * - OBJ 模型：使用 OBJLoader 加载，OBJ 不像 GLTF 有 scene 属性，直接返回 Group/Mesh
+   * - 图片文件：使用 TextureLoader 加载，设置正确的 colorSpace
    * 
-   * 图片文件（PNG/JPG/WebP 等）使用 TextureLoader 加载，设置正确的 colorSpace（SRGBColorSpace），
-   * 不设置 colorSpace 会导致颜色偏暗。
+   * OBJ 文件加载后需要手动计算边界盒，因为 OBJLoader 返回的是原始几何体。
    * 
    * 使用 URL.createObjectURL 创建临时 URL，删除资源时要 URL.revokeObjectURL 释放内存，
    * 不然内存泄漏了直接老冯飞天。
-   * 
-   * 文件类型判断很暴力：直接看扩展名。更好的方案是检查文件 MIME 类型，但浏览器是傻逼。
    */
   const handleImportAsset = useCallback((file) => {
     const fileExt = file.name.split('.').pop().toLowerCase();
     const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'];
-    const modelExts = ['gltf', 'glb'];
+    const modelExts = ['gltf', 'glb', 'obj'];
     
     let assetType;
     if (modelExts.includes(fileExt)) {
@@ -430,30 +431,69 @@ function AppContent() {
     };
 
     if (assetType === 'model') {
-      gltfLoaderRef.current.load(
-        asset.url,
-        (gltf) => {
-          const box = new THREE.Box3().setFromObject(gltf.scene);
-          const center = new THREE.Vector3();
-          box.getCenter(center);
-          
-          asset.gltfScene = gltf.scene;
-          asset.center = center.clone();
-          asset.size = box.getSize(new THREE.Vector3());
-          
-          gltf.scene.traverse((child) => {
-            if (child.isMesh) {
-              child.geometry.computeBoundingBox();
-            }
-          });
-          
-          setAssets(prev => [...prev, asset]);
-        },
-        undefined,
-        (error) => {
-          console.error('Error loading GLTF:', error);
-        }
-      );
+      // OBJ 文件用 OBJLoader，GLTF/GLB 用 GLTFLoader
+      if (fileExt === 'obj') {
+        objLoaderRef.current.load(
+          asset.url,
+          (obj) => {
+            // OBJLoader 返回的是 Group，需要计算边界盒
+            const box = new THREE.Box3().setFromObject(obj);
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            
+            asset.gltfScene = obj; // 复用 gltfScene 字段存储加载结果
+            asset.center = center.clone();
+            asset.size = box.getSize(new THREE.Vector3());
+            
+            // OBJ 模型需要特殊处理：将所有子 Mesh 的位置相对于中心点偏移
+            // 这样 clone 后的 modelContent 的几何中心会在局部原点
+            // 不然缩放时相对位置计算会出错，模型会乱飞
+            obj.traverse((child) => {
+              if (child.isMesh) {
+                child.geometry.computeBoundingBox();
+                // 将 Mesh 的位置相对于 Group 的中心点偏移
+                // 这样 modelContent.position.sub(center) 后，Mesh 的相对位置正确
+                child.position.sub(center);
+              }
+            });
+            
+            // 重置 Group 的位置，因为子 Mesh 已经偏移了
+            obj.position.set(0, 0, 0);
+            
+            setAssets(prev => [...prev, asset]);
+          },
+          undefined,
+          (error) => {
+            console.error('Error loading OBJ:', error);
+          }
+        );
+      } else {
+        // GLTF/GLB 加载
+        gltfLoaderRef.current.load(
+          asset.url,
+          (gltf) => {
+            const box = new THREE.Box3().setFromObject(gltf.scene);
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            
+            asset.gltfScene = gltf.scene;
+            asset.center = center.clone();
+            asset.size = box.getSize(new THREE.Vector3());
+            
+            gltf.scene.traverse((child) => {
+              if (child.isMesh) {
+                child.geometry.computeBoundingBox();
+              }
+            });
+            
+            setAssets(prev => [...prev, asset]);
+          },
+          undefined,
+          (error) => {
+            console.error('Error loading GLTF:', error);
+          }
+        );
+      }
     } else if (assetType === 'texture') {
       textureLoaderRef.current.load(
         asset.url,
@@ -524,6 +564,9 @@ function AppContent() {
       const meshObjects = [];
       let meshCounter = 0;
       
+      // 检查是否是 OBJ 模型（通过文件名判断）
+      const isObjModel = asset.name && asset.name.toLowerCase().endsWith('.obj');
+      
       asset.gltfScene.traverse((child) => {
         if (child.isMesh) {
           const meshId = rootFolderId + 1 + meshCounter;
@@ -536,7 +579,9 @@ function AppContent() {
           child.getWorldQuaternion(worldQuat);
           child.getWorldScale(worldScale);
           
-          const relativePos = worldPos.clone().sub(modelCenter);
+          // OBJ 模型的子 Mesh 已经在加载时偏移过了，worldPos 就是相对于模型中心的坐标
+          // GLTF 模型需要减去 modelCenter 来计算相对位置
+          const relativePos = isObjModel ? worldPos.clone() : worldPos.clone().sub(modelCenter);
           
           const worldEuler = new THREE.Euler().setFromQuaternion(worldQuat);
           

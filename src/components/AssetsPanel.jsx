@@ -63,40 +63,70 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
     }
   }, [isElectron]);
 
+  /**
+   * 处理文件浏览器选择
+   * 
+   * 支持选择文件和文件夹。文件夹会递归遍历所有文件并导入。
+   * 这样用户可以一次性导入整个资源文件夹，爽飞了。
+   */
   const handleFileBrowserSelect = useCallback(async (paths) => {
     if (!paths) return;
     
     const filePaths = Array.isArray(paths) ? paths : [paths];
+    
     for (const filePath of filePaths) {
       try {
-        const result = await window.electronAPI.readFile(filePath);
-        if (result.success) {
-          const fileName = getBasename(filePath);
-          let file;
-          
-          if (result.isBinary) {
-            const binaryString = atob(result.content);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
+        // 检查是否是文件夹
+        const pathInfo = await window.electronAPI.fs.getPathInfo(filePath);
+        
+        if (pathInfo.success && pathInfo.isDirectory) {
+          // 递归读取文件夹中的所有文件
+          const dirResult = await window.electronAPI.readDirectory(filePath, true);
+          if (dirResult.success && dirResult.files) {
+            for (const subFilePath of dirResult.files) {
+              await importFile(subFilePath);
             }
-            file = new File([bytes], fileName, {
-              type: getMimeType(filePath)
-            });
-          } else {
-            file = new File([result.content], fileName, {
-              type: getMimeType(filePath)
-            });
           }
-          
-          onImport(file);
+        } else {
+          // 直接导入文件
+          await importFile(filePath);
         }
       } catch (error) {
-        console.error('Failed to import file:', error);
+        console.error('Failed to import:', error);
       }
     }
     setIsFileBrowserOpen(false);
   }, [onImport]);
+
+  /**
+   * 导入单个文件
+   * 
+   * 从文件路径读取内容并创建 File 对象，然后调用 onImport。
+   */
+  const importFile = async (filePath) => {
+    const result = await window.electronAPI.readFile(filePath);
+    if (result.success) {
+      const fileName = getBasename(filePath);
+      let file;
+      
+      if (result.isBinary) {
+        const binaryString = atob(result.content);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        file = new File([bytes], fileName, {
+          type: getMimeType(filePath)
+        });
+      } else {
+        file = new File([result.content], fileName, {
+          type: getMimeType(filePath)
+        });
+      }
+      
+      onImport(file);
+    }
+  };
 
   const handleFileChange = (e) => {
     const files = e.target.files;
@@ -118,15 +148,81 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
     setIsDragging(false);
   };
 
-  const handleDrop = (e) => {
+  /**
+   * 处理拖拽放置
+   * 
+   * 支持拖拽文件和文件夹。文件夹会递归遍历所有文件并导入。
+   * 使用 FileSystem API 来处理文件夹，这玩意儿比传统的 File API 强多了。
+   */
+  const handleDrop = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
 
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      Array.from(files).forEach(file => onImport(file));
+    const items = e.dataTransfer.items;
+    
+    if (items && items.length > 0) {
+      for (const item of items) {
+        if (item.kind === 'file') {
+          const entry = item.webkitGetAsEntry?.() || item.getAsFileSystemEntry?.();
+          
+          if (entry) {
+            if (entry.isDirectory) {
+              // 递归读取文件夹
+              await readDirectoryEntry(entry);
+            } else {
+              // 直接读取文件
+              const file = item.getAsFile();
+              if (file) onImport(file);
+            }
+          } else {
+            // 兜底：直接获取文件
+            const file = item.getAsFile();
+            if (file) onImport(file);
+          }
+        }
+      }
+    } else {
+      // 兜底：使用传统的 files 属性
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0) {
+        Array.from(files).forEach(file => onImport(file));
+      }
     }
+  };
+
+  /**
+   * 递归读取 FileSystem 目录条目
+   * 
+   * 使用 FileSystem API 递归遍历文件夹，这比 Electron API 麻烦多了，
+   * 但 Web 端只能用这个，没办法。
+   */
+  const readDirectoryEntry = async (directoryEntry) => {
+    const reader = directoryEntry.createReader();
+    
+    const readEntries = async () => {
+      const entries = await new Promise((resolve, reject) => {
+        reader.readEntries(resolve, reject);
+      });
+      
+      for (const entry of entries) {
+        if (entry.isDirectory) {
+          await readDirectoryEntry(entry);
+        } else {
+          const file = await new Promise((resolve, reject) => {
+            entry.file(resolve, reject);
+          });
+          if (file) onImport(file);
+        }
+      }
+      
+      // readEntries 可能一次只返回部分条目，需要循环读取直到空
+      if (entries.length > 0) {
+        await readEntries();
+      }
+    };
+    
+    await readEntries();
   };
 
   const handleContextMenu = (e, asset) => {
@@ -171,6 +267,26 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
       setEditingAsset(null);
       setEditName('');
     }
+  };
+
+  /**
+   * 资源拖拽开始处理
+   * 
+   * 设置拖拽数据，让 Viewport 可以识别拖拽的是什么类型的资源。
+   * 只有贴图资源可以被拖拽到场景中应用到模型。
+   */
+  const handleAssetDragStart = (e, asset) => {
+    if (asset.assetType !== 'texture') {
+      e.preventDefault();
+      return;
+    }
+    
+    e.dataTransfer.setData('application/astra-texture', JSON.stringify({
+      assetId: asset.id,
+      assetName: asset.name,
+      assetType: asset.assetType
+    }));
+    e.dataTransfer.effectAllowed = 'copy';
   };
 
   const filteredAssets = useMemo(() => {
@@ -262,6 +378,8 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
                 className={`asset-item ${selectedAsset?.id === asset.id ? 'selected' : ''}`}
                 onClick={() => onSelectAsset(asset)}
                 onContextMenu={(e) => handleContextMenu(e, asset)}
+                onDragStart={(e) => handleAssetDragStart(e, asset)}
+                draggable={asset.assetType === 'texture'}
                 title={asset.name}
               >
                 <div className="asset-preview">
@@ -339,6 +457,7 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
           { name: msg('assets.filterTextures'), extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }
         ]}
         allowMultiple={true}
+        allowSelectFolder={true}
       />
     </CollapsiblePanel>
   );

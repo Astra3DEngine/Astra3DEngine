@@ -93,6 +93,7 @@
   "inspector.face.back": "Back",
   "inspector.noTexture": "No Texture",
   "inspector.texture": "Texture",
+  "inspector.modelTexture": "Model Texture",
   "inspector.uvTransform": "UV Transform",
   "inspector.uvScale": "UV Scale",
   "inspector.uvOffset": "UV Offset",

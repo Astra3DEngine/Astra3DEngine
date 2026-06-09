@@ -93,6 +93,7 @@
   "inspector.face.back": "后面",
   "inspector.noTexture": "无贴图",
   "inspector.texture": "贴图",
+  "inspector.modelTexture": "模型贴图",
   "inspector.uvTransform": "UV变换",
   "inspector.uvScale": "UV缩放",
   "inspector.uvOffset": "UV偏移",

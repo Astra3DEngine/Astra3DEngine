@@ -543,9 +543,23 @@ function Viewport({
       });
     };
 
-    // 兄弟兄弟，获取一下你的几何中心呢😋
-    // 让我用用
+    /**
+     * 获取 mesh 的几何中心（世界坐标）
+     * 
+     * 对于 model 类型（Group），使用 Box3.setFromObject 计算边界盒中心。
+     * 对于普通 mesh，使用 geometry.boundingBox 计算中心。
+     * 这样才能正确处理多选时的相对位置计算，不然 model 类型的 geoCenterOffset 会是 (0,0,0)，
+     * 导致缩放时相对位置计算错误，模型会乱飞。
+     */
     const getMeshGeometryCenterWorld = (mesh) => {
+      if (mesh.userData.isModel) {
+        // model 类型是 Group，用 Box3.setFromObject 计算边界盒
+        const box = new THREE.Box3().setFromObject(mesh);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        return center;
+      }
+      
       if (!mesh.geometry) return mesh.position.clone();
       
       mesh.geometry.computeBoundingBox();
@@ -830,11 +844,20 @@ function Viewport({
             applyTransformToDescendants(initial.primaryId, initial.descendantRelativeTransforms);
           }
         } else if (mode === 'scale' && initial.center) {
-          const scaleRatio = new THREE.Vector3(
-            attached.scale.x / initial.pivotScale.x,
-            attached.scale.y / initial.pivotScale.y,
-            attached.scale.z / initial.pivotScale.z
-          );
+          // 等比缩放时，取三个轴的平均值
+          let scaleRatio;
+          if (uniformScaleRef.current) {
+            const avgScale = (attached.scale.x + attached.scale.y + attached.scale.z) / 3;
+            const avgInitial = (initial.pivotScale.x + initial.pivotScale.y + initial.pivotScale.z) / 3;
+            const ratio = avgScale / avgInitial;
+            scaleRatio = new THREE.Vector3(ratio, ratio, ratio);
+          } else {
+            scaleRatio = new THREE.Vector3(
+              attached.scale.x / initial.pivotScale.x,
+              attached.scale.y / initial.pivotScale.y,
+              attached.scale.z / initial.pivotScale.z
+            );
+          }
 
           Object.keys(initial.others).forEach(objId => {
             const mesh = meshesRef.current[objId];
@@ -928,32 +951,39 @@ function Viewport({
           });
         }
       } else if (mode === 'scale' && initial.primary && initial.center) {
+        // 非 pivot 模式下的多选缩放
+        // mesh 是 TransformControls 直接操作的对象（primary mesh）
+        
+        // 等比缩放时，取三个轴的平均值计算 scaleRatio
+        let scaleRatio;
         if (uniformScaleRef.current) {
           const avgScale = (mesh.scale.x + mesh.scale.y + mesh.scale.z) / 3;
+          const avgInitial = (initial.primary.scale.x + initial.primary.scale.y + initial.primary.scale.z) / 3;
+          const ratio = avgScale / avgInitial;
+          scaleRatio = new THREE.Vector3(ratio, ratio, ratio);
+          
+          // 强制把 mesh.scale 设置为等比缩放后的值
           mesh.scale.set(avgScale, avgScale, avgScale);
+        } else {
+          scaleRatio = new THREE.Vector3(
+            mesh.scale.x / initial.primary.scale.x,
+            mesh.scale.y / initial.primary.scale.y,
+            mesh.scale.z / initial.primary.scale.z
+          );
         }
         
-        const rawScaleRatio = new THREE.Vector3(
-          mesh.scale.x / initial.primary.scale.x,
-          mesh.scale.y / initial.primary.scale.y,
-          mesh.scale.z / initial.primary.scale.z
-        );
-        
-        const scaleRatio = new THREE.Vector3(1, 1, 1);
-        const threshold = 0.001;
-        
-        if (Math.abs(rawScaleRatio.x - 1) > threshold) scaleRatio.x = rawScaleRatio.x;
-        if (Math.abs(rawScaleRatio.y - 1) > threshold) scaleRatio.y = rawScaleRatio.y;
-        if (Math.abs(rawScaleRatio.z - 1) > threshold) scaleRatio.z = rawScaleRatio.z;
-        
+        // 计算 primary mesh 的新位置
         const primaryGeoCenterOffset = initial.primary.geoCenterOffset || new THREE.Vector3();
         const primaryGeoCenter = initial.primary.position.clone().add(primaryGeoCenterOffset);
         
         const primaryOffset = primaryGeoCenter.clone().sub(initial.center);
-        primaryOffset.multiply(scaleRatio);
+        primaryOffset.x *= scaleRatio.x;
+        primaryOffset.y *= scaleRatio.y;
+        primaryOffset.z *= scaleRatio.z;
         const newPrimaryGeoCenter = initial.center.clone().add(primaryOffset);
         mesh.position.copy(newPrimaryGeoCenter).sub(primaryGeoCenterOffset);
         
+        // 更新其他 mesh 的位置和 scale
         Object.keys(initial.others).forEach(objId => {
           const otherMesh = meshesRef.current[objId];
           const otherInitial = initial.others[objId];
@@ -962,7 +992,9 @@ function Viewport({
             const geoCenter = otherInitial.position.clone().add(geoCenterOffset);
             
             const offset = geoCenter.clone().sub(initial.center);
-            offset.multiply(scaleRatio);
+            offset.x *= scaleRatio.x;
+            offset.y *= scaleRatio.y;
+            offset.z *= scaleRatio.z;
             const newGeoCenter = initial.center.clone().add(offset);
             otherMesh.position.copy(newGeoCenter).sub(geoCenterOffset);
             
@@ -1525,8 +1557,35 @@ function Viewport({
             
             const modelGroup = new THREE.Group();
             const modelContent = asset.gltfScene.clone();
+            // OBJ 模型的子 Mesh 已经在加载时偏移过了，不需要再 sub center
+            // GLTF 模型需要 sub center 来居化
             const center = asset.center || new THREE.Vector3(0, 0, 0);
-            modelContent.position.sub(center);
+            const isObjModel = asset.name && asset.name.toLowerCase().endsWith('.obj');
+            if (!isObjModel) {
+              modelContent.position.sub(center);
+            }
+            
+            // 处理模型贴图：遍历所有 Mesh 并应用用户选择的贴图
+            if (obj.textureId) {
+              const textureAsset = assetsRef.current.find(a => a.id === obj.textureId);
+              if (textureAsset && textureAsset.texture) {
+                const texture = textureAsset.texture.clone();
+                texture.needsUpdate = true;
+                
+                const uvScale = obj.uvScale || [1, 1];
+                const uvOffset = obj.uvOffset || [0, 0];
+                texture.repeat.set(uvScale[0], uvScale[1]);
+                texture.offset.set(uvOffset[0], uvOffset[1]);
+                
+                modelContent.traverse((child) => {
+                  if (child.isMesh && child.material) {
+                    // 替换所有 Mesh 的漫反射贴图，保留其他材质属性
+                    child.material.map = texture;
+                    child.material.needsUpdate = true;
+                  }
+                });
+              }
+            }
             
             modelGroup.add(modelContent);
             modelGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
@@ -1590,6 +1649,35 @@ function Viewport({
               mesh.material.map = null;
               mesh.material.needsUpdate = true;
             }
+          } else if (obj.isModel && mesh.userData.isModel) {
+            // model 类型贴图更新：遍历 Group 中所有 Mesh
+            if (obj.textureId) {
+              const textureAsset = assetsRef.current.find(a => a.id === obj.textureId);
+              if (textureAsset && textureAsset.texture) {
+                const texture = textureAsset.texture.clone();
+                texture.needsUpdate = true;
+                
+                const uvScale = obj.uvScale || [1, 1];
+                const uvOffset = obj.uvOffset || [0, 0];
+                texture.repeat.set(uvScale[0], uvScale[1]);
+                texture.offset.set(uvOffset[0], uvOffset[1]);
+                
+                mesh.traverse((child) => {
+                  if (child.isMesh && child.material) {
+                    child.material.map = texture;
+                    child.material.needsUpdate = true;
+                  }
+                });
+              }
+            } else {
+              // 清除贴图，恢复原始材质
+              mesh.traverse((child) => {
+                if (child.isMesh && child.material) {
+                  child.material.map = null;
+                  child.material.needsUpdate = true;
+                }
+              });
+            }
           } else if (obj.type !== 'mesh' && mesh.material && mesh.material.color) {
             mesh.material.color.setStyle(obj.color || '#4a90d9');
           }
@@ -1636,8 +1724,14 @@ function Viewport({
             const modelGroup = new THREE.Group();
             
             const modelContent = asset.gltfScene.clone();
+            // OBJ 模型的子 Mesh 已经在加载时偏移过了，不需要再 sub center
+            // GLTF 模型需要 sub center 来居化
             const center = asset.center || new THREE.Vector3(0, 0, 0);
-            modelContent.position.sub(center);
+            // 检查是否是 OBJ 模型（通过文件名判断）
+            const isObjModel = asset.name && asset.name.toLowerCase().endsWith('.obj');
+            if (!isObjModel) {
+              modelContent.position.sub(center);
+            }
             
             modelGroup.add(modelContent);
             modelGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
@@ -1763,17 +1857,38 @@ function Viewport({
       const isPrimary = index === 0;
       
       if (mesh.userData.isModel) {
-        const assetSize = mesh.userData.assetSize || new THREE.Vector3(1, 1, 1);
-        
-        const outline = new THREE.LineSegments(
-          new THREE.EdgesGeometry(new THREE.BoxGeometry(assetSize.x, assetSize.y, assetSize.z)),
-          new THREE.LineBasicMaterial({ 
-            color: isPrimary ? 0x4a90d9 : 0x66aaff, 
-            linewidth: 2 
-          })
-        );
-        mesh.add(outline);
-        mesh.userData.outline = outline;
+        // model 类型是 Group，outline 需要放在 modelContent 上
+        // modelContent.position = -center（相对于 Group），所以几何中心在 Group 的局部原点
+        // 但在 modelContent 的局部坐标系中，几何中心仍然是 center
+        const modelContent = mesh.children[0];
+        if (modelContent) {
+          // 用 Box3.setFromObject 计算实际边界盒（世界坐标）
+          const box = new THREE.Box3().setFromObject(modelContent);
+          const size = new THREE.Vector3();
+          box.getSize(size);
+          
+          // 边界盒中心（世界坐标）
+          const boxCenter = new THREE.Vector3();
+          box.getCenter(boxCenter);
+          
+          // 转换到 modelContent 的局部坐标系
+          const localCenter = modelContent.worldToLocal(boxCenter.clone());
+          
+          // 创建边界盒几何体，稍微放大一点避免贴得太紧
+          const outlineGeo = new THREE.BoxGeometry(size.x * 1.02, size.y * 1.02, size.z * 1.02);
+          const outline = new THREE.LineSegments(
+            new THREE.EdgesGeometry(outlineGeo),
+            new THREE.LineBasicMaterial({ 
+              color: isPrimary ? 0x4a90d9 : 0x66aaff, 
+              linewidth: 2 
+            })
+          );
+          
+          // outline 放在 modelContent 上，位置是边界盒中心在局部坐标系中的位置
+          outline.position.copy(localCenter);
+          modelContent.add(outline);
+          mesh.userData.outline = outline;
+        }
       } else {
         const outline = new THREE.LineSegments(
           new THREE.EdgesGeometry(mesh.geometry),
@@ -1793,10 +1908,18 @@ function Viewport({
     } else if (objectsToHighlight.length === 1) {
       const mesh = meshesRef.current[objectsToHighlight[0].id];
       if (mesh && mesh.parent === sceneRef.current) {
-        mesh.geometry.computeBoundingBox();
-        const geoCenter = new THREE.Vector3();
-        mesh.geometry.boundingBox.getCenter(geoCenter);
-        const worldCenter = geoCenter.clone().applyMatrix4(mesh.matrixWorld);
+        // model 类型是 Group，没有 geometry，需要用 Box3.setFromObject 计算边界盒
+        let worldCenter;
+        if (mesh.userData.isModel) {
+          const box = new THREE.Box3().setFromObject(mesh);
+          worldCenter = new THREE.Vector3();
+          box.getCenter(worldCenter);
+        } else {
+          mesh.geometry.computeBoundingBox();
+          const geoCenter = new THREE.Vector3();
+          mesh.geometry.boundingBox.getCenter(geoCenter);
+          worldCenter = geoCenter.clone().applyMatrix4(mesh.matrixWorld);
+        }
         
         const pivot = sceneRef.current.getObjectByName('singleSelectPivot');
         if (pivot) {
@@ -1813,10 +1936,18 @@ function Viewport({
       
       const center = new THREE.Vector3();
       meshes.forEach(m => {
-        m.geometry.computeBoundingBox();
-        const geoCenter = new THREE.Vector3();
-        m.geometry.boundingBox.getCenter(geoCenter);
-        const worldCenter = geoCenter.clone().applyMatrix4(m.matrixWorld);
+        // model 类型是 Group，需要用 Box3.setFromObject 计算边界盒
+        let worldCenter;
+        if (m.userData.isModel) {
+          const box = new THREE.Box3().setFromObject(m);
+          worldCenter = new THREE.Vector3();
+          box.getCenter(worldCenter);
+        } else {
+          m.geometry.computeBoundingBox();
+          const geoCenter = new THREE.Vector3();
+          m.geometry.boundingBox.getCenter(geoCenter);
+          worldCenter = geoCenter.clone().applyMatrix4(m.matrixWorld);
+        }
         center.add(worldCenter);
       });
       center.divideScalar(meshes.length);
@@ -1895,6 +2026,53 @@ function Viewport({
     }
   }, [isPlaying]);
 
+  /**
+   * 贴图拖拽处理
+   * 
+   * 允许用户从资源面板拖拽贴图到视口中，应用到当前选中的模型。
+   * 只有 model/sphere/plane 类型可以接收贴图。
+   * 
+   * 注意：只有在确实有贴图拖拽数据时才阻止默认行为，
+   * 否则会干扰 OrbitControls 的正常工作，鼠标操作会变得很奇怪。
+   */
+  const handleDragOver = (e) => {
+    // 只有贴图拖拽才阻止默认行为，其他拖拽（如层级面板拖拽）不处理
+    if (e.dataTransfer.types.includes('application/astra-texture')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  };
+
+  const handleDrop = (e) => {
+    // 只有贴图拖拽才处理
+    const textureData = e.dataTransfer.getData('application/astra-texture');
+    if (!textureData) return;
+    
+    e.preventDefault();
+    
+    try {
+      const { assetId } = JSON.parse(textureData);
+      
+      // 检查是否有选中对象，且该对象可以应用贴图
+      if (!selectedObject) return;
+      
+      // model 类型用 isModel 判断，sphere/plane 用 type 判断
+      const canApplyTexture = selectedObject.isModel || 
+                              selectedObject.type === 'sphere' || 
+                              selectedObject.type === 'plane';
+      
+      if (!canApplyTexture) return;
+      
+      // 应用贴图到选中对象
+      if (onUpdateObject) {
+        onRecordHistory?.();
+        onUpdateObject(selectedObject.id, { textureId: assetId });
+      }
+    } catch (err) {
+      console.error('Failed to parse texture drag data:', err);
+    }
+  };
+
   const tools = [
     { id: 'select', labelKey: 'tool.select', icon: <IconSelect className="tool-icon" /> },
     { id: 'move', labelKey: 'tool.move', icon: <IconMove className="tool-icon" /> },
@@ -1914,7 +2092,12 @@ function Viewport({
   ];
 
   return (
-    <div className="viewport-container" ref={containerRef}>
+    <div 
+      className="viewport-container" 
+      ref={containerRef}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       {showToolbar && (
         <div className="viewport-toolbar">
           {tools.map(tool => (

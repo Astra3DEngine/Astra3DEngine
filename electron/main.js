@@ -188,6 +188,37 @@ ipcMain.handle('file:write', async (event, filePath, content) => {
   }
 });
 
+/**
+ * 递归读取文件夹中的所有文件
+ * 
+ * 返回文件夹中所有文件的路径列表，支持递归遍历子文件夹。
+ * 用于导入整个文件夹的资源。
+ */
+ipcMain.handle('file:readDirectory', async (event, dirPath, recursive = true) => {
+  try {
+    const files = [];
+    
+    const scanDir = async (currentPath) => {
+      const entries = await fsp.readdir(currentPath, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const fullPath = path.join(currentPath, entry.name);
+        
+        if (entry.isDirectory() && recursive) {
+          await scanDir(fullPath);
+        } else if (entry.isFile()) {
+          files.push(fullPath);
+        }
+      }
+    };
+    
+    await scanDir(dirPath);
+    return { success: true, files };
+  } catch (error) {
+    return { success: false, error: error.message, files: [] };
+  }
+});
+
 ipcMain.handle('fs:listDirectory', async (event, dirPath) => {
   try {
     const entries = await fsp.readdir(dirPath, { withFileTypes: true });

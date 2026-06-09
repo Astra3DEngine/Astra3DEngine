@@ -463,6 +463,64 @@ function InspectorPanel({
             </div>
           )}
           
+          {selectedObject.isModel && (
+            <div className="inspector-section">
+              <div className="inspector-section-title">{msg('inspector.modelTexture')}</div>
+              <div className="inspector-row">
+                <label className="inspector-label">{msg('inspector.texture')}</label>
+                <select
+                  className="inspector-input inspector-select"
+                  value={selectedObject.textureId || ''}
+                  onChange={(e) => handleTextureChange(e.target.value ? parseInt(e.target.value) : null)}
+                >
+                  <option value="">{msg('inspector.noTexture')}</option>
+                  {textureAssets.map(asset => (
+                    <option key={asset.id} value={asset.id}>{asset.name}</option>
+                  ))}
+                </select>
+              </div>
+              {selectedObject.textureId != null && (
+                <>
+                  <div className="inspector-row">
+                    <label className="inspector-label">{msg('inspector.uvScale')}</label>
+                    <div className="inspector-vector2">
+                      {['U', 'V'].map((axis, i) => (
+                        <div key={axis} className="vector-input">
+                          <span className="vector-label">{axis}</span>
+                          <input
+                            type="number"
+                            className="inspector-input"
+                            value={(selectedObject.uvScale || [1, 1])[i]}
+                            onChange={(e) => handleUVChange('uvScale', i, e.target.value)}
+                            step="0.1"
+                            min="0.01"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="inspector-row">
+                    <label className="inspector-label">{msg('inspector.uvOffset')}</label>
+                    <div className="inspector-vector2">
+                      {['U', 'V'].map((axis, i) => (
+                        <div key={axis} className="vector-input">
+                          <span className="vector-label">{axis}</span>
+                          <input
+                            type="number"
+                            className="inspector-input"
+                            value={(selectedObject.uvOffset || [0, 0])[i]}
+                            onChange={(e) => handleUVChange('uvOffset', i, e.target.value)}
+                            step="0.1"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          
           {(selectedObject.type === 'sphere' || selectedObject.type === 'plane') && selectedObject.textureId != null && (
             <div className="inspector-section">
               <div className="inspector-section-title">{msg('inspector.uvTransform')}</div>

@@ -43,6 +43,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   writeFile: (filePath, content) => ipcRenderer.invoke('file:write', filePath, content),
   
+  readDirectory: (dirPath, recursive = true) => ipcRenderer.invoke('file:readDirectory', dirPath, recursive),
+  
   fs: {
     listDirectory: (dirPath) => ipcRenderer.invoke('fs:listDirectory', dirPath),
     getHomeDir: () => ipcRenderer.invoke('fs:getHomeDir'),

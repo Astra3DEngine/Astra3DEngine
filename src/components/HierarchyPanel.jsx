@@ -100,45 +100,17 @@ function HierarchyPanel({
   }, [objects]);
 
   const computedExpandedIds = useMemo(() => {
-    const result = new Set(expandedIds);
-    
-    console.log('expandedIds (user controlled):', Array.from(expandedIds));
-    console.log('objects with parentId:', objects.filter(o => o.parentId).map(o => ({ name: o.name, parentId: o.parentId })));
-    
-    return result;
-  }, [objects, expandedIds]);
-
-  useEffect(() => {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      let changed = false;
-      
-      objects.forEach(obj => {
-        if (obj.parentId && !prev.has(obj.parentId)) {
-          next.add(obj.parentId);
-          changed = true;
-          console.log('Auto-expanding parent:', obj.parentId, 'for child:', obj.name);
-        }
-      });
-      
-      return changed ? next : prev;
-    });
-  }, [objects]);
+    return new Set(expandedIds);
+  }, [expandedIds]);
 
   const toggleExpanded = (id) => {
-    console.log('=== toggleExpanded ===');
-    console.log('id:', id);
-    
     setExpandedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) {
-        console.log('Removing from expanded');
         next.delete(id);
       } else {
-        console.log('Adding to expanded');
         next.add(id);
       }
-      console.log('new expandedIds:', Array.from(next));
       return next;
     });
   };
@@ -372,33 +344,26 @@ function HierarchyPanel({
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('=== handleDrop ===');
-    console.log('draggedId:', draggedId, 'targetObj.id:', targetObj.id, 'dropPosition:', dropPosition);
-    
     if (!draggedId || draggedId === targetObj.id) {
-      console.log('SKIP: no draggedId or same object');
       return;
     }
     
     const descendantIds = getAllDescendantIds(draggedId);
     if (descendantIds.has(targetObj.id)) {
-      console.log('SKIP: target is descendant');
       return;
     }
 
     const finalDropPosition = dropPosition || 'after';
-    console.log('finalDropPosition:', finalDropPosition);
-    console.log('calling onReorderObjects...');
 
     if (onReorderObjects) {
       onReorderObjects(draggedId, targetObj.id, finalDropPosition);
     }
     
+    // 拖拽创建父子关系时自动展开父对象
     if (finalDropPosition === 'inside') {
       setExpandedIds(prev => {
         const next = new Set(prev);
         next.add(targetObj.id);
-        console.log('Expanding parent:', targetObj.id);
         return next;
       });
     }
@@ -412,32 +377,24 @@ function HierarchyPanel({
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('=== handleDropOnEmpty ===');
-    console.log('draggedId:', draggedId);
-    
     if (!draggedId) {
-      console.log('SKIP: no draggedId');
       return;
     }
     
     const data = e.dataTransfer.getData('application/json');
-    console.log('data from dataTransfer:', data);
     
     if (data) {
       try {
         const parsed = JSON.parse(data);
         if (parsed.id && onReorderObjects) {
-          console.log('Calling onReorderObjects with parsed.id:', parsed.id);
           onReorderObjects(parsed.id, null, 'end');
         }
       } catch (err) {
         if (onReorderObjects) {
-          console.log('Calling onReorderObjects with draggedId:', draggedId);
           onReorderObjects(draggedId, null, 'end');
         }
       }
     } else if (onReorderObjects) {
-      console.log('Calling onReorderObjects with draggedId:', draggedId);
       onReorderObjects(draggedId, null, 'end');
     }
     
@@ -452,14 +409,6 @@ function HierarchyPanel({
     const hasChildren = objects.some(o => o.parentId === obj.id);
     const isSelected = selectedObjects.some(o => o && o.id === obj.id);
     const isExpanded = computedExpandedIds.has(obj.id);
-    
-    if (depth === 0) {
-      console.log(`renderObject: ${obj.name} (id:${obj.id}), hasChildren:${hasChildren}, isExpanded:${isExpanded}, parentId:${obj.parentId}`);
-      if (hasChildren) {
-        const children = objects.filter(o => o.parentId === obj.id);
-        console.log(`  children of ${obj.name}:`, children.map(c => c.name));
-      }
-    }
     
     return (
       <React.Fragment key={obj.id}>
@@ -477,8 +426,6 @@ function HierarchyPanel({
           }}
           onDoubleClick={(e) => {
             if (hasChildren) {
-              console.log('=== Double click to toggle ===');
-              console.log('obj.id:', obj.id, 'obj.name:', obj.name);
               e.stopPropagation();
               toggleExpanded(obj.id);
             }
@@ -495,8 +442,6 @@ function HierarchyPanel({
             <span 
               className={`hierarchy-expand-icon ${isExpanded ? 'expanded' : ''}`}
               onClick={(e) => {
-                console.log('=== Expand icon clicked ===');
-                console.log('obj.id:', obj.id, 'obj.name:', obj.name);
                 e.stopPropagation();
                 e.preventDefault();
                 toggleExpanded(obj.id);
