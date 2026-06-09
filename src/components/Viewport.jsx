@@ -1690,12 +1690,30 @@ function Viewport({
         if (obj.type === 'mesh' && obj.assetId && obj.meshPath) {
           const asset = assetsRef.current.find(a => a.id === obj.assetId);
           if (asset && asset.gltfScene) {
+            // 根据 meshPath 查找嵌套的 mesh
+            // meshPath 格式：'Group1/Group2/MeshName' 或 'MeshName'（扁平）
+            const pathParts = obj.meshPath.split('/');
             let targetMesh = null;
-            asset.gltfScene.traverse((child) => {
-              if (child.isMesh && child.name === obj.meshPath) {
-                targetMesh = child;
+            
+            if (pathParts.length === 1) {
+              // 扁平路径，直接遍历查找
+              asset.gltfScene.traverse((child) => {
+                if (child.isMesh && child.name === obj.meshPath) {
+                  targetMesh = child;
+                }
+              });
+            } else {
+              // 嵌套路径，按层级查找
+              let currentObj = asset.gltfScene;
+              for (let i = 0; i < pathParts.length; i++) {
+                const part = pathParts[i];
+                currentObj = currentObj.children.find(c => c.name === part);
+                if (!currentObj) break;
               }
-            });
+              if (currentObj && currentObj.isMesh) {
+                targetMesh = currentObj;
+              }
+            }
             
             if (targetMesh) {
               const geometry = targetMesh.geometry.clone();
@@ -2053,20 +2071,122 @@ function Viewport({
     try {
       const { assetId } = JSON.parse(textureData);
       
-      // 检查是否有选中对象，且该对象可以应用贴图
+      // 检查是否有选中对象
       if (!selectedObject) return;
       
-      // model 类型用 isModel 判断，sphere/plane 用 type 判断
+      // model 类型用 isModel 判断，sphere/plane/cube 用 type 判断
       const canApplyTexture = selectedObject.isModel || 
                               selectedObject.type === 'sphere' || 
-                              selectedObject.type === 'plane';
+                              selectedObject.type === 'plane' ||
+                              selectedObject.type === 'cube';
       
       if (!canApplyTexture) return;
       
       // 应用贴图到选中对象
       if (onUpdateObject) {
         onRecordHistory?.();
-        onUpdateObject(selectedObject.id, { textureId: assetId });
+        
+        // cube 类型使用 faceTextures，拖拽贴图应用到鼠标碰到的那个面
+        if (selectedObject.type === 'cube') {
+          const mesh = meshesRef.current[selectedObject.id];
+          if (mesh && sceneRef.current && cameraRef.current && containerRef.current) {
+            // 用 raycaster 检测鼠标位置对应的面
+            const rect = containerRef.current.getBoundingClientRect();
+            const mouse = new THREE.Vector2(
+              ((e.clientX - rect.left) / rect.width) * 2 - 1,
+              -((e.clientY - rect.top) / rect.height) * 2 + 1
+            );
+            
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, cameraRef.current);
+            
+            const intersects = raycaster.intersectObject(mesh);
+            console.log('=== Cube texture drop debug ===');
+            console.log('intersects count:', intersects.length);
+            if (intersects.length > 0) {
+              // 遍历所有交点，找到不是角点的交点
+              // 角点的三个轴分量都接近 0.5，面上的点只有一个轴接近 0.5
+              const threshold = 0.48; // 判断是否在面上的阈值
+              
+              let bestFace = null;
+              
+              for (const intersect of intersects) {
+                console.log('intersect.point:', intersect.point, 'index:', intersect.index, 'distance:', intersect.distance);
+                
+                // 将交点转换到 mesh 的局部坐标系
+                const localPoint = mesh.worldToLocal(intersect.point.clone());
+                console.log('local point:', localPoint.x, localPoint.y, localPoint.z);
+                
+                const absX = Math.abs(localPoint.x);
+                const absY = Math.abs(localPoint.y);
+                const absZ = Math.abs(localPoint.z);
+                
+                // 判断是否是角点：三个轴都接近 0.5
+                const isCorner = absX > threshold && absY > threshold && absZ > threshold;
+                console.log('is corner:', isCorner);
+                
+                if (isCorner) {
+                  // 跳过角点
+                  continue;
+                }
+                
+                // 判断是哪个面：只有一个轴接近 0.5
+                let faceName;
+                if (absX > threshold && absY <= threshold && absZ <= threshold) {
+                  faceName = localPoint.x > 0 ? 'right' : 'left';
+                } else if (absY > threshold && absX <= threshold && absZ <= threshold) {
+                  faceName = localPoint.y > 0 ? 'top' : 'bottom';
+                } else if (absZ > threshold && absX <= threshold && absY <= threshold) {
+                  faceName = localPoint.z > 0 ? 'front' : 'back';
+                } else {
+                  // 边上的点：两个轴接近 0.5，跳过
+                  console.log('edge point, skipping');
+                  continue;
+                }
+                
+                console.log('detected face:', faceName);
+                bestFace = faceName;
+                break; // 找到第一个非角点的交点就停止
+              }
+              
+              console.log('=== Best match face:', bestFace);
+              
+              if (bestFace) {
+                // 只更新那个面的贴图
+                const newFaceTextures = { ...selectedObject.faceTextures };
+                newFaceTextures[bestFace] = assetId;
+                onUpdateObject(selectedObject.id, { faceTextures: newFaceTextures });
+              } else {
+                // 如果没有检测到面，应用到所有面作为 fallback
+                onUpdateObject(selectedObject.id, {
+                  faceTextures: {
+                    right: assetId,
+                    left: assetId,
+                    top: assetId,
+                    bottom: assetId,
+                    front: assetId,
+                    back: assetId
+                  }
+                });
+              }
+            } else {
+              // 如果没有检测到面，应用到所有面作为 fallback
+              onUpdateObject(selectedObject.id, {
+                faceTextures: {
+                  right: assetId,
+                  left: assetId,
+                  top: assetId,
+                  bottom: assetId,
+                  front: assetId,
+                  back: assetId
+                }
+              });
+            }
+          }
+        } else {
+          // model/sphere/plane 类型使用 textureId
+          onUpdateObject(selectedObject.id, { textureId: assetId });
+        }
       }
     } catch (err) {
       console.error('Failed to parse texture drag data:', err);

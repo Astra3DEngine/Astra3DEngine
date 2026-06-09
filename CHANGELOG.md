@@ -1,5 +1,53 @@
 # 更新日志
 
+## 2026-06-09 OBJ 模型导入 + 贴图功能 + 多选缩放修复
+
+### 新增功能
+- **OBJ 模型导入支持**：
+  - 添加 OBJLoader，支持导入 .obj 格式模型
+  - OBJ 模型在加载时将子 Mesh 相对于中心点偏移，确保后续缩放正确
+  - 扩展模型类型列表包含 `obj`
+- **模型贴图功能**：
+  - InspectorPanel 添加 model 类型贴图选择 + UV 变换控制
+  - Viewport 处理 model 类型贴图应用
+  - AssetsPanel 支持拖拽贴图到场景
+  - 添加 i18n 翻译 `inspector.modelTexture`
+- **导入文件夹支持**：
+  - FileBrowserDialog 添加 `allowSelectFolder` 属性，Ctrl+点击可选中文件夹
+  - AssetsPanel 处理文件夹导入：递归遍历所有文件
+  - 拖拽导入也支持文件夹（FileSystem API）
+  - Electron 添加 `file:readDirectory` API
+- **素材栏多排布局**：
+  - 改用 `flex-wrap: wrap` 支持多排显示
+  - 卡片固定尺寸 80x80，垂直滚动
+
+### BUG修复
+- **选择框对齐问题**：
+  - model 类型（Group）的 outline 没有正确对齐模型
+  - 修复：用 `Box3.setFromObject` 计算边界盒，`worldToLocal` 转换到局部坐标
+- **多选标准化缩放问题**：
+  - model 类型的 geoCenterOffset 计算错误导致相对位置失效
+  - 修复：`getMeshGeometryCenterWorld` 对 model 类型用 Box3 计算边界盒中心
+  - 修复：移除 threshold 判断，等比缩放时正确计算 scaleRatio
+- **拖拽操作冲突**：
+  - 鼠标左键旋转视角会触发贴图拖拽
+  - 修复：只有贴图拖拽数据时才阻止默认行为
+- **层级面板自动展开**：
+  - 创建模型/文件夹时自动展开所有父对象导致卡顿
+  - 修复：移除自动展开逻辑，只保留拖拽创建父子关系时的展开
+
+### 修改文件
+- `src/App.jsx` — OBJ 加载 + 文件夹导入处理
+- `src/components/Viewport.jsx` — 选择框/多选缩放/拖拽修复
+- `src/components/InspectorPanel.jsx` — model 贴图支持
+- `src/components/AssetsPanel.jsx` — 文件夹导入 + 拖拽贴图
+- `src/components/FileBrowserDialog.jsx` — allowSelectFolder 属性
+- `src/components/HierarchyPanel.jsx` — 移除自动展开逻辑
+- `src/styles/assets.css` — 多排布局
+- `src/i18n/zh.json`, `src/i18n/en.json` — modelTexture 翻译
+- `electron/main.js` — readDirectory API
+- `electron/preload.js` — readDirectory 暴露
+
 ## 2026-06-07 文件浏览器跨平台修复 + Electron 图标路径修复
 
 ### BUG修复

@@ -374,6 +374,10 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 - [x] 自定义 Dialog 系统（替换浏览器原生弹窗）
 - [x] 插件设置界面
 - [x] 插件系统 l10n 国际化
+- [x] OBJ 模型导入支持
+- [x] 模型贴图功能（Inspector + 拖拽）
+- [x] 导入文件夹支持
+- [x] 素材栏多排布局
 
 **项目格式设计**（详见 [PROJECT_FORMAT_DESIGN.md](./PROJECT_FORMAT_DESIGN.md)）：
 - [ ] 项目文件夹结构实现

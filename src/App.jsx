@@ -345,7 +345,7 @@ function AppContent() {
           isFolder: true,
           children: []
         };
-      } else if (asset && (asset.type === 'gltf' || asset.type === 'glb')) {
+      } else if (asset && (asset.type === 'gltf' || asset.type === 'glb' || asset.type === 'obj')) {
         baseName = asset.name.replace(/\.[^.]+$/, '');
         const uniqueName = generateUniqueName(baseName, prev);
         
@@ -358,7 +358,10 @@ function AppContent() {
           scale: [1, 1, 1],
           color: '#ffffff',
           assetId: asset.id,
-          isModel: true
+          isModel: true,
+          textureId: null,
+          uvScale: [1, 1],
+          uvOffset: [0, 0]
         };
       } else {
         baseName = type.charAt(0).toUpperCase() + type.slice(1);
@@ -532,8 +535,8 @@ function AppContent() {
   /**
    * 导入模型为部件层级
    * 
-   * 解析GLTF模型的内部层级结构，将每个Mesh作为单独的对象添加到场景中。
-   * 创建一个根文件夹对象，然后将所有Mesh作为子对象添加到文件夹中。
+   * 解析GLTF/OBJ模型的内部层级结构，保留原本的分组关系。
+   * Group 转换成 folder 对象，Mesh 转换成 mesh 对象。
    * 
    * 部件的位置是相对于模型中心点的偏移，这样移动文件夹时所有部件会一起移动。
    * 
@@ -545,51 +548,51 @@ function AppContent() {
     setSceneObjectsWithHistory(prev => {
       const modelBaseName = asset.name.replace(/\.[^.]+$/, '');
       const rootFolderName = generateUniqueName(modelBaseName, prev);
-      const rootFolderId = Date.now();
+      const baseId = Date.now();
       
       const modelCenter = asset.center || new THREE.Vector3(0, 0, 0);
-      
-      const rootFolder = {
-        id: rootFolderId,
-        name: rootFolderName,
-        type: 'folder',
-        position: [0, 0, 0],
-        rotation: [0, 0, 0],
-        scale: [1, 1, 1],
-        isFolder: true,
-        children: [],
-        assetId: asset.id
-      };
-      
-      const meshObjects = [];
-      let meshCounter = 0;
       
       // 检查是否是 OBJ 模型（通过文件名判断）
       const isObjModel = asset.name && asset.name.toLowerCase().endsWith('.obj');
       
-      asset.gltfScene.traverse((child) => {
-        if (child.isMesh) {
-          const meshId = rootFolderId + 1 + meshCounter;
-          meshCounter++;
-          
-          const worldPos = new THREE.Vector3();
-          const worldQuat = new THREE.Quaternion();
-          const worldScale = new THREE.Vector3();
-          child.getWorldPosition(worldPos);
-          child.getWorldQuaternion(worldQuat);
-          child.getWorldScale(worldScale);
-          
-          // OBJ 模型的子 Mesh 已经在加载时偏移过了，worldPos 就是相对于模型中心的坐标
-          // GLTF 模型需要减去 modelCenter 来计算相对位置
-          const relativePos = isObjModel ? worldPos.clone() : worldPos.clone().sub(modelCenter);
-          
-          const worldEuler = new THREE.Euler().setFromQuaternion(worldQuat);
-          
-          const meshName = generateUniqueName(child.name || 'Mesh', [...prev, rootFolder, ...meshObjects]);
-          
+      const allNewObjects = [];
+      let idCounter = 0;
+      
+      /**
+       * 递归解析模型层级结构
+       * 
+       * @param {THREE.Object3D} threeObj - Three.js 对象（Group 或 Mesh）
+       * @param {number} parentId - 父对象 ID
+       * @param {string} parentPath - 父对象的 meshPath（用于 Viewport 查找）
+       * @returns {Object} 创建的场景对象
+       */
+      const parseObject3D = (threeObj, parentId, parentPath = '') => {
+        const objId = baseId + idCounter;
+        idCounter++;
+        
+        const currentPath = parentPath ? `${parentPath}/${threeObj.name}` : threeObj.name;
+        
+        // 获取世界变换
+        const worldPos = new THREE.Vector3();
+        const worldQuat = new THREE.Quaternion();
+        const worldScale = new THREE.Vector3();
+        threeObj.getWorldPosition(worldPos);
+        threeObj.getWorldQuaternion(worldQuat);
+        threeObj.getWorldScale(worldScale);
+        
+        // OBJ 模型的子 Mesh 已经在加载时偏移过了，worldPos 就是相对于模型中心的坐标
+        // GLTF 模型需要减去 modelCenter 来计算相对位置
+        const relativePos = isObjModel ? worldPos.clone() : worldPos.clone().sub(modelCenter);
+        const worldEuler = new THREE.Euler().setFromQuaternion(worldQuat);
+        
+        // 生成唯一名称
+        const objName = generateUniqueName(threeObj.name || (threeObj.isMesh ? 'Mesh' : 'Group'), [...prev, ...allNewObjects]);
+        
+        if (threeObj.isMesh) {
+          // Mesh 类型
           const meshObj = {
-            id: meshId,
-            name: meshName,
+            id: objId,
+            name: objName,
             type: 'mesh',
             position: [relativePos.x, relativePos.y, relativePos.z],
             rotation: [
@@ -598,20 +601,63 @@ function AppContent() {
               THREE.MathUtils.radToDeg(worldEuler.z)
             ],
             scale: [worldScale.x, worldScale.y, worldScale.z],
-            parentId: rootFolderId,
+            parentId: parentId,
             assetId: asset.id,
-            meshPath: child.name
+            meshPath: currentPath
+          };
+          allNewObjects.push(meshObj);
+          return meshObj;
+        } else if (threeObj.isGroup || threeObj.children.length > 0) {
+          // Group 类型（包括有子对象的任意 Object3D）
+          const folderObj = {
+            id: objId,
+            name: objName,
+            type: 'folder',
+            position: [relativePos.x, relativePos.y, relativePos.z],
+            rotation: [
+              THREE.MathUtils.radToDeg(worldEuler.x),
+              THREE.MathUtils.radToDeg(worldEuler.y),
+              THREE.MathUtils.radToDeg(worldEuler.z)
+            ],
+            scale: [worldScale.x, worldScale.y, worldScale.z],
+            isFolder: true,
+            children: [],
+            parentId: parentId,
+            assetId: asset.id,
+            meshPath: currentPath
           };
           
-          meshObjects.push(meshObj);
+          // 递归处理子对象
+          threeObj.children.forEach(child => {
+            const childObj = parseObject3D(child, objId, currentPath);
+            if (childObj) {
+              folderObj.children.push(childObj.id);
+            }
+          });
+          
+          allNewObjects.push(folderObj);
+          return folderObj;
         }
-      });
+        
+        return null;
+      };
       
-      rootFolder.children = meshObjects.map(obj => obj.id);
+      // 从模型的根节点开始解析
+      // 注意：asset.gltfScene 本身可能是一个 Group，需要保留它的层级结构
+      const rootObj = parseObject3D(asset.gltfScene, null);
       
-      const allNewObjects = [rootFolder, ...meshObjects];
-      setSelectedObject(rootFolder);
-      setSelectedObjects(allNewObjects);
+      // 如果根对象没有名称，重命名为模型名称
+      if (rootObj && rootObj.name !== rootFolderName) {
+        const existingNames = [...prev, ...allNewObjects.filter(o => o.id !== rootObj.id)];
+        rootObj.name = generateUniqueName(rootFolderName, existingNames);
+      }
+      
+      // 选中根文件夹
+      if (rootObj) {
+        setSelectedObject(rootObj);
+        // 选中所有新创建的对象
+        setSelectedObjects(allNewObjects);
+      }
       
       return [...prev, ...allNewObjects];
     });
