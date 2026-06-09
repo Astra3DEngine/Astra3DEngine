@@ -178,10 +178,10 @@ function Viewport({
     const axesHelper = new THREE.AxesHelper(2);
     scene.add(axesHelper);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.2);
     directionalLight.position.set(5, 10, 5);
     scene.add(directionalLight);
 
@@ -1520,6 +1520,10 @@ function Viewport({
         const mesh = meshesRef.current[id];
         if (mesh) {
           sceneRef.current.remove(mesh);
+          // 光源需要删除 target
+          if (mesh.userData.isLight && mesh.target) {
+            sceneRef.current.remove(mesh.target);
+          }
           if (mesh.geometry) {
             mesh.geometry.dispose();
           }
@@ -1681,6 +1685,72 @@ function Viewport({
           } else if (obj.type !== 'mesh' && mesh.material && mesh.material.color) {
             mesh.material.color.setStyle(obj.color || '#4a90d9');
           }
+          
+          // 光源属性更新
+          if (obj.isLight && mesh.userData.isLight) {
+            mesh.color.setStyle(obj.color || '#ffffff');
+            mesh.intensity = obj.intensity || 2;
+            
+            if (obj.lightType === 'point' || obj.lightType === 'spot') {
+              mesh.distance = obj.distance || 10;
+              mesh.decay = obj.decay || 1;
+            }
+            
+            if (obj.lightType === 'spot') {
+              mesh.angle = obj.angle || Math.PI / 4;
+              mesh.penumbra = obj.penumbra || 0.3;
+            }
+            
+            // 方向光和聚光灯需要更新 target
+            if (obj.lightType === 'directional' || obj.lightType === 'spot') {
+              const direction = new THREE.Vector3(0, -1, 0); // 默认向下
+              direction.applyEuler(new THREE.Euler(
+                THREE.MathUtils.degToRad(obj.rotation[0] || 0),
+                THREE.MathUtils.degToRad(obj.rotation[1] || 0),
+                THREE.MathUtils.degToRad(obj.rotation[2] || 0)
+              ));
+              mesh.target.position.set(
+                obj.position[0] + direction.x * 5,
+                obj.position[1] + direction.y * 5,
+                obj.position[2] + direction.z * 5
+              );
+            }
+            
+            // 更新可视化 Mesh 的颜色
+            if (mesh.userData.visualMesh) {
+              mesh.userData.visualMesh.traverse((child) => {
+                if (child.material) {
+                  if (Array.isArray(child.material)) {
+                    child.material.forEach(m => {
+                      if (m.color) m.color.setStyle(obj.color || '#ffffff');
+                    });
+                  } else {
+                    if (child.material.color) child.material.color.setStyle(obj.color || '#ffffff');
+                  }
+                }
+              });
+              
+              // 聚光灯需要更新锥形大小
+              if (obj.lightType === 'spot') {
+                const coneLength = 0.6;
+                const coneRadius = coneLength * Math.tan(obj.angle || Math.PI / 4);
+                // 找到锥形 Mesh 和锥形边缘 LineSegments
+                mesh.userData.visualMesh.children.forEach(child => {
+                  if (child.geometry) {
+                    if (child.geometry.type === 'ConeGeometry') {
+                      child.geometry.dispose();
+                      child.geometry = new THREE.ConeGeometry(coneRadius, coneLength, 16, 1, true);
+                    } else if (child.geometry.type === 'EdgesGeometry') {
+                      const newConeGeo = new THREE.ConeGeometry(coneRadius, coneLength, 16, 1, true);
+                      child.geometry.dispose();
+                      child.geometry = new THREE.EdgesGeometry(newConeGeo);
+                      newConeGeo.dispose();
+                    }
+                  }
+                });
+              }
+            }
+          }
         }
       } else {
         if (obj.isFolder) {
@@ -1763,6 +1833,169 @@ function Viewport({
 
             sceneRef.current.add(modelGroup);
             meshesRef.current[obj.id] = modelGroup;
+          }
+          return;
+        }
+
+        // 光源类型处理
+        if (obj.isLight) {
+          let light;
+          let visualMesh; // 可视化的 Mesh，不受光照影响
+
+          if (obj.lightType === 'point') {
+            light = new THREE.PointLight(
+              new THREE.Color(obj.color || '#ffffff'),
+              obj.intensity || 2,
+              obj.distance || 10,
+              obj.decay || 1
+            );
+            // 点光源可视化：发光球体 + 光晕
+            const visualGeo = new THREE.SphereGeometry(0.15, 16, 16);
+            const visualMat = new THREE.MeshBasicMaterial({
+              color: new THREE.Color(obj.color || '#ffffff')
+            });
+            visualMesh = new THREE.Mesh(visualGeo, visualMat);
+            
+            // 添加光晕（多层透明球体）
+            for (let i = 1; i <= 3; i++) {
+              const haloGeo = new THREE.SphereGeometry(0.15 + i * 0.05, 16, 16);
+              const haloMat = new THREE.MeshBasicMaterial({
+                color: new THREE.Color(obj.color || '#ffffff'),
+                transparent: true,
+                opacity: 0.3 - i * 0.08
+              });
+              const halo = new THREE.Mesh(haloGeo, haloMat);
+              visualMesh.add(halo);
+            }
+          } else if (obj.lightType === 'directional') {
+            light = new THREE.DirectionalLight(
+              new THREE.Color(obj.color || '#ffffff'),
+              obj.intensity || 1.5
+            );
+            // 方向光需要设置 target，否则会照射到原点
+            // 根据旋转计算照射方向
+            const direction = new THREE.Vector3(0, -1, 0); // 默认向下
+            direction.applyEuler(new THREE.Euler(
+              THREE.MathUtils.degToRad(obj.rotation[0] || 0),
+              THREE.MathUtils.degToRad(obj.rotation[1] || 0),
+              THREE.MathUtils.degToRad(obj.rotation[2] || 0)
+            ));
+            light.target.position.set(
+              obj.position[0] + direction.x * 5,
+              obj.position[1] + direction.y * 5,
+              obj.position[2] + direction.z * 5
+            );
+            sceneRef.current.add(light.target);
+            
+            // 方向光可视化：太阳图标 + 方向箭头
+            const visualGeo = new THREE.SphereGeometry(0.2, 16, 16);
+            const visualMat = new THREE.MeshBasicMaterial({
+              color: new THREE.Color(obj.color || '#ffffff')
+            });
+            visualMesh = new THREE.Mesh(visualGeo, visualMat);
+            
+            // 添加光芒线条（8条）
+            const raysGeo = new THREE.BufferGeometry();
+            const rayPositions = [];
+            for (let i = 0; i < 8; i++) {
+              const angle = (i / 8) * Math.PI * 2;
+              const x1 = Math.cos(angle) * 0.3;
+              const y1 = Math.sin(angle) * 0.3;
+              const x2 = Math.cos(angle) * 0.45;
+              const y2 = Math.sin(angle) * 0.45;
+              rayPositions.push(x1, y1, 0, x2, y2, 0);
+            }
+            raysGeo.setAttribute('position', new THREE.Float32BufferAttribute(rayPositions, 3));
+            const raysMat = new THREE.LineBasicMaterial({ color: new THREE.Color(obj.color || '#ffffff') });
+            const rays = new THREE.LineSegments(raysGeo, raysMat);
+            visualMesh.add(rays);
+            
+            // 添加方向箭头（指向照射方向）
+            const arrowLength = 0.8;
+            const arrowGeo = new THREE.BufferGeometry();
+            const arrowPos = [0, 0, 0, 0, -arrowLength, 0];
+            arrowGeo.setAttribute('position', new THREE.Float32BufferAttribute(arrowPos, 3));
+            const arrowMat = new THREE.LineBasicMaterial({ color: new THREE.Color(obj.color || '#ffffff'), linewidth: 2 });
+            const arrowLine = new THREE.Line(arrowGeo, arrowMat);
+            visualMesh.add(arrowLine);
+            
+            // 箭头头部（小三角形）
+            const arrowHeadGeo = new THREE.ConeGeometry(0.08, 0.15, 8);
+            const arrowHeadMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(obj.color || '#ffffff') });
+            const arrowHead = new THREE.Mesh(arrowHeadGeo, arrowHeadMat);
+            arrowHead.position.y = -arrowLength - 0.075; // 箭头头部中心位置
+            arrowHead.rotation.x = Math.PI; // ConeGeometry 默认尖端在上，旋转180度让尖端朝下
+            visualMesh.add(arrowHead);
+          } else if (obj.lightType === 'spot') {
+            light = new THREE.SpotLight(
+              new THREE.Color(obj.color || '#ffffff'),
+              obj.intensity || 3,
+              obj.distance || 10,
+              obj.angle || Math.PI / 4,
+              obj.penumbra || 0.3,
+              obj.decay || 1
+            );
+            // 聚光灯需要设置 target，否则会照射到原点
+            // 根据旋转计算照射方向
+            const direction = new THREE.Vector3(0, -1, 0); // 默认向下
+            direction.applyEuler(new THREE.Euler(
+              THREE.MathUtils.degToRad(obj.rotation[0] || 0),
+              THREE.MathUtils.degToRad(obj.rotation[1] || 0),
+              THREE.MathUtils.degToRad(obj.rotation[2] || 0)
+            ));
+            light.target.position.set(
+              obj.position[0] + direction.x * 5,
+              obj.position[1] + direction.y * 5,
+              obj.position[2] + direction.z * 5
+            );
+            sceneRef.current.add(light.target);
+            
+            // 聚光灯可视化：光源球体 + 锥形
+            const bulbGeo = new THREE.SphereGeometry(0.12, 16, 16);
+            const bulbMat = new THREE.MeshBasicMaterial({
+              color: new THREE.Color(obj.color || '#ffffff')
+            });
+            visualMesh = new THREE.Mesh(bulbGeo, bulbMat);
+            
+            // 添加锥形（表示光照范围，尖端在光源位置，底部朝下）
+            const coneLength = 0.6;
+            const coneRadius = coneLength * Math.tan(obj.angle || Math.PI / 4);
+            const coneGeo = new THREE.ConeGeometry(coneRadius, coneLength, 16, 1, true);
+            const coneMat = new THREE.MeshBasicMaterial({
+              color: new THREE.Color(obj.color || '#ffffff'),
+              transparent: true,
+              opacity: 0.3,
+              side: THREE.DoubleSide
+            });
+            const cone = new THREE.Mesh(coneGeo, coneMat);
+            // ConeGeometry 默认尖端在上，底部在下
+            // 不旋转，让尖端在光源位置，底部朝下
+            cone.position.y = -coneLength / 2 - 0.05; // 锥形中心偏移，让尖端在光源附近
+            visualMesh.add(cone);
+            
+            // 添加锥形边缘线条
+            const coneEdgeGeo = new THREE.EdgesGeometry(coneGeo);
+            const coneEdgeMat = new THREE.LineBasicMaterial({ color: new THREE.Color(obj.color || '#ffffff') });
+            const coneEdge = new THREE.LineSegments(coneEdgeGeo, coneEdgeMat);
+            coneEdge.position.y = -coneLength / 2 - 0.05;
+            visualMesh.add(coneEdge);
+          }
+
+          if (light) {
+            light.position.set(obj.position[0], obj.position[1], obj.position[2]);
+            light.rotation.set(
+              THREE.MathUtils.degToRad(obj.rotation[0]),
+              THREE.MathUtils.degToRad(obj.rotation[1]),
+              THREE.MathUtils.degToRad(obj.rotation[2])
+            );
+            light.userData = { id: obj.id, isLight: true, lightType: obj.lightType };
+
+            sceneRef.current.add(light);
+            if (visualMesh) {
+              light.add(visualMesh);
+              light.userData.visualMesh = visualMesh;
+            }
+            meshesRef.current[obj.id] = light;
           }
           return;
         }
@@ -1907,6 +2140,17 @@ function Viewport({
           modelContent.add(outline);
           mesh.userData.outline = outline;
         }
+      } else if (mesh.userData.isLight) {
+        // 光源没有 geometry，使用一个简单的球体表示选中状态
+        const outline = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.SphereGeometry(0.6, 8, 8)),
+          new THREE.LineBasicMaterial({ 
+            color: isPrimary ? 0x4a90d9 : 0x66aaff, 
+            linewidth: 2 
+          })
+        );
+        mesh.add(outline);
+        mesh.userData.outline = outline;
       } else {
         const outline = new THREE.LineSegments(
           new THREE.EdgesGeometry(mesh.geometry),
@@ -1932,6 +2176,9 @@ function Viewport({
           const box = new THREE.Box3().setFromObject(mesh);
           worldCenter = new THREE.Vector3();
           box.getCenter(worldCenter);
+        } else if (mesh.userData.isLight) {
+          // 光源没有 geometry，直接使用 position 作为中心
+          worldCenter = mesh.position.clone();
         } else {
           mesh.geometry.computeBoundingBox();
           const geoCenter = new THREE.Vector3();
@@ -1960,6 +2207,9 @@ function Viewport({
           const box = new THREE.Box3().setFromObject(m);
           worldCenter = new THREE.Vector3();
           box.getCenter(worldCenter);
+        } else if (m.userData.isLight) {
+          // 光源没有 geometry，直接使用 position 作为中心
+          worldCenter = m.position.clone();
         } else {
           m.geometry.computeBoundingBox();
           const geoCenter = new THREE.Vector3();

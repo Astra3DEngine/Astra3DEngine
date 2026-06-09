@@ -345,6 +345,60 @@ function AppContent() {
           isFolder: true,
           children: []
         };
+      } else if (type === 'pointLight') {
+        baseName = 'Point Light';
+        const uniqueName = generateUniqueName(baseName, prev);
+        
+        newObject = {
+          id: Date.now(),
+          name: uniqueName,
+          type: 'pointLight',
+          position: [0, 2, 0],
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1],
+          color: '#ffffff',
+          intensity: 2, // 提高默认强度
+          distance: 10, // 设置有效距离
+          decay: 1, // 降低衰减
+          isLight: true,
+          lightType: 'point'
+        };
+      } else if (type === 'directionalLight') {
+        baseName = 'Directional Light';
+        const uniqueName = generateUniqueName(baseName, prev);
+        
+        newObject = {
+          id: Date.now(),
+          name: uniqueName,
+          type: 'directionalLight',
+          position: [1, 2, 1],
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1],
+          color: '#ffffff',
+          intensity: 1.5, // 提高默认强度
+          isLight: true,
+          lightType: 'directional'
+        };
+      } else if (type === 'spotLight') {
+        baseName = 'Spot Light';
+        const uniqueName = generateUniqueName(baseName, prev);
+        
+        newObject = {
+          id: Date.now(),
+          name: uniqueName,
+          type: 'spotLight',
+          position: [0, 2, 0],
+          rotation: [-Math.PI / 4, 0, 0],
+          scale: [1, 1, 1],
+          color: '#ffffff',
+          intensity: 3, // 提高默认强度
+          distance: 10, // 设置有效距离
+          decay: 1, // 降低衰减
+          angle: Math.PI / 4, // 增大角度
+          penumbra: 0.3, // 添加半影
+          isLight: true,
+          lightType: 'spot'
+        };
       } else if (asset && (asset.type === 'gltf' || asset.type === 'glb' || asset.type === 'obj')) {
         baseName = asset.name.replace(/\.[^.]+$/, '');
         const uniqueName = generateUniqueName(baseName, prev);

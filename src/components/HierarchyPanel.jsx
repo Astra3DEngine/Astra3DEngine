@@ -22,6 +22,9 @@ import IconRename from '../icons/rename.svg?react';
 import IconPlus from '../icons/plus.svg?react';
 import IconSearch from '../icons/search.svg?react';
 import IconChevronCollapsed from '../icons/chevron-collapsed.svg?react';
+import IconPointLight from '../icons/light-point.svg?react';
+import IconDirectionalLight from '../icons/light-directional.svg?react';
+import IconSpotLight from '../icons/light-spot.svg?react';
 
 /**
  * 层级面板组件
@@ -243,6 +246,9 @@ function HierarchyPanel({
     if (obj.type === 'sphere') return <IconSphere className="hierarchy-icon" />;
     if (obj.type === 'plane') return <IconPlane className="hierarchy-icon" />;
     if (obj.type === 'model') return <IconModel className="hierarchy-icon" />;
+    if (obj.type === 'pointLight') return <IconPointLight className="hierarchy-icon" />;
+    if (obj.type === 'directionalLight') return <IconDirectionalLight className="hierarchy-icon" />;
+    if (obj.type === 'spotLight') return <IconSpotLight className="hierarchy-icon" />;
     return <IconCube className="hierarchy-icon" />;
   };
 
@@ -546,6 +552,28 @@ function HierarchyPanel({
           >
             <IconPlane className="add-menu-item-icon" />
             {msg('hierarchy.plane')}
+          </div>
+          <div className="add-menu-divider" />
+          <div 
+            className="add-menu-item"
+            onClick={() => { onAddObject('pointLight'); setAddMenuOpen(false); }}
+          >
+            <IconPointLight className="add-menu-item-icon" />
+            {msg('hierarchy.pointLight')}
+          </div>
+          <div 
+            className="add-menu-item"
+            onClick={() => { onAddObject('directionalLight'); setAddMenuOpen(false); }}
+          >
+            <IconDirectionalLight className="add-menu-item-icon" />
+            {msg('hierarchy.directionalLight')}
+          </div>
+          <div 
+            className="add-menu-item"
+            onClick={() => { onAddObject('spotLight'); setAddMenuOpen(false); }}
+          >
+            <IconSpotLight className="add-menu-item-icon" />
+            {msg('hierarchy.spotLight')}
           </div>
         </div>
       )}

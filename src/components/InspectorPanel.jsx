@@ -388,7 +388,8 @@ function InspectorPanel({
             <input
               type="text"
               className="inspector-input"
-              value={isPrefabInstance ? `${prefab.template.type} (Prefab)` : selectedObject.type}
+              value={isPrefabInstance ? `${prefab.template.type} (Prefab)` : 
+                (selectedObject.isLight ? msg(`hierarchy.${selectedObject.type}`) : selectedObject.type)}
               disabled
               style={{ opacity: 0.6 }}
             />
@@ -427,6 +428,79 @@ function InspectorPanel({
               )}
             </div>
           </div>
+          
+          {/* 光源属性 */}
+          {selectedObject.isLight && (
+            <div className="inspector-section">
+              <div className="inspector-section-title">{msg('inspector.light')}</div>
+              <div className="inspector-row">
+                <label className="inspector-label">{msg('inspector.intensity')}</label>
+                <input
+                  type="number"
+                  className="inspector-input inspector-number"
+                  value={selectedObject.intensity || 2}
+                  min={0}
+                  step={0.1}
+                  onChange={(e) => onUpdateObject(selectedObject.id, { intensity: parseFloat(e.target.value) || 2 })}
+                />
+              </div>
+              {(selectedObject.lightType === 'point' || selectedObject.lightType === 'spot') && (
+                <>
+                  <div className="inspector-row">
+                    <label className="inspector-label">{msg('inspector.distance')}</label>
+                    <input
+                      type="number"
+                      className="inspector-input inspector-number"
+                      value={selectedObject.distance || 10}
+                      min={0}
+                      step={1}
+                      onChange={(e) => onUpdateObject(selectedObject.id, { distance: parseFloat(e.target.value) || 10 })}
+                    />
+                  </div>
+                  <div className="inspector-row">
+                    <label className="inspector-label">{msg('inspector.decay')}</label>
+                    <input
+                      type="number"
+                      className="inspector-input inspector-number"
+                      value={selectedObject.decay || 1}
+                      min={0}
+                      step={0.1}
+                      onChange={(e) => onUpdateObject(selectedObject.id, { decay: parseFloat(e.target.value) || 1 })}
+                    />
+                  </div>
+                </>
+              )}
+              {selectedObject.lightType === 'spot' && (
+                <>
+                  <div className="inspector-row">
+                    <label className="inspector-label">{msg('inspector.angle')}</label>
+                    <input
+                      type="number"
+                      className="inspector-input inspector-number"
+                      value={selectedObject.angle ? (selectedObject.angle * 180 / Math.PI).toFixed(1) : 45}
+                      min={0}
+                      max={90}
+                      step={1}
+                      onChange={(e) => onUpdateObject(selectedObject.id, { angle: parseFloat(e.target.value) * Math.PI / 180 || Math.PI / 4 })}
+                    />
+                  </div>
+                  <div className="inspector-row">
+                    <label className="inspector-label">{msg('inspector.penumbra')}</label>
+                    <input
+                      type="number"
+                      className="inspector-input inspector-number"
+                      value={selectedObject.penumbra || 0.3}
+                      min={0}
+                      max={1}
+                      step={0.1}
+                      onChange={(e) => onUpdateObject(selectedObject.id, { penumbra: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          
           {selectedObject.type === 'cube' && selectedObject.faceTextures && (
             <div className="inspector-section">
               <div className="inspector-section-title">{msg('inspector.faceTextures')}</div>

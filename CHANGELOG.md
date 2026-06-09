@@ -1,6 +1,6 @@
 # 更新日志
 
-## 2026-06-09 OBJ 模型导入 + 贴图功能 + 多选缩放修复
+## 2026-06-09 OBJ 模型导入 + 贴图功能 + 光源系统
 
 ### 新增功能
 - **OBJ 模型导入支持**：
@@ -12,6 +12,19 @@
   - Viewport 处理 model 类型贴图应用
   - AssetsPanel 支持拖拽贴图到场景
   - 添加 i18n 翻译 `inspector.modelTexture`
+- **Cube 贴图应用到特定面**：
+  - 拖拽贴图到 cube 时，只应用到鼠标碰到的那个面
+  - 使用 raycaster 检测交点，获取顶点法向量判断面
+  - 考虑 mesh 的旋转，用 quaternion 转换法向量到世界坐标系
+- **模型层级结构保留**：
+  - 导入模型为部件层级时，保留原本的分组结构
+  - Group → folder 对象，Mesh → mesh 对象
+  - 支持 meshPath 嵌套路径查找
+- **光源系统**：
+  - 支持添加三种光源：点光源、方向光、聚光灯
+  - 光源可视化：发光球体、太阳图标+箭头、锥形
+  - InspectorPanel 光源属性编辑（颜色、强度、距离、衰减、角度、半影）
+  - 方向光/聚光灯照射方向根据 rotation 计算
 - **导入文件夹支持**：
   - FileBrowserDialog 添加 `allowSelectFolder` 属性，Ctrl+点击可选中文件夹
   - AssetsPanel 处理文件夹导入：递归遍历所有文件
@@ -35,16 +48,25 @@
 - **层级面板自动展开**：
   - 创建模型/文件夹时自动展开所有父对象导致卡顿
   - 修复：移除自动展开逻辑，只保留拖拽创建父子关系时的展开
+- **光源属性更新无效**：
+  - 修复：Viewport.jsx 同步更新 Light 对象的属性
+- **方向光/聚光灯效果相同**：
+  - 修复：根据 rotation 计算 target 位置
+- **光源可视化方向错误**：
+  - 修复：方向光箭头旋转180度朝下，聚光灯光锥不旋转
 
 ### 修改文件
-- `src/App.jsx` — OBJ 加载 + 文件夹导入处理
-- `src/components/Viewport.jsx` — 选择框/多选缩放/拖拽修复
-- `src/components/InspectorPanel.jsx` — model 贴图支持
+- `src/App.jsx` — OBJ 加载 + 文件夹导入处理 + 光源类型定义 + 模型层级解析
+- `src/components/Viewport.jsx` — 选择框/多选缩放/拖拽修复 + 光源渲染 + 贴图面检测
+- `src/components/InspectorPanel.jsx` — model 贴图支持 + 光源属性编辑
 - `src/components/AssetsPanel.jsx` — 文件夹导入 + 拖拽贴图
 - `src/components/FileBrowserDialog.jsx` — allowSelectFolder 属性
-- `src/components/HierarchyPanel.jsx` — 移除自动展开逻辑
+- `src/components/HierarchyPanel.jsx` — 移除自动展开逻辑 + 光源菜单项
 - `src/styles/assets.css` — 多排布局
-- `src/i18n/zh.json`, `src/i18n/en.json` — modelTexture 翻译
+- `src/i18n/zh.json`, `src/i18n/en.json` — modelTexture + light 翻译
+- `src/icons/light-point.svg` — 点光源图标
+- `src/icons/light-directional.svg` — 方向光图标
+- `src/icons/light-spot.svg` — 聚光灯图标
 - `electron/main.js` — readDirectory API
 - `electron/preload.js` — readDirectory 暴露
 
