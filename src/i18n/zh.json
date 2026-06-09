@@ -110,6 +110,8 @@
   "viewport.perspective": "透视",
   "viewport.orthographic": "正交",
   "viewport.cameraMode": "视角模式",
+  "viewport.lightRenderingOn": "光渲染: 开启",
+  "viewport.lightRenderingOff": "光渲染: 关闭",
   "viewport.top": "顶视图",
   "viewport.front": "前视图",
   "viewport.side": "侧视图",

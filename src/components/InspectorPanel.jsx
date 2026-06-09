@@ -379,7 +379,7 @@ function InspectorPanel({
             <input
               type="text"
               className="inspector-input"
-              value={selectedObject.name}
+              value={selectedObject.name || ''}
               onChange={(e) => handleNameChange(e.target.value)}
             />
           </div>
@@ -389,7 +389,7 @@ function InspectorPanel({
               type="text"
               className="inspector-input"
               value={isPrefabInstance ? `${prefab.template.type} (Prefab)` : 
-                (selectedObject.isLight ? msg(`hierarchy.${selectedObject.type}`) : selectedObject.type)}
+                (selectedObject.isLight ? msg(`hierarchy.${selectedObject.type || 'light'}`) : selectedObject.type || 'unknown')}
               disabled
               style={{ opacity: 0.6 }}
             />
@@ -413,7 +413,7 @@ function InspectorPanel({
               <input
                 type="color"
                 className="inspector-input inspector-color"
-                value={selectedObject.color}
+                value={selectedObject.color || '#ffffff'}
                 onChange={(e) => handleColorChange(e.target.value)}
               />
               {isPrefabInstance && (

@@ -67,6 +67,11 @@ function AppContent() {
   const [currentTool, setCurrentTool] = useState('select');
   const [isPlaying, setIsPlaying] = useState(false);
   const [locale, setLocaleState] = useState(getLocale());
+  // 光渲染开关状态，默认开启喵
+  const [lightRenderingEnabled, setLightRenderingEnabled] = useState(() => {
+    const saved = localStorage.getItem('astra-light-rendering');
+    return saved !== 'false'; // 默认开启，只有明确设置为 'false' 才关闭
+  });
   
   useEffect(() => {
     setPluginLocale(getLocale());
@@ -164,6 +169,12 @@ function AppContent() {
     const clampedValue = Math.max(1, Math.min(50, value));
     setMaxSnapshots(clampedValue);
     localStorage.setItem('astra-max-snapshots', String(clampedValue));
+  }, []);
+
+  // 光渲染开关变化处理喵
+  const handleLightRenderingChange = useCallback((enabled) => {
+    setLightRenderingEnabled(enabled);
+    localStorage.setItem('astra-light-rendering', String(enabled));
   }, []);
 
   useEffect(() => {
@@ -508,9 +519,51 @@ function AppContent() {
             obj.traverse((child) => {
               if (child.isMesh) {
                 child.geometry.computeBoundingBox();
+                // 计算法线以确保光照和阴影正确渲染喵
+                if (!child.geometry.attributes.normal) {
+                  child.geometry.computeVertexNormals();
+                }
                 // 将 Mesh 的位置相对于 Group 的中心点偏移
                 // 这样 modelContent.position.sub(center) 后，Mesh 的相对位置正确
                 child.position.sub(center);
+                
+                // 设置阴影属性喵
+                child.castShadow = true;
+                child.receiveShadow = true;
+                
+                // 转换材质为 MeshStandardMaterial 以支持阴影喵
+                if (child.material) {
+                  const convertMaterial = (mat) => {
+                    if (mat.type === 'MeshBasicMaterial' || 
+                        mat.type === 'MeshLambertMaterial' || 
+                        mat.type === 'MeshPhongMaterial') {
+                      const oldMat = mat;
+                      const newMat = new THREE.MeshStandardMaterial({
+                        color: oldMat.color || 0xffffff,
+                        map: oldMat.map,
+                        transparent: oldMat.transparent,
+                        opacity: oldMat.opacity,
+                        // 强制使用 FrontSide 以正确渲染阴影喵
+                        // DoubleSide 会导致阴影渲染不正确
+                        side: THREE.FrontSide,
+                        metalness: mat.type === 'MeshPhongMaterial' ? 
+                          (oldMat.shininess ? Math.min(oldMat.shininess / 100, 1) : 0.1) : 0.1,
+                        roughness: mat.type === 'MeshPhongMaterial' ? 
+                          (oldMat.shininess ? 1 - Math.min(oldMat.shininess / 100, 1) : 0.8) : 0.8,
+                        emissive: oldMat.emissive || 0x000000
+                      });
+                      newMat.needsUpdate = true;
+                      return newMat;
+                    }
+                    return mat;
+                  };
+                  
+                  if (Array.isArray(child.material)) {
+                    child.material = child.material.map(convertMaterial);
+                  } else {
+                    child.material = convertMaterial(child.material);
+                  }
+                }
               }
             });
             
@@ -537,9 +590,51 @@ function AppContent() {
             asset.center = center.clone();
             asset.size = box.getSize(new THREE.Vector3());
             
+            // 加载时就设置阴影属性和材质转换喵
             gltf.scene.traverse((child) => {
               if (child.isMesh) {
                 child.geometry.computeBoundingBox();
+                // 计算法线以确保光照和阴影正确渲染喵
+                if (!child.geometry.attributes.normal) {
+                  child.geometry.computeVertexNormals();
+                }
+                // 设置阴影属性喵
+                child.castShadow = true;
+                child.receiveShadow = true;
+                
+                // 转换材质为 MeshStandardMaterial 以支持阴影喵
+                if (child.material) {
+                  const convertMaterial = (mat) => {
+                    if (mat.type === 'MeshBasicMaterial' || 
+                        mat.type === 'MeshLambertMaterial' || 
+                        mat.type === 'MeshPhongMaterial') {
+                      const oldMat = mat;
+                      const newMat = new THREE.MeshStandardMaterial({
+                        color: oldMat.color || 0xffffff,
+                        map: oldMat.map,
+                        transparent: oldMat.transparent,
+                        opacity: oldMat.opacity,
+                        // 强制使用 FrontSide 以正确渲染阴影喵
+                        // DoubleSide 会导致阴影渲染不正确
+                        side: THREE.FrontSide,
+                        metalness: mat.type === 'MeshPhongMaterial' ? 
+                          (oldMat.shininess ? Math.min(oldMat.shininess / 100, 1) : 0.1) : 0.1,
+                        roughness: mat.type === 'MeshPhongMaterial' ? 
+                          (oldMat.shininess ? 1 - Math.min(oldMat.shininess / 100, 1) : 0.8) : 0.8,
+                        emissive: oldMat.emissive || 0x000000
+                      });
+                      newMat.needsUpdate = true;
+                      return newMat;
+                    }
+                    return mat;
+                  };
+                  
+                  if (Array.isArray(child.material)) {
+                    child.material = child.material.map(convertMaterial);
+                  } else {
+                    child.material = convertMaterial(child.material);
+                  }
+                }
               }
             });
             
@@ -1818,6 +1913,8 @@ function AppContent() {
               onUpdateObject={handleUpdateObject}
               onRecordHistory={recordCurrentState}
               theme={theme}
+              lightRenderingEnabled={lightRenderingEnabled}
+              onLightRenderingChange={handleLightRenderingChange}
             />
           </div>
 

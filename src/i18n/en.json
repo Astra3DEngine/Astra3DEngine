@@ -110,6 +110,8 @@
   "viewport.perspective": "Perspective",
   "viewport.orthographic": "Orthographic",
   "viewport.cameraMode": "Camera Mode",
+  "viewport.lightRenderingOn": "Light Rendering: On",
+  "viewport.lightRenderingOff": "Light Rendering: Off",
   "viewport.top": "Top",
   "viewport.front": "Front",
   "viewport.side": "Side",

@@ -1,5 +1,39 @@
 # 更新日志
 
+## 2026-06-10 光渲染开关 + 阴影系统完整实现
+
+### 新增功能
+- **光渲染开关**：
+  - 在预览窗口 Dock 中添加光渲染开关按钮（灯泡图标）
+  - F1 快捷键切换光渲染开关
+  - 开启时：环境光极低(0.05)，光源工作，有阴影
+  - 关闭时：环境光高强度(1.5)，所有光源不工作，像贴图世界一样均匀亮度
+  - 状态持久化到 localStorage
+- **阴影系统完整实现**：
+  - 所有内置物体(cube/sphere/plane)支持阴影
+  - 所有光源(PointLight/DirectionalLight/SpotLight)支持阴影
+  - 导入模型支持阴影（mesh 类型对象）
+  - 阴影相机范围扩大到 ±50，shadow.mapSize 提升到 2048x2048
+  - 默认方向光在有用户光源时自动禁用，避免多余阴影
+- **模型材质转换**：
+  - 模型加载时自动将 MeshBasicMaterial/MeshLambertMaterial/MeshPhongMaterial 转换为 MeshStandardMaterial
+  - 强制使用 FrontSide 以正确渲染阴影
+  - 添加 computeVertexNormals() 确保法线数据
+
+### BUG修复
+- **导入模型不产生阴影**：
+  - mesh 类型对象（handleImportModelParts 创建）缺少 castShadow/receiveShadow 属性
+  - 修复：在创建 mesh 时设置阴影属性
+- **InspectorPanel 输入框警告**：
+  - 导入模型时 React controlled input 变成 uncontrolled
+  - 修复：给 name、type、color 输入框添加默认值
+- **按钮样式问题**：
+  - 按钮高度不一致，未激活背景不透明
+  - 修复：改为 32x32px 正方形，未激活背景透明
+- **图标关联性问题**：
+  - sun/sun-off 图标关联性不强
+  - 修复：改为灯泡图标（发光/不发光）
+
 ## 2026-06-09 OBJ 模型导入 + 贴图功能 + 光源系统
 
 ### 新增功能

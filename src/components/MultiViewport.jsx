@@ -53,6 +53,8 @@ const VIEW_CONFIGS = {
  * @param {Function} props.onUpdateObject - 更新对象回调
  * @param {Function} props.onRecordHistory - 记录历史回调
  * @param {string} props.theme - 主题
+ * @param {boolean} props.lightRenderingEnabled - 是否启用光渲染
+ * @param {Function} props.onLightRenderingChange - 光渲染开关变化回调
  * @returns {JSX.Element} 多视口组件
  */
 function MultiViewport({
@@ -66,7 +68,9 @@ function MultiViewport({
   isPlaying,
   onUpdateObject,
   onRecordHistory,
-  theme
+  theme,
+  lightRenderingEnabled,
+  onLightRenderingChange
 }) {
   const [layoutMode, setLayoutMode] = useState('single');
   const [activeView, setActiveView] = useState('perspective');
@@ -126,6 +130,8 @@ function MultiViewport({
           showViewCube={layoutMode === 'single' ? true : isActive}
           viewLabel={msg(config.label)}
           onCameraTypeChange={(type) => handleViewportCameraChange(viewName, type)}
+          lightRenderingEnabled={lightRenderingEnabled}
+          onLightRenderingChange={onLightRenderingChange}
         />
       </div>
     );

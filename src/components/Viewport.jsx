@@ -36,6 +36,8 @@ import IconKeyS from '../icons/key-s.svg?react';
 import IconKeyD from '../icons/key-d.svg?react';
 import IconKeyQ from '../icons/key-q.svg?react';
 import IconKeyE from '../icons/key-e.svg?react';
+import IconSun from '../icons/sun.svg?react';
+import IconSunOff from '../icons/sun-off.svg?react';
 
 /**
  * 3D 视口组件
@@ -59,6 +61,8 @@ import IconKeyE from '../icons/key-e.svg?react';
  * @param {boolean} props.showViewCube - 是否显示视图立方体
  * @param {string} props.viewLabel - 视图标签
  * @param {Function} props.onCameraTypeChange - 相机类型变化回调
+ * @param {boolean} props.lightRenderingEnabled - 是否启用光渲染（阴影）
+ * @param {Function} props.onLightRenderingChange - 光渲染开关变化回调
  * @returns {JSX.Element} 视口组件
  */
 function Viewport({ 
@@ -80,7 +84,9 @@ function Viewport({
   showDock = true,
   showViewCube = true,
   viewLabel,
-  onCameraTypeChange
+  onCameraTypeChange,
+  lightRenderingEnabled = true,
+  onLightRenderingChange
 }) {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
@@ -101,6 +107,8 @@ function Viewport({
   const viewCubeSceneRef = useRef(null);
   const viewCubeCameraRef = useRef(null);
   const viewCubeRendererRef = useRef(null);
+  const ambientLightRef = useRef(null);
+  const defaultLightRef = useRef(null); // 默认方向光的 ref 喵
   const viewCubeMeshRef = useRef(null);
   const viewCubeOrthoCameraRef = useRef(null);
   const orthographicCameraRef = useRef(null);
@@ -109,6 +117,12 @@ function Viewport({
   const [isFPSMode, setIsFPSMode] = useState(false);
   const initialTransformsRef = useRef({});
   const hasDraggedRef = useRef(false);
+  const lightRenderingEnabledRef = useRef(lightRenderingEnabled);
+  const sceneLightsRef = useRef([]); // 存储场景中的光源对象（用于光渲染开关）
+
+  useEffect(() => {
+    lightRenderingEnabledRef.current = lightRenderingEnabled;
+  }, [lightRenderingEnabled]);
 
   useEffect(() => {
     cameraTypeRef.current = cameraType;
@@ -137,6 +151,68 @@ function Viewport({
   useEffect(() => {
     onRecordHistoryRef.current = onRecordHistory;
   }, [onRecordHistory]);
+
+  // 光渲染开关效果：当关闭时，禁用所有光源，实现均匀亮度喵
+  useEffect(() => {
+    if (!sceneRef.current || !ambientLightRef.current) return;
+    
+    // 检查是否有用户创建的光源喵
+    const hasUserLights = objectsRef.current.some(obj => obj.isLight);
+    
+    if (lightRenderingEnabled) {
+      // 开启光渲染：环境光极低（几乎为0），光源工作，有阴影
+      ambientLightRef.current.intensity = 0.05;
+      sceneRef.current.traverse((child) => {
+        // AmbientLight 不支持阴影，要排除掉喵
+        if (child.isLight && child.type !== 'AmbientLight') {
+          // 恢复光源的原始强度（存储在 userData 中）
+          if (child.userData.originalIntensity !== undefined) {
+            child.intensity = child.userData.originalIntensity;
+          }
+          if (child.castShadow !== undefined) {
+            child.castShadow = true;
+          }
+        }
+      });
+      // 处理默认光源喵：如果有用户光源，禁用默认光源
+      if (defaultLightRef.current) {
+        if (hasUserLights) {
+          defaultLightRef.current.intensity = 0;
+          defaultLightRef.current.castShadow = false;
+        } else {
+          defaultLightRef.current.intensity = 0.2;
+          defaultLightRef.current.castShadow = true;
+        }
+      }
+      if (rendererRef.current) {
+        rendererRef.current.shadowMap.enabled = true;
+      }
+    } else {
+      // 关闭光渲染：环境光高强度，所有光源不工作，像贴图世界一样喵
+      ambientLightRef.current.intensity = 1.5;
+      sceneRef.current.traverse((child) => {
+        // AmbientLight 不支持阴影，要排除掉喵
+        if (child.isLight && child.type !== 'AmbientLight') {
+          // 保存原始强度，然后设置为 0
+          if (child.userData.originalIntensity === undefined) {
+            child.userData.originalIntensity = child.intensity;
+          }
+          child.intensity = 0;
+          if (child.castShadow !== undefined) {
+            child.castShadow = false;
+          }
+        }
+      });
+      // 默认光源也要禁用喵
+      if (defaultLightRef.current) {
+        defaultLightRef.current.intensity = 0;
+        defaultLightRef.current.castShadow = false;
+      }
+      if (rendererRef.current) {
+        rendererRef.current.shadowMap.enabled = false;
+      }
+    }
+  }, [lightRenderingEnabled]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -169,6 +245,9 @@ function Viewport({
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
+    // 启用阴影映射，光渲染的基石喵
+    renderer.shadowMap.enabled = lightRenderingEnabled;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -178,12 +257,32 @@ function Viewport({
     const axesHelper = new THREE.AxesHelper(2);
     scene.add(axesHelper);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+    // 环境光，用于在没有光渲染时提供均匀亮度
+    const ambientLight = new THREE.AmbientLight(0xffffff, lightRenderingEnabled ? 0.05 : 1.5);
     scene.add(ambientLight);
+    ambientLightRef.current = ambientLight;
 
+    // 默认的方向光，用于预览场景（没有用户光源时使用）
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.2);
     directionalLight.position.set(5, 10, 5);
+    // 默认光源也投射阴影，不然场景太暗了喵
+    directionalLight.castShadow = lightRenderingEnabled;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    // 阴影相机范围要足够大才能覆盖整个场景喵
+    directionalLight.shadow.camera.near = 0.1;
+    directionalLight.shadow.camera.far = 100;
+    directionalLight.shadow.camera.left = -50;
+    directionalLight.shadow.camera.right = 50;
+    directionalLight.shadow.camera.top = 50;
+    directionalLight.shadow.camera.bottom = -50;
+    // 如果光渲染关闭，保存原始强度并设置为 0 喵
+    if (!lightRenderingEnabled) {
+      directionalLight.userData.originalIntensity = directionalLight.intensity;
+      directionalLight.intensity = 0;
+    }
     scene.add(directionalLight);
+    defaultLightRef.current = directionalLight; // 保存默认光源的 ref 喵
 
     const orbitControls = new OrbitControls(camera, renderer.domElement);
     orbitControls.enableDamping = false;
@@ -227,6 +326,13 @@ function Viewport({
     let fpsInitialTargetDistance = 5;
 
     const handleKeyDown = (e) => {
+      // F1 快捷键切换光渲染喵
+      if (e.key === 'F1' && onLightRenderingChange) {
+        onLightRenderingChange(!lightRenderingEnabledRef.current);
+        e.preventDefault();
+        return;
+      }
+      
       if (e.key === 'Shift' && !isRightMouseDown) {
         isShiftPressed = true;
       }
@@ -1512,6 +1618,14 @@ function Viewport({
   useEffect(() => {
     if (!sceneRef.current) return;
 
+    // 检查是否有用户创建的光源喵
+    const hasUserLights = objects.some(obj => obj.isLight);
+    // 如果有用户光源，禁用默认方向光，避免产生多余阴影喵
+    if (defaultLightRef.current) {
+      defaultLightRef.current.intensity = hasUserLights ? 0 : 0.2;
+      defaultLightRef.current.castShadow = hasUserLights ? false : lightRenderingEnabled;
+    }
+
     const existingIds = new Set(Object.keys(meshesRef.current));
     const newIds = new Set(objects.map(obj => obj.id));
 
@@ -1590,6 +1704,28 @@ function Viewport({
                 });
               }
             }
+            
+            // 遍历模型中的所有 mesh，设置阴影属性喵
+            modelContent.traverse((child) => {
+              if (child.isMesh) {
+                // 如果材质是 MeshBasicMaterial，转换为 MeshStandardMaterial 以支持阴影喵
+                if (child.material && child.material.type === 'MeshBasicMaterial') {
+                  const oldMat = child.material;
+                  child.material = new THREE.MeshStandardMaterial({
+                    color: oldMat.color || 0xffffff,
+                    map: oldMat.map,
+                    transparent: oldMat.transparent,
+                    opacity: oldMat.opacity,
+                    side: oldMat.side,
+                    metalness: 0.1,
+                    roughness: 0.8
+                  });
+                  oldMat.dispose();
+                }
+                child.castShadow = true;
+                child.receiveShadow = true;
+              }
+            });
             
             modelGroup.add(modelContent);
             modelGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
@@ -1799,6 +1935,10 @@ function Viewport({
               mesh.scale.set(obj.scale[0], obj.scale[1], obj.scale[2]);
               mesh.userData = { id: obj.id, isMeshPart: true };
               
+              // 设置阴影属性喵！这是关键！
+              mesh.castShadow = true;
+              mesh.receiveShadow = true;
+              
               sceneRef.current.add(mesh);
               meshesRef.current[obj.id] = mesh;
             }
@@ -1820,6 +1960,15 @@ function Viewport({
             if (!isObjModel) {
               modelContent.position.sub(center);
             }
+            
+            // 遍历模型中的所有 mesh，设置阴影属性喵
+            // 材质已经在加载时转换了，clone() 会复制材质引用，不需要再次转换
+            modelContent.traverse((child) => {
+              if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+              }
+            });
             
             modelGroup.add(modelContent);
             modelGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
@@ -1849,6 +1998,12 @@ function Viewport({
               obj.distance || 10,
               obj.decay || 1
             );
+            // 点光源投射阴影喵
+            light.castShadow = true;
+            light.shadow.mapSize.width = 1024;
+            light.shadow.mapSize.height = 1024;
+            light.shadow.camera.near = 0.1;
+            light.shadow.camera.far = obj.distance || 10;
             // 点光源可视化：发光球体 + 光晕
             const visualGeo = new THREE.SphereGeometry(0.15, 16, 16);
             const visualMat = new THREE.MeshBasicMaterial({
@@ -1872,6 +2027,16 @@ function Viewport({
               new THREE.Color(obj.color || '#ffffff'),
               obj.intensity || 1.5
             );
+            // 方向光投射阴影喵
+            light.castShadow = true;
+            light.shadow.mapSize.width = 2048;
+            light.shadow.mapSize.height = 2048;
+            light.shadow.camera.near = 0.1;
+            light.shadow.camera.far = 100;
+            light.shadow.camera.left = -50;
+            light.shadow.camera.right = 50;
+            light.shadow.camera.top = 50;
+            light.shadow.camera.bottom = -50;
             // 方向光需要设置 target，否则会照射到原点
             // 根据旋转计算照射方向
             const direction = new THREE.Vector3(0, -1, 0); // 默认向下
@@ -1935,6 +2100,12 @@ function Viewport({
               obj.penumbra || 0.3,
               obj.decay || 1
             );
+            // 聚光灯投射阴影喵
+            light.castShadow = true;
+            light.shadow.mapSize.width = 1024;
+            light.shadow.mapSize.height = 1024;
+            light.shadow.camera.near = 0.1;
+            light.shadow.camera.far = obj.distance || 10;
             // 聚光灯需要设置 target，否则会照射到原点
             // 根据旋转计算照射方向
             const direction = new THREE.Vector3(0, -1, 0); // 默认向下
@@ -1989,6 +2160,13 @@ function Viewport({
               THREE.MathUtils.degToRad(obj.rotation[2])
             );
             light.userData = { id: obj.id, isLight: true, lightType: obj.lightType };
+            
+            // 如果光渲染关闭，保存原始强度并设置为 0 喵
+            if (!lightRenderingEnabledRef.current) {
+              light.userData.originalIntensity = light.intensity;
+              light.intensity = 0;
+              light.castShadow = false;
+            }
 
             sceneRef.current.add(light);
             if (visualMesh) {
@@ -2078,6 +2256,9 @@ function Viewport({
         );
         mesh.scale.set(obj.scale[0], obj.scale[1], obj.scale[2]);
         mesh.userData = { id: obj.id };
+        // 阴影设置，让物体能投射和接收阴影喵
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
 
         sceneRef.current.add(mesh);
         meshesRef.current[obj.id] = mesh;
@@ -2509,6 +2690,22 @@ function Viewport({
               position="top"
             />
           </div>
+          {/* 光渲染开关按钮喵 */}
+          {onLightRenderingChange && (
+            <div className="viewport-dock-item">
+              <button
+                className={`viewport-dock-btn ${lightRenderingEnabled ? 'active' : ''}`}
+                onClick={() => onLightRenderingChange(!lightRenderingEnabled)}
+                title={`${lightRenderingEnabled ? msg('viewport.lightRenderingOn') : msg('viewport.lightRenderingOff')} (F1)`}
+              >
+                {lightRenderingEnabled ? (
+                  <IconSun className="dock-icon" />
+                ) : (
+                  <IconSunOff className="dock-icon" />
+                )}
+              </button>
+            </div>
+          )}
           <div className="viewport-control-hint">
             {isFPSMode ? (
               <>
