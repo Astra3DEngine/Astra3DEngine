@@ -519,10 +519,9 @@ function AppContent() {
             obj.traverse((child) => {
               if (child.isMesh) {
                 child.geometry.computeBoundingBox();
-                // 计算法线以确保光照和阴影正确渲染喵
-                if (!child.geometry.attributes.normal) {
-                  child.geometry.computeVertexNormals();
-                }
+                // 强制重新计算法线以确保光照正确渲染喵
+                // OBJ 模型的法线可能不正确，需要重新计算
+                child.geometry.computeVertexNormals();
                 // 将 Mesh 的位置相对于 Group 的中心点偏移
                 // 这样 modelContent.position.sub(center) 后，Mesh 的相对位置正确
                 child.position.sub(center);
@@ -534,28 +533,39 @@ function AppContent() {
                 // 转换材质为 MeshStandardMaterial 以支持阴影喵
                 if (child.material) {
                   const convertMaterial = (mat) => {
-                    if (mat.type === 'MeshBasicMaterial' || 
-                        mat.type === 'MeshLambertMaterial' || 
-                        mat.type === 'MeshPhongMaterial') {
-                      const oldMat = mat;
-                      const newMat = new THREE.MeshStandardMaterial({
-                        color: oldMat.color || 0xffffff,
-                        map: oldMat.map,
-                        transparent: oldMat.transparent,
-                        opacity: oldMat.opacity,
-                        // 强制使用 FrontSide 以正确渲染阴影喵
-                        // DoubleSide 会导致阴影渲染不正确
-                        side: THREE.FrontSide,
-                        metalness: mat.type === 'MeshPhongMaterial' ? 
-                          (oldMat.shininess ? Math.min(oldMat.shininess / 100, 1) : 0.1) : 0.1,
-                        roughness: mat.type === 'MeshPhongMaterial' ? 
-                          (oldMat.shininess ? 1 - Math.min(oldMat.shininess / 100, 1) : 0.8) : 0.8,
-                        emissive: oldMat.emissive || 0x000000
-                      });
-                      newMat.needsUpdate = true;
-                      return newMat;
+                    // 无论什么材质类型，都转换为 MeshStandardMaterial 以支持光照喵
+                    // OBJLoader 可能创建各种材质类型，包括 MeshBasicMaterial、MeshPhongMaterial 等
+                    const oldMat = mat;
+                    
+                    // specular 值影响 metalness 喵
+                    // specular 越低，metalness 应该越低（非金属材质）
+                    // specular 的亮度可以用 r/g/b 的平均值来估算
+                    let specularIntensity = 0;
+                    if (oldMat.specular) {
+                      specularIntensity = (oldMat.specular.r + oldMat.specular.g + oldMat.specular.b) / 3;
                     }
-                    return mat;
+                    
+                    // 根据 specular 和 shininess 计算 metalness 和 roughness 喵
+                    // specular 很低（如 0.0056）表示非金属材质，metalness 应该接近 0
+                    // shininess 越高，roughness 越低
+                    const metalness = specularIntensity < 0.1 ? 0.0 : Math.min(specularIntensity, 0.5);
+                    const roughness = oldMat.shininess ? Math.max(1 - oldMat.shininess / 100, 0.5) : 0.8;
+                    
+                    const newMat = new THREE.MeshStandardMaterial({
+                      color: oldMat.color || 0xffffff,
+                      map: oldMat.map,
+                      transparent: oldMat.transparent,
+                      opacity: oldMat.opacity,
+                      // 强制使用 FrontSide 以正确渲染阴影喵
+                      // DoubleSide 会导致阴影渲染不正确
+                      side: THREE.FrontSide,
+                      metalness: metalness,
+                      roughness: roughness,
+                      emissive: oldMat.emissive || 0x000000
+                    });
+                    newMat.needsUpdate = true;
+                    oldMat.dispose();
+                    return newMat;
                   };
                   
                   if (Array.isArray(child.material)) {
@@ -594,10 +604,9 @@ function AppContent() {
             gltf.scene.traverse((child) => {
               if (child.isMesh) {
                 child.geometry.computeBoundingBox();
-                // 计算法线以确保光照和阴影正确渲染喵
-                if (!child.geometry.attributes.normal) {
-                  child.geometry.computeVertexNormals();
-                }
+                // 强制重新计算法线以确保光照正确渲染喵
+                // 模型的法线可能不正确，需要重新计算
+                child.geometry.computeVertexNormals();
                 // 设置阴影属性喵
                 child.castShadow = true;
                 child.receiveShadow = true;
@@ -738,7 +747,7 @@ function AppContent() {
         const objName = generateUniqueName(threeObj.name || (threeObj.isMesh ? 'Mesh' : 'Group'), [...prev, ...allNewObjects]);
         
         if (threeObj.isMesh) {
-          // Mesh 类型
+          // Mesh 类型，支持单独贴图喵
           const meshObj = {
             id: objId,
             name: objName,
@@ -752,7 +761,11 @@ function AppContent() {
             scale: [worldScale.x, worldScale.y, worldScale.z],
             parentId: parentId,
             assetId: asset.id,
-            meshPath: currentPath
+            meshPath: currentPath,
+            // 贴图相关属性，用户可以给单个 mesh 换贴图喵
+            textureId: null,
+            uvScale: [1, 1],
+            uvOffset: [0, 0]
           };
           allNewObjects.push(meshObj);
           return meshObj;

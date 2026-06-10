@@ -160,8 +160,8 @@ function Viewport({
     const hasUserLights = objectsRef.current.some(obj => obj.isLight);
     
     if (lightRenderingEnabled) {
-      // 开启光渲染：环境光极低（几乎为0），光源工作，有阴影
-      ambientLightRef.current.intensity = 0.05;
+      // 开启光渲染：环境光适中，光源工作，有阴影
+      ambientLightRef.current.intensity = 0.3;
       sceneRef.current.traverse((child) => {
         // AmbientLight 不支持阴影，要排除掉喵
         if (child.isLight && child.type !== 'AmbientLight') {
@@ -180,7 +180,8 @@ function Viewport({
           defaultLightRef.current.intensity = 0;
           defaultLightRef.current.castShadow = false;
         } else {
-          defaultLightRef.current.intensity = 0.2;
+          // 恢复默认光源的原始强度喵
+          defaultLightRef.current.intensity = defaultLightRef.current.userData.originalIntensity || 1.5;
           defaultLightRef.current.castShadow = true;
         }
       }
@@ -258,12 +259,14 @@ function Viewport({
     scene.add(axesHelper);
 
     // 环境光，用于在没有光渲染时提供均匀亮度
-    const ambientLight = new THREE.AmbientLight(0xffffff, lightRenderingEnabled ? 0.05 : 1.5);
+    // 光渲染开启时环境光强度稍微提高一点，不然模型太黑了喵
+    const ambientLight = new THREE.AmbientLight(0xffffff, lightRenderingEnabled ? 0.3 : 1.5);
     scene.add(ambientLight);
     ambientLightRef.current = ambientLight;
 
     // 默认的方向光，用于预览场景（没有用户光源时使用）
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.2);
+    // 强度提高到 1.5，不然模型太黑了喵
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
     directionalLight.position.set(5, 10, 5);
     // 默认光源也投射阴影，不然场景太暗了喵
     directionalLight.castShadow = lightRenderingEnabled;
@@ -276,9 +279,12 @@ function Viewport({
     directionalLight.shadow.camera.right = 50;
     directionalLight.shadow.camera.top = 50;
     directionalLight.shadow.camera.bottom = -50;
+    // 阴影偏移，防止阴影条纹和多重阴影喵
+    directionalLight.shadow.bias = -0.0001;
     // 如果光渲染关闭，保存原始强度并设置为 0 喵
+    // 同时保存原始强度，以便光渲染切换时恢复喵
+    directionalLight.userData.originalIntensity = directionalLight.intensity;
     if (!lightRenderingEnabled) {
-      directionalLight.userData.originalIntensity = directionalLight.intensity;
       directionalLight.intensity = 0;
     }
     scene.add(directionalLight);
@@ -1796,6 +1802,8 @@ function Viewport({
               if (textureAsset && textureAsset.texture) {
                 const texture = textureAsset.texture.clone();
                 texture.needsUpdate = true;
+                // 确保贴图的 colorSpace 正确喵
+                texture.colorSpace = THREE.SRGBColorSpace;
                 
                 const uvScale = obj.uvScale || [1, 1];
                 const uvOffset = obj.uvOffset || [0, 0];
@@ -1804,8 +1812,47 @@ function Viewport({
                 
                 mesh.traverse((child) => {
                   if (child.isMesh && child.material) {
-                    child.material.map = texture;
-                    child.material.needsUpdate = true;
+                    // 材质类型检查和转换喵！无论什么材质类型，都转换为 MeshStandardMaterial
+                    const ensureStandardMaterial = (mat) => {
+                      // MeshStandardMaterial 已经是正确的类型，只需要更新贴图喵
+                      if (mat.type === 'MeshStandardMaterial') {
+                        mat.map = texture;
+                        mat.needsUpdate = true;
+                        return mat;
+                      }
+                      
+                      // 其他材质类型都需要转换为 MeshStandardMaterial 喵
+                      const oldMat = mat;
+                      
+                      // specular 值影响 metalness 喵
+                      let specularIntensity = 0;
+                      if (oldMat.specular) {
+                        specularIntensity = (oldMat.specular.r + oldMat.specular.g + oldMat.specular.b) / 3;
+                      }
+                      
+                      const metalness = specularIntensity < 0.1 ? 0.0 : Math.min(specularIntensity, 0.5);
+                      const roughness = oldMat.shininess ? Math.max(1 - oldMat.shininess / 100, 0.5) : 0.8;
+                      
+                      const newMat = new THREE.MeshStandardMaterial({
+                        color: oldMat.color || 0xffffff,
+                        map: texture,
+                        transparent: oldMat.transparent,
+                        opacity: oldMat.opacity,
+                        side: THREE.FrontSide,
+                        metalness: metalness,
+                        roughness: roughness,
+                        emissive: oldMat.emissive || 0x000000
+                      });
+                      newMat.needsUpdate = true;
+                      oldMat.dispose();
+                      return newMat;
+                    };
+                    
+                    if (Array.isArray(child.material)) {
+                      child.material = child.material.map(ensureStandardMaterial);
+                    } else {
+                      child.material = ensureStandardMaterial(child.material);
+                    }
                   }
                 });
               }
@@ -1818,7 +1865,97 @@ function Viewport({
                 }
               });
             }
-          } else if (obj.type !== 'mesh' && mesh.material && mesh.material.color) {
+          } else if (obj.type === 'mesh' && mesh.userData.isMeshPart) {
+            // mesh 部件类型贴图更新喵
+            if (obj.textureId) {
+              const textureAsset = assetsRef.current.find(a => a.id === obj.textureId);
+              if (textureAsset && textureAsset.texture) {
+                const texture = textureAsset.texture.clone();
+                texture.needsUpdate = true;
+                // 确保贴图的 colorSpace 正确喵
+                texture.colorSpace = THREE.SRGBColorSpace;
+                
+                const uvScale = obj.uvScale || [1, 1];
+                const uvOffset = obj.uvOffset || [0, 0];
+                texture.repeat.set(uvScale[0], uvScale[1]);
+                texture.offset.set(uvOffset[0], uvOffset[1]);
+                
+                // 材质转换函数，无论什么材质类型，都转换为 MeshStandardMaterial 喵
+                const convertToStandardMaterial = (mat) => {
+                  // MeshStandardMaterial 已经是正确的类型，只需要更新贴图喵
+                  if (mat.type === 'MeshStandardMaterial') {
+                    mat.map = texture;
+                    mat.needsUpdate = true;
+                    return mat;
+                  }
+                  
+                  // 其他材质类型都需要转换为 MeshStandardMaterial 喵
+                  const oldMat = mat;
+                  const newMat = new THREE.MeshStandardMaterial({
+                    color: oldMat.color || 0xffffff,
+                    map: texture,
+                    transparent: oldMat.transparent,
+                    opacity: oldMat.opacity,
+                    side: THREE.FrontSide,
+                    metalness: 0.1,
+                    roughness: 0.8,
+                    emissive: oldMat.emissive || 0x000000
+                  });
+                  newMat.needsUpdate = true;
+                  oldMat.dispose();
+                  return newMat;
+                };
+                
+                // 处理多材质的情况
+                if (Array.isArray(mesh.material)) {
+                  mesh.material = mesh.material.map(convertToStandardMaterial);
+                } else {
+                  mesh.material = convertToStandardMaterial(mesh.material);
+                }
+              }
+            } else {
+              // 清除贴图，恢复原始材质
+              // 需要从原始 asset 中获取材质
+              const asset = assetsRef.current.find(a => a.id === obj.assetId);
+              if (asset && asset.gltfScene) {
+                const pathParts = obj.meshPath.split('/');
+                let targetMesh = null;
+                
+                if (pathParts.length === 1) {
+                  asset.gltfScene.traverse((child) => {
+                    if (child.isMesh && child.name === obj.meshPath) {
+                      targetMesh = child;
+                    }
+                  });
+                } else {
+                  let currentObj = asset.gltfScene;
+                  for (let i = 0; i < pathParts.length; i++) {
+                    const part = pathParts[i];
+                    currentObj = currentObj.children.find(c => c.name === part);
+                    if (!currentObj) break;
+                  }
+                  if (currentObj && currentObj.isMesh) {
+                    targetMesh = currentObj;
+                  }
+                }
+                
+                if (targetMesh) {
+                  // 恢复原始材质贴图
+                  if (Array.isArray(mesh.material)) {
+                    mesh.material.forEach((mat, i) => {
+                      if (targetMesh.material[i]) {
+                        mat.map = targetMesh.material[i].map;
+                        mat.needsUpdate = true;
+                      }
+                    });
+                  } else {
+                    mesh.material.map = targetMesh.material.map;
+                    mesh.material.needsUpdate = true;
+                  }
+                }
+              }
+            }
+          } else if (mesh.material && mesh.material.color) {
             mesh.material.color.setStyle(obj.color || '#4a90d9');
           }
           
@@ -1923,7 +2060,59 @@ function Viewport({
             
             if (targetMesh) {
               const geometry = targetMesh.geometry.clone();
-              const material = targetMesh.material;
+              // 确保法线存在喵！clone() 后法线应该还在，但以防万一
+              if (!geometry.attributes.normal) {
+                geometry.computeVertexNormals();
+              }
+              
+              // 克隆材质，这样每个 mesh 部件可以单独应用贴图喵
+              let material;
+              if (Array.isArray(targetMesh.material)) {
+                material = targetMesh.material.map(m => m.clone());
+              } else {
+                material = targetMesh.material.clone();
+              }
+              
+                // 材质类型检查和转换喵！无论什么材质类型，都转换为 MeshStandardMaterial
+                // OBJ 模型可能使用 MeshBasicMaterial 或其他类型，不支持光照
+                const ensureStandardMaterial = (mat) => {
+                  // MeshStandardMaterial 已经是正确的类型，不需要转换喵
+                  if (mat.type === 'MeshStandardMaterial') {
+                    return mat;
+                  }
+                  
+                  // 其他材质类型都需要转换为 MeshStandardMaterial 喵
+                  const oldMat = mat;
+                  
+                  // specular 值影响 metalness 喵
+                  let specularIntensity = 0;
+                  if (oldMat.specular) {
+                    specularIntensity = (oldMat.specular.r + oldMat.specular.g + oldMat.specular.b) / 3;
+                  }
+                  
+                  const metalness = specularIntensity < 0.1 ? 0.0 : Math.min(specularIntensity, 0.5);
+                  const roughness = oldMat.shininess ? Math.max(1 - oldMat.shininess / 100, 0.5) : 0.8;
+                  
+                  const newMat = new THREE.MeshStandardMaterial({
+                    color: oldMat.color || 0xffffff,
+                    map: oldMat.map,
+                    transparent: oldMat.transparent,
+                    opacity: oldMat.opacity,
+                    side: THREE.FrontSide,
+                    metalness: metalness,
+                    roughness: roughness,
+                    emissive: oldMat.emissive || 0x000000
+                  });
+                  newMat.needsUpdate = true;
+                  oldMat.dispose();
+                  return newMat;
+                };
+              
+              if (Array.isArray(material)) {
+                material = material.map(ensureStandardMaterial);
+              } else {
+                material = ensureStandardMaterial(material);
+              }
               
               const mesh = new THREE.Mesh(geometry, material);
               mesh.position.set(obj.position[0], obj.position[1], obj.position[2]);
@@ -1938,6 +2127,55 @@ function Viewport({
               // 设置阴影属性喵！这是关键！
               mesh.castShadow = true;
               mesh.receiveShadow = true;
+              
+              // 应用贴图喵！如果用户给这个 mesh 部件指定了贴图
+              if (obj.textureId) {
+                const textureAsset = assetsRef.current.find(a => a.id === obj.textureId);
+                if (textureAsset && textureAsset.texture) {
+                  const texture = textureAsset.texture.clone();
+                  texture.needsUpdate = true;
+                  // 确保贴图的 colorSpace 正确，不然颜色会不对喵
+                  texture.colorSpace = THREE.SRGBColorSpace;
+                  // UV 变换喵
+                  const uvScale = obj.uvScale || [1, 1];
+                  const uvOffset = obj.uvOffset || [0, 0];
+                  texture.repeat.set(uvScale[0], uvScale[1]);
+                  texture.offset.set(uvOffset[0], uvOffset[1]);
+                  
+                  // 给材质应用贴图，处理多材质的情况
+                  // 无论什么材质类型，都确保是 MeshStandardMaterial 以支持光照喵
+                  const applyTextureToMaterial = (mat) => {
+                    // MeshStandardMaterial 已经是正确的类型，只需要更新贴图喵
+                    if (mat.type === 'MeshStandardMaterial') {
+                      mat.map = texture;
+                      mat.needsUpdate = true;
+                      return mat;
+                    }
+                    
+                    // 其他材质类型都需要转换为 MeshStandardMaterial 喵
+                    const oldMat = mat;
+                    const newMat = new THREE.MeshStandardMaterial({
+                      color: oldMat.color || 0xffffff,
+                      map: texture,
+                      transparent: oldMat.transparent,
+                      opacity: oldMat.opacity,
+                      side: THREE.FrontSide,
+                      metalness: 0.1,
+                      roughness: 0.8,
+                      emissive: oldMat.emissive || 0x000000
+                    });
+                    newMat.needsUpdate = true;
+                    oldMat.dispose();
+                    return newMat;
+                  };
+                  
+                  if (Array.isArray(mesh.material)) {
+                    mesh.material = mesh.material.map(applyTextureToMaterial);
+                  } else {
+                    mesh.material = applyTextureToMaterial(mesh.material);
+                  }
+                }
+              }
               
               sceneRef.current.add(mesh);
               meshesRef.current[obj.id] = mesh;
@@ -1962,11 +2200,58 @@ function Viewport({
             }
             
             // 遍历模型中的所有 mesh，设置阴影属性喵
-            // 材质已经在加载时转换了，clone() 会复制材质引用，不需要再次转换
+            // 同时检查材质类型，确保是 MeshStandardMaterial 以支持光照
+            // clone() 后材质类型保持不变，需要再次检查和转换喵
             modelContent.traverse((child) => {
               if (child.isMesh) {
+                // 确保法线存在喵！clone() 后法线应该还在，但以防万一
+                if (!child.geometry.attributes.normal) {
+                  child.geometry.computeVertexNormals();
+                }
+                
                 child.castShadow = true;
                 child.receiveShadow = true;
+                
+                // 材质类型检查和转换喵！无论什么材质类型，都转换为 MeshStandardMaterial
+                // OBJ 模型 clone() 后可能仍然是 MeshBasicMaterial 或其他类型
+                const ensureStandardMaterial = (mat) => {
+                  // MeshStandardMaterial 已经是正确的类型，不需要转换喵
+                  if (mat.type === 'MeshStandardMaterial') {
+                    return mat;
+                  }
+                  
+                  // 其他材质类型都需要转换为 MeshStandardMaterial 喵
+                  const oldMat = mat;
+                  
+                  // specular 值影响 metalness 喵
+                  let specularIntensity = 0;
+                  if (oldMat.specular) {
+                    specularIntensity = (oldMat.specular.r + oldMat.specular.g + oldMat.specular.b) / 3;
+                  }
+                  
+                  const metalness = specularIntensity < 0.1 ? 0.0 : Math.min(specularIntensity, 0.5);
+                  const roughness = oldMat.shininess ? Math.max(1 - oldMat.shininess / 100, 0.5) : 0.8;
+                  
+                  const newMat = new THREE.MeshStandardMaterial({
+                    color: oldMat.color || 0xffffff,
+                    map: oldMat.map,
+                    transparent: oldMat.transparent,
+                    opacity: oldMat.opacity,
+                    side: THREE.FrontSide,
+                    metalness: metalness,
+                    roughness: roughness,
+                    emissive: oldMat.emissive || 0x000000
+                  });
+                  newMat.needsUpdate = true;
+                  oldMat.dispose();
+                  return newMat;
+                };
+                
+                if (Array.isArray(child.material)) {
+                  child.material = child.material.map(ensureStandardMaterial);
+                } else {
+                  child.material = ensureStandardMaterial(child.material);
+                }
               }
             });
             
@@ -2004,6 +2289,8 @@ function Viewport({
             light.shadow.mapSize.height = 1024;
             light.shadow.camera.near = 0.1;
             light.shadow.camera.far = obj.distance || 10;
+            // 阴影偏移，防止阴影条纹和多重阴影喵
+            light.shadow.bias = -0.001;
             // 点光源可视化：发光球体 + 光晕
             const visualGeo = new THREE.SphereGeometry(0.15, 16, 16);
             const visualMat = new THREE.MeshBasicMaterial({
@@ -2037,6 +2324,8 @@ function Viewport({
             light.shadow.camera.right = 50;
             light.shadow.camera.top = 50;
             light.shadow.camera.bottom = -50;
+            // 阴影偏移，防止阴影条纹和多重阴影喵
+            light.shadow.bias = -0.0001;
             // 方向光需要设置 target，否则会照射到原点
             // 根据旋转计算照射方向
             const direction = new THREE.Vector3(0, -1, 0); // 默认向下
@@ -2106,6 +2395,8 @@ function Viewport({
             light.shadow.mapSize.height = 1024;
             light.shadow.camera.near = 0.1;
             light.shadow.camera.far = obj.distance || 10;
+            // 阴影偏移，防止阴影条纹和多重阴影喵
+            light.shadow.bias = -0.001;
             // 聚光灯需要设置 target，否则会照射到原点
             // 根据旋转计算照射方向
             const direction = new THREE.Vector3(0, -1, 0); // 默认向下
@@ -2505,11 +2796,12 @@ function Viewport({
       // 检查是否有选中对象
       if (!selectedObject) return;
       
-      // model 类型用 isModel 判断，sphere/plane/cube 用 type 判断
+      // model 类型用 isModel 判断，sphere/plane/cube/mesh 用 type 判断
       const canApplyTexture = selectedObject.isModel || 
                               selectedObject.type === 'sphere' || 
                               selectedObject.type === 'plane' ||
-                              selectedObject.type === 'cube';
+                              selectedObject.type === 'cube' ||
+                              selectedObject.type === 'mesh';
       
       if (!canApplyTexture) return;
       
@@ -2532,8 +2824,6 @@ function Viewport({
             raycaster.setFromCamera(mouse, cameraRef.current);
             
             const intersects = raycaster.intersectObject(mesh);
-            console.log('=== Cube texture drop debug ===');
-            console.log('intersects count:', intersects.length);
             if (intersects.length > 0) {
               // 遍历所有交点，找到不是角点的交点
               // 角点的三个轴分量都接近 0.5，面上的点只有一个轴接近 0.5
@@ -2542,11 +2832,8 @@ function Viewport({
               let bestFace = null;
               
               for (const intersect of intersects) {
-                console.log('intersect.point:', intersect.point, 'index:', intersect.index, 'distance:', intersect.distance);
-                
                 // 将交点转换到 mesh 的局部坐标系
                 const localPoint = mesh.worldToLocal(intersect.point.clone());
-                console.log('local point:', localPoint.x, localPoint.y, localPoint.z);
                 
                 const absX = Math.abs(localPoint.x);
                 const absY = Math.abs(localPoint.y);
@@ -2554,7 +2841,6 @@ function Viewport({
                 
                 // 判断是否是角点：三个轴都接近 0.5
                 const isCorner = absX > threshold && absY > threshold && absZ > threshold;
-                console.log('is corner:', isCorner);
                 
                 if (isCorner) {
                   // 跳过角点
@@ -2571,16 +2857,12 @@ function Viewport({
                   faceName = localPoint.z > 0 ? 'front' : 'back';
                 } else {
                   // 边上的点：两个轴接近 0.5，跳过
-                  console.log('edge point, skipping');
                   continue;
                 }
                 
-                console.log('detected face:', faceName);
                 bestFace = faceName;
                 break; // 找到第一个非角点的交点就停止
               }
-              
-              console.log('=== Best match face:', bestFace);
               
               if (bestFace) {
                 // 只更新那个面的贴图
