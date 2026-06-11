@@ -120,6 +120,67 @@ function Viewport({
   const lightRenderingEnabledRef = useRef(lightRenderingEnabled);
   const sceneLightsRef = useRef([]); // 存储场景中的光源对象（用于光渲染开关）
 
+  /**
+   * 获取 mesh 的几何中心（世界坐标）
+   * 
+   * 对于 model 类型（Group），使用 Box3.setFromObject 计算边界盒中心。
+   * 对于普通 mesh，使用 geometry.boundingBox 计算中心。
+   * 这样才能正确处理多选时的相对位置计算，不然 model 类型的 geoCenterOffset 会是 (0,0,0)，
+   * 导致缩放时相对位置计算错误，模型会乱飞。
+   * 
+   * 这个函数定义在组件顶层，以便在多个 useEffect 中使用喵~
+   */
+  const getMeshGeometryCenterWorld = useCallback((mesh) => {
+    if (mesh.userData.isModel) {
+      // model 类型是 Group，用 Box3.setFromObject 计算边界盒
+      const box = new THREE.Box3().setFromObject(mesh);
+      const center = new THREE.Vector3();
+      // 空 Group 会导致 Box3 为空，getCenter 返回 (0,0,0)，这会导致缩放时模型乱飞喵
+      if (box.isEmpty()) {
+        // 模型还没加载完成，用 mesh.position 作为临时中心
+        center.copy(mesh.position);
+      } else {
+        box.getCenter(center);
+      }
+      return center;
+    }
+    
+    if (mesh.userData.isLight) {
+      // 光源没有 geometry，直接使用 position 作为中心喵
+      return mesh.position.clone();
+    }
+    
+    if (!mesh.geometry) return mesh.position.clone();
+    
+    mesh.geometry.computeBoundingBox();
+    const geoCenter = new THREE.Vector3();
+    mesh.geometry.boundingBox.getCenter(geoCenter);
+    
+    const worldCenter = geoCenter.clone();
+    worldCenter.applyMatrix4(mesh.matrixWorld);
+    
+    return worldCenter;
+  }, []);
+
+  /**
+   * 计算多个 mesh 的几何中心（世界坐标）
+   * 
+   * 这个函数定义在组件顶层，以便在多个 useEffect 中使用喵~
+   */
+  const calculateSelectionsCenter = useCallback((meshes) => {
+    const center = new THREE.Vector3();
+    if (meshes.length === 0) {
+      // meshes 为空时，返回 (0, 0, 0)，避免 NaN 喵
+      return center;
+    }
+    meshes.forEach(m => {
+      const geoCenter = getMeshGeometryCenterWorld(m);
+      center.add(geoCenter);
+    });
+    center.divideScalar(meshes.length);
+    return center;
+  }, [getMeshGeometryCenterWorld]);
+
   useEffect(() => {
     lightRenderingEnabledRef.current = lightRenderingEnabled;
   }, [lightRenderingEnabled]);
@@ -656,45 +717,6 @@ function Viewport({
     };
 
     /**
-     * 获取 mesh 的几何中心（世界坐标）
-     * 
-     * 对于 model 类型（Group），使用 Box3.setFromObject 计算边界盒中心。
-     * 对于普通 mesh，使用 geometry.boundingBox 计算中心。
-     * 这样才能正确处理多选时的相对位置计算，不然 model 类型的 geoCenterOffset 会是 (0,0,0)，
-     * 导致缩放时相对位置计算错误，模型会乱飞。
-     */
-    const getMeshGeometryCenterWorld = (mesh) => {
-      if (mesh.userData.isModel) {
-        // model 类型是 Group，用 Box3.setFromObject 计算边界盒
-        const box = new THREE.Box3().setFromObject(mesh);
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-        return center;
-      }
-      
-      if (!mesh.geometry) return mesh.position.clone();
-      
-      mesh.geometry.computeBoundingBox();
-      const geoCenter = new THREE.Vector3();
-      mesh.geometry.boundingBox.getCenter(geoCenter);
-      
-      const worldCenter = geoCenter.clone();
-      worldCenter.applyMatrix4(mesh.matrixWorld);
-      
-      return worldCenter;
-    };
-
-    const calculateSelectionsCenter = (meshes) => {
-      const center = new THREE.Vector3();
-      meshes.forEach(m => {
-        const geoCenter = getMeshGeometryCenterWorld(m);
-        center.add(geoCenter);
-      });
-      center.divideScalar(meshes.length);
-      return center;
-    };
-
-    /**
      * 变换控制拖拽事件处理
      * 
      * 这是最复杂的部分！多选变换需要记录初始变换状态，
@@ -723,12 +745,9 @@ function Viewport({
         const isSinglePivotMode = attached && attached.name === 'singleSelectPivot';
         
         if (isPivotMode) {
-          const allMeshes = selectedObjectsRef.current
-            .filter(o => o)
-            .map(o => meshesRef.current[o.id])
-            .filter(m => m);
-          
-          const center = calculateSelectionsCenter(allMeshes);
+          // 使用 pivot 的位置作为 center，而不是重新计算喵
+          // 这样可以确保 initial.center 和 pivot 的位置一致
+          const center = attached.position.clone();
           
           initialTransformsRef.current = {
             center: center.clone(),
@@ -743,11 +762,28 @@ function Viewport({
           selectedObjectsRef.current.filter(o => o).forEach(obj => {
             const mesh = meshesRef.current[obj.id];
             if (mesh) {
+              // geoCenterOffset 需要在 mesh 的局部坐标系中计算，而不是世界坐标系喵
+              // 这样旋转时才能正确保持几何中心相对于 mesh 的偏移
+              const worldGeoCenter = getMeshGeometryCenterWorld(mesh);
+              const localGeoCenter = mesh.worldToLocal(worldGeoCenter.clone());
               initialTransformsRef.current.others[obj.id] = {
                 position: mesh.position.clone(),
                 rotation: mesh.rotation.clone(),
                 scale: mesh.scale.clone(),
-                geoCenterOffset: getMeshGeometryCenterWorld(mesh).sub(mesh.position)
+                geoCenterOffset: localGeoCenter // 局部坐标系中的几何中心偏移
+              };
+            } else if (obj.isFolder) {
+              // 文件夹对象没有 mesh，记录 objects 数组中的位置信息喵
+              initialTransformsRef.current.others[obj.id] = {
+                position: new THREE.Vector3(obj.position[0], obj.position[1], obj.position[2]),
+                rotation: new THREE.Euler(
+                  THREE.MathUtils.degToRad(obj.rotation[0]),
+                  THREE.MathUtils.degToRad(obj.rotation[1]),
+                  THREE.MathUtils.degToRad(obj.rotation[2])
+                ),
+                scale: new THREE.Vector3(obj.scale[0], obj.scale[1], obj.scale[2]),
+                geoCenterOffset: new THREE.Vector3(0, 0, 0), // 文件夹没有几何中心
+                isFolder: true
               };
             }
           });
@@ -777,7 +813,8 @@ function Viewport({
               position: attached.position.clone(),
               rotation: attached.rotation.clone(),
               scale: attached.scale.clone(),
-              geoCenterOffset: getMeshGeometryCenterWorld(attached).sub(attached.position)
+              // geoCenterOffset 需要在 mesh 的局部坐标系中计算喵
+              geoCenterOffset: attached.worldToLocal(getMeshGeometryCenterWorld(attached).clone())
             },
             others: {},
             descendantRelativeTransforms: descendantRelativeTransforms
@@ -786,11 +823,14 @@ function Viewport({
           others.forEach(obj => {
             const otherMesh = meshesRef.current[obj.id];
             if (otherMesh) {
+              // geoCenterOffset 需要在 mesh 的局部坐标系中计算喵
+              const worldGeoCenter = getMeshGeometryCenterWorld(otherMesh);
+              const localGeoCenter = otherMesh.worldToLocal(worldGeoCenter.clone());
               initialTransformsRef.current.others[obj.id] = {
                 position: otherMesh.position.clone(),
                 rotation: otherMesh.rotation.clone(),
                 scale: otherMesh.scale.clone(),
-                geoCenterOffset: getMeshGeometryCenterWorld(otherMesh).sub(otherMesh.position)
+                geoCenterOffset: localGeoCenter
               };
               
               const otherDescendantTransforms = collectDescendantRelativeTransforms(obj.id);
@@ -822,6 +862,111 @@ function Viewport({
                   THREE.MathUtils.radToDeg(mesh.rotation.z)
                 ],
                 scale: [mesh.scale.x, mesh.scale.y, mesh.scale.z]
+              }, false);
+            } else if (obj.isFolder) {
+              // 文件夹对象没有 mesh，需要根据 pivot 的变换来更新位置喵
+              const initial = initialTransformsRef.current;
+              const folderInitial = initial.others[obj.id];
+              const mode = transformControls.getMode();
+              
+              if (!folderInitial) return;
+              
+              let newPos, newRotation, newScale;
+              
+              if (mode === 'translate') {
+                // 平移：直接加上位移增量喵
+                const deltaPos = attached.position.clone().sub(initial.pivotPosition);
+                newPos = [
+                  folderInitial.position.x + deltaPos.x,
+                  folderInitial.position.y + deltaPos.y,
+                  folderInitial.position.z + deltaPos.z
+                ];
+                newRotation = [
+                  THREE.MathUtils.radToDeg(folderInitial.rotation.x),
+                  THREE.MathUtils.radToDeg(folderInitial.rotation.y),
+                  THREE.MathUtils.radToDeg(folderInitial.rotation.z)
+                ];
+                newScale = [folderInitial.scale.x, folderInitial.scale.y, folderInitial.scale.z];
+              } else if (mode === 'rotate' && initial.center) {
+                // 旋转：绕着 pivot 的中心旋转喵
+                const deltaQuat = new THREE.Quaternion();
+                const initialQuat = new THREE.Quaternion().setFromEuler(initial.pivotRotation);
+                const currentQuat = new THREE.Quaternion().setFromEuler(attached.rotation);
+                deltaQuat.multiplyQuaternions(currentQuat, initialQuat.clone().invert());
+                
+                // 计算文件夹对象的新位置（绕着 pivot 的中心旋转）
+                const folderPos = folderInitial.position.clone();
+                const rotatedPos = folderPos.clone().sub(initial.center);
+                rotatedPos.applyQuaternion(deltaQuat);
+                rotatedPos.add(initial.center);
+                
+                newPos = [rotatedPos.x, rotatedPos.y, rotatedPos.z];
+                
+                // 计算文件夹对象的新旋转
+                const folderQuat = new THREE.Quaternion().setFromEuler(folderInitial.rotation);
+                const newQuat = deltaQuat.clone().multiply(folderQuat);
+                const newEuler = new THREE.Euler().setFromQuaternion(newQuat);
+                newRotation = [
+                  THREE.MathUtils.radToDeg(newEuler.x),
+                  THREE.MathUtils.radToDeg(newEuler.y),
+                  THREE.MathUtils.radToDeg(newEuler.z)
+                ];
+                newScale = [folderInitial.scale.x, folderInitial.scale.y, folderInitial.scale.z];
+              } else if (mode === 'scale' && initial.center) {
+                // 缩放：从 pivot 的中心向外缩放喵
+                let scaleRatio;
+                if (uniformScaleRef.current) {
+                  const avgScale = (attached.scale.x + attached.scale.y + attached.scale.z) / 3;
+                  const avgInitial = (initial.pivotScale.x + initial.pivotScale.y + initial.pivotScale.z) / 3;
+                  const ratio = avgScale / avgInitial;
+                  scaleRatio = new THREE.Vector3(ratio, ratio, ratio);
+                } else {
+                  scaleRatio = new THREE.Vector3(
+                    attached.scale.x / initial.pivotScale.x,
+                    attached.scale.y / initial.pivotScale.y,
+                    attached.scale.z / initial.pivotScale.z
+                  );
+                }
+                
+                // 计算文件夹对象的新位置（从 pivot 的中心向外缩放）
+                const folderPos = folderInitial.position.clone();
+                const offset = folderPos.clone().sub(initial.center);
+                offset.x *= scaleRatio.x;
+                offset.y *= scaleRatio.y;
+                offset.z *= scaleRatio.z;
+                const newFolderPos = initial.center.clone().add(offset);
+                
+                newPos = [newFolderPos.x, newFolderPos.y, newFolderPos.z];
+                newRotation = [
+                  THREE.MathUtils.radToDeg(folderInitial.rotation.x),
+                  THREE.MathUtils.radToDeg(folderInitial.rotation.y),
+                  THREE.MathUtils.radToDeg(folderInitial.rotation.z)
+                ];
+                newScale = [
+                  folderInitial.scale.x * scaleRatio.x,
+                  folderInitial.scale.y * scaleRatio.y,
+                  folderInitial.scale.z * scaleRatio.z
+                ];
+              } else {
+                // 默认：只更新位置喵
+                const deltaPos = attached.position.clone().sub(initial.pivotPosition);
+                newPos = [
+                  folderInitial.position.x + deltaPos.x,
+                  folderInitial.position.y + deltaPos.y,
+                  folderInitial.position.z + deltaPos.z
+                ];
+                newRotation = [
+                  THREE.MathUtils.radToDeg(folderInitial.rotation.x),
+                  THREE.MathUtils.radToDeg(folderInitial.rotation.y),
+                  THREE.MathUtils.radToDeg(folderInitial.rotation.z)
+                ];
+                newScale = [folderInitial.scale.x, folderInitial.scale.y, folderInitial.scale.z];
+              }
+              
+              onUpdateObject(obj.id, {
+                position: newPos,
+                rotation: newRotation,
+                scale: newScale
               }, false);
             }
           });
@@ -921,6 +1066,10 @@ function Viewport({
             const meshInitial = initial.others[objId];
             if (mesh && meshInitial) {
               mesh.position.copy(meshInitial.position).add(deltaPos);
+            } else if (meshInitial && meshInitial.isFolder) {
+              // 文件夹对象没有 mesh，但需要实时更新位置喵
+              // 这里只记录位置变化，实际更新在拖拽结束时进行
+              // 因为文件夹对象没有 Three.js mesh，无法直接操作
             }
           });
           
@@ -937,17 +1086,28 @@ function Viewport({
             const mesh = meshesRef.current[objId];
             const meshInitial = initial.others[objId];
             if (mesh && meshInitial) {
+              // geoCenterOffset 是局部坐标系中的偏移，需要转换到世界坐标系喵
+              // 转换顺序：先乘以 scale，然后应用旋转
               const geoCenterOffset = meshInitial.geoCenterOffset || new THREE.Vector3();
-              const geoCenter = meshInitial.position.clone().add(geoCenterOffset);
+              const worldGeoCenterOffset = geoCenterOffset.clone()
+                .multiply(meshInitial.scale)
+                .applyEuler(meshInitial.rotation);
+              const geoCenter = meshInitial.position.clone().add(worldGeoCenterOffset);
               
               const rotatedGeoCenter = geoCenter.clone().sub(initial.center);
               rotatedGeoCenter.applyQuaternion(deltaQuat);
               rotatedGeoCenter.add(initial.center);
               
-              mesh.position.copy(rotatedGeoCenter).sub(geoCenterOffset);
-              
+              // 计算新的 mesh 位置：新几何中心 - 新的世界坐标系偏移
+              // 但是新的世界坐标系偏移需要用新的旋转来计算喵
+              // scale 不变，只旋转
               const meshInitialQuat = new THREE.Quaternion().setFromEuler(meshInitial.rotation);
               const newQuat = deltaQuat.clone().multiply(meshInitialQuat);
+              const newWorldGeoCenterOffset = geoCenterOffset.clone()
+                .multiply(meshInitial.scale)
+                .applyQuaternion(newQuat);
+              mesh.position.copy(rotatedGeoCenter).sub(newWorldGeoCenterOffset);
+              
               mesh.quaternion.copy(newQuat);
             }
           });
@@ -975,8 +1135,13 @@ function Viewport({
             const mesh = meshesRef.current[objId];
             const meshInitial = initial.others[objId];
             if (mesh && meshInitial) {
+              // geoCenterOffset 是局部坐标系中的偏移，需要转换到世界坐标系喵
+              // 转换顺序：先乘以 scale，然后应用旋转
               const geoCenterOffset = meshInitial.geoCenterOffset || new THREE.Vector3();
-              const geoCenter = meshInitial.position.clone().add(geoCenterOffset);
+              const worldGeoCenterOffset = geoCenterOffset.clone()
+                .multiply(meshInitial.scale)
+                .applyEuler(meshInitial.rotation);
+              const geoCenter = meshInitial.position.clone().add(worldGeoCenterOffset);
               
               const offset = geoCenter.clone().sub(initial.center);
               offset.x *= scaleRatio.x;
@@ -984,11 +1149,20 @@ function Viewport({
               offset.z *= scaleRatio.z;
               
               const newGeoCenter = initial.center.clone().add(offset);
-              mesh.position.copy(newGeoCenter).sub(geoCenterOffset);
+              
+              // 计算新的 mesh 位置：新几何中心 - 新的世界坐标系偏移
+              // 新的 scale 会影响世界坐标系偏移的长度喵
+              const newScale = new THREE.Vector3(
+                meshInitial.scale.x * scaleRatio.x,
+                meshInitial.scale.y * scaleRatio.y,
+                meshInitial.scale.z * scaleRatio.z
+              );
+              const newWorldGeoCenterOffset = geoCenterOffset.clone()
+                .multiply(newScale)
+                .applyEuler(meshInitial.rotation);
+              mesh.position.copy(newGeoCenter).sub(newWorldGeoCenterOffset);
 
-              mesh.scale.x = meshInitial.scale.x * scaleRatio.x;
-              mesh.scale.y = meshInitial.scale.y * scaleRatio.y;
-              mesh.scale.z = meshInitial.scale.z * scaleRatio.z;
+              mesh.scale.copy(newScale);
             }
           });
           
@@ -1030,28 +1204,48 @@ function Viewport({
         const currentQuat = new THREE.Quaternion().setFromEuler(mesh.rotation);
         deltaQuat.multiplyQuaternions(currentQuat, initialQuat.clone().invert());
         
+        // geoCenterOffset 是局部坐标系中的偏移，需要转换到世界坐标系喵
+        // 转换顺序：先乘以 scale，然后应用旋转
         const primaryGeoCenterOffset = initial.primary.geoCenterOffset || new THREE.Vector3();
-        const primaryGeoCenter = initial.primary.position.clone().add(primaryGeoCenterOffset);
+        const primaryWorldGeoCenterOffset = primaryGeoCenterOffset.clone()
+          .multiply(initial.primary.scale)
+          .applyEuler(initial.primary.rotation);
+        const primaryGeoCenter = initial.primary.position.clone().add(primaryWorldGeoCenterOffset);
         
         const rotatedPrimaryGeoCenter = primaryGeoCenter.clone().sub(initial.center);
         rotatedPrimaryGeoCenter.applyQuaternion(deltaQuat);
         rotatedPrimaryGeoCenter.add(initial.center);
-        mesh.position.copy(rotatedPrimaryGeoCenter).sub(primaryGeoCenterOffset);
+        
+        // 计算新的 mesh 位置：新几何中心 - 新的世界坐标系偏移
+        const newWorldGeoCenterOffset = primaryGeoCenterOffset.clone()
+          .multiply(initial.primary.scale)
+          .applyQuaternion(currentQuat);
+        mesh.position.copy(rotatedPrimaryGeoCenter).sub(newWorldGeoCenterOffset);
         
         Object.keys(initial.others).forEach(objId => {
           const otherMesh = meshesRef.current[objId];
           const otherInitial = initial.others[objId];
           if (otherMesh && otherInitial) {
+            // geoCenterOffset 是局部坐标系中的偏移，需要转换到世界坐标系喵
+            // 转换顺序：先乘以 scale，然后应用旋转
             const geoCenterOffset = otherInitial.geoCenterOffset || new THREE.Vector3();
-            const geoCenter = otherInitial.position.clone().add(geoCenterOffset);
+            const worldGeoCenterOffset = geoCenterOffset.clone()
+              .multiply(otherInitial.scale)
+              .applyEuler(otherInitial.rotation);
+            const geoCenter = otherInitial.position.clone().add(worldGeoCenterOffset);
             
             const rotatedGeoCenter = geoCenter.clone().sub(initial.center);
             rotatedGeoCenter.applyQuaternion(deltaQuat);
             rotatedGeoCenter.add(initial.center);
-            otherMesh.position.copy(rotatedGeoCenter).sub(geoCenterOffset);
             
+            // 计算新的 mesh 位置：新几何中心 - 新的世界坐标系偏移
             const otherInitialQuat = new THREE.Quaternion().setFromEuler(otherInitial.rotation);
             const newQuat = deltaQuat.clone().multiply(otherInitialQuat);
+            const newOtherWorldGeoCenterOffset = geoCenterOffset.clone()
+              .multiply(otherInitial.scale)
+              .applyQuaternion(newQuat);
+            otherMesh.position.copy(rotatedGeoCenter).sub(newOtherWorldGeoCenterOffset);
+            
             otherMesh.quaternion.copy(newQuat);
           }
         });
@@ -1085,36 +1279,63 @@ function Viewport({
         }
         
         // 计算 primary mesh 的新位置
+        // geoCenterOffset 是局部坐标系中的偏移，需要转换到世界坐标系喵
+        // 转换顺序：先乘以 scale，然后应用旋转
         const primaryGeoCenterOffset = initial.primary.geoCenterOffset || new THREE.Vector3();
-        const primaryGeoCenter = initial.primary.position.clone().add(primaryGeoCenterOffset);
+        const primaryWorldGeoCenterOffset = primaryGeoCenterOffset.clone()
+          .multiply(initial.primary.scale)
+          .applyEuler(initial.primary.rotation);
+        const primaryGeoCenter = initial.primary.position.clone().add(primaryWorldGeoCenterOffset);
         
         const primaryOffset = primaryGeoCenter.clone().sub(initial.center);
         primaryOffset.x *= scaleRatio.x;
         primaryOffset.y *= scaleRatio.y;
         primaryOffset.z *= scaleRatio.z;
         const newPrimaryGeoCenter = initial.center.clone().add(primaryOffset);
-        mesh.position.copy(newPrimaryGeoCenter).sub(primaryGeoCenterOffset);
+        
+        // 计算新的 mesh 位置：新几何中心 - 新的世界坐标系偏移
+        // 新的 scale 会影响世界坐标系偏移的长度喵
+        const newPrimaryScale = new THREE.Vector3(
+          initial.primary.scale.x * scaleRatio.x,
+          initial.primary.scale.y * scaleRatio.y,
+          initial.primary.scale.z * scaleRatio.z
+        );
+        const newPrimaryWorldGeoCenterOffset = primaryGeoCenterOffset.clone()
+          .multiply(newPrimaryScale)
+          .applyEuler(initial.primary.rotation);
+        mesh.position.copy(newPrimaryGeoCenter).sub(newPrimaryWorldGeoCenterOffset);
         
         // 更新其他 mesh 的位置和 scale
         Object.keys(initial.others).forEach(objId => {
           const otherMesh = meshesRef.current[objId];
           const otherInitial = initial.others[objId];
           if (otherMesh && otherInitial) {
+            // geoCenterOffset 是局部坐标系中的偏移，需要转换到世界坐标系喵
+            // 转换顺序：先乘以 scale，然后应用旋转
             const geoCenterOffset = otherInitial.geoCenterOffset || new THREE.Vector3();
-            const geoCenter = otherInitial.position.clone().add(geoCenterOffset);
+            const worldGeoCenterOffset = geoCenterOffset.clone()
+              .multiply(otherInitial.scale)
+              .applyEuler(otherInitial.rotation);
+            const geoCenter = otherInitial.position.clone().add(worldGeoCenterOffset);
             
             const offset = geoCenter.clone().sub(initial.center);
             offset.x *= scaleRatio.x;
             offset.y *= scaleRatio.y;
             offset.z *= scaleRatio.z;
             const newGeoCenter = initial.center.clone().add(offset);
-            otherMesh.position.copy(newGeoCenter).sub(geoCenterOffset);
             
-            otherMesh.scale.set(
+            // 计算新的 mesh 位置：新几何中心 - 新的世界坐标系偏移
+            const newOtherScale = new THREE.Vector3(
               otherInitial.scale.x * scaleRatio.x,
               otherInitial.scale.y * scaleRatio.y,
               otherInitial.scale.z * scaleRatio.z
             );
+            const newOtherWorldGeoCenterOffset = geoCenterOffset.clone()
+              .multiply(newOtherScale)
+              .applyEuler(otherInitial.rotation);
+            otherMesh.position.copy(newGeoCenter).sub(newOtherWorldGeoCenterOffset);
+            
+            otherMesh.scale.copy(newOtherScale);
           }
         });
         
@@ -2642,21 +2863,8 @@ function Viewport({
     } else if (objectsToHighlight.length === 1) {
       const mesh = meshesRef.current[objectsToHighlight[0].id];
       if (mesh && mesh.parent === sceneRef.current) {
-        // model 类型是 Group，没有 geometry，需要用 Box3.setFromObject 计算边界盒
-        let worldCenter;
-        if (mesh.userData.isModel) {
-          const box = new THREE.Box3().setFromObject(mesh);
-          worldCenter = new THREE.Vector3();
-          box.getCenter(worldCenter);
-        } else if (mesh.userData.isLight) {
-          // 光源没有 geometry，直接使用 position 作为中心
-          worldCenter = mesh.position.clone();
-        } else {
-          mesh.geometry.computeBoundingBox();
-          const geoCenter = new THREE.Vector3();
-          mesh.geometry.boundingBox.getCenter(geoCenter);
-          worldCenter = geoCenter.clone().applyMatrix4(mesh.matrixWorld);
-        }
+        // 使用 getMeshGeometryCenterWorld 函数计算几何中心，确保一致性喵
+        const worldCenter = getMeshGeometryCenterWorld(mesh);
         
         const pivot = sceneRef.current.getObjectByName('singleSelectPivot');
         if (pivot) {
@@ -2671,26 +2879,27 @@ function Viewport({
         .map(obj => meshesRef.current[obj.id])
         .filter(m => m && m.parent === sceneRef.current);
       
-      const center = new THREE.Vector3();
-      meshes.forEach(m => {
-        // model 类型是 Group，需要用 Box3.setFromObject 计算边界盒
-        let worldCenter;
-        if (m.userData.isModel) {
-          const box = new THREE.Box3().setFromObject(m);
-          worldCenter = new THREE.Vector3();
-          box.getCenter(worldCenter);
-        } else if (m.userData.isLight) {
-          // 光源没有 geometry，直接使用 position 作为中心
-          worldCenter = m.position.clone();
-        } else {
-          m.geometry.computeBoundingBox();
-          const geoCenter = new THREE.Vector3();
-          m.geometry.boundingBox.getCenter(geoCenter);
-          worldCenter = geoCenter.clone().applyMatrix4(m.matrixWorld);
+      // 如果 meshes 为空（比如文件夹内的 mesh 还没加载完成），尝试用文件夹对象的位置作为 pivot
+      if (meshes.length === 0) {
+        // 找到第一个有位置信息的对象（通常是文件夹对象）
+        const firstObj = objectsToHighlight[0];
+        if (firstObj && firstObj.position) {
+          const pivot = sceneRef.current.getObjectByName('multiSelectPivot');
+          if (pivot) {
+            pivot.position.set(firstObj.position[0], firstObj.position[1], firstObj.position[2]);
+            pivot.rotation.set(
+              THREE.MathUtils.degToRad(firstObj.rotation[0] || 0),
+              THREE.MathUtils.degToRad(firstObj.rotation[1] || 0),
+              THREE.MathUtils.degToRad(firstObj.rotation[2] || 0)
+            );
+            pivot.scale.set(firstObj.scale[0] || 1, firstObj.scale[1] || 1, firstObj.scale[2] || 1);
+            transformControlsRef.current.attach(pivot);
+          }
         }
-        center.add(worldCenter);
-      });
-      center.divideScalar(meshes.length);
+        return;
+      }
+      
+      const center = calculateSelectionsCenter(meshes);
       
       const primaryMesh = meshes[0];
       if (primaryMesh) {
@@ -2703,7 +2912,7 @@ function Viewport({
         }
       }
     }
-  }, [selectedObject, selectedObjects, currentTool]);
+  }, [selectedObject, selectedObjects, currentTool, calculateSelectionsCenter, getMeshGeometryCenterWorld]);
 
   useEffect(() => {
     if (!containerRef.current || !rendererRef.current) return;
