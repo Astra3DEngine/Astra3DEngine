@@ -153,6 +153,8 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
    * 
    * 支持拖拽文件和文件夹。文件夹会递归遍历所有文件并导入。
    * 使用 FileSystem API 来处理文件夹，这玩意儿比传统的 File API 强多了。
+   * 对于 GLTF 文件，会收集同目录下的所有资源文件（如 .bin、贴图）
+   * 
    */
   const handleDrop = async (e) => {
     e.preventDefault();
@@ -168,8 +170,8 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
           
           if (entry) {
             if (entry.isDirectory) {
-              // 递归读取文件夹
-              await readDirectoryEntry(entry);
+              // 递归读取文件夹，收集所有文件
+              await readDirectoryEntryWithResources(entry);
             } else {
               // 直接读取文件
               const file = item.getAsFile();
@@ -192,37 +194,115 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
   };
 
   /**
-   * 递归读取 FileSystem 目录条目
+   * 递归读取 FileSystem 目录条目（带资源映射版本）
    * 
-   * 使用 FileSystem API 递归遍历文件夹，这比 Electron API 麻烦多了，
-   * 但 Web 端只能用这个，没办法。
+   * 先收集文件夹中的所有文件到一个 Map 中，然后对于 GLTF 文件，
+   * 创建一个包含 resourceMap 的对象喵！
+   * 
+   * resourceMap 中包含同目录下的所有资源文件（如 .bin、贴图）
+   * 这样就可以加载模型文件夹了
    */
-  const readDirectoryEntry = async (directoryEntry) => {
-    const reader = directoryEntry.createReader();
+  const readDirectoryEntryWithResources = async (directoryEntry) => {
+    // 先收集所有文件喵！
+    const fileMap = new Map();
     
-    const readEntries = async () => {
-      const entries = await new Promise((resolve, reject) => {
-        reader.readEntries(resolve, reject);
-      });
+    const collectFiles = async (entry, basePath = '') => {
+      const reader = entry.createReader();
       
-      for (const entry of entries) {
-        if (entry.isDirectory) {
-          await readDirectoryEntry(entry);
-        } else {
-          const file = await new Promise((resolve, reject) => {
-            entry.file(resolve, reject);
-          });
-          if (file) onImport(file);
+      const readEntriesBatch = async () => {
+        const entries = await new Promise((resolve, reject) => {
+          reader.readEntries(resolve, reject);
+        });
+        
+        for (const subEntry of entries) {
+          if (subEntry.isDirectory) {
+            // 递归处理子目录喵！
+            await collectFiles(subEntry, basePath ? `${basePath}/${subEntry.name}` : subEntry.name);
+          } else {
+            // 收集文件喵！
+            const file = await new Promise((resolve, reject) => {
+              subEntry.file(resolve, reject);
+            });
+            if (file) {
+              const relativePath = basePath ? `${basePath}/${subEntry.name}` : subEntry.name;
+              fileMap.set(relativePath, file);
+            }
+          }
         }
-      }
+        
+        // readEntries 可能一次只返回部分条目，需要循环读取直到空喵！
+        if (entries.length > 0) {
+          await readEntriesBatch();
+        }
+      };
       
-      // readEntries 可能一次只返回部分条目，需要循环读取直到空
-      if (entries.length > 0) {
-        await readEntries();
-      }
+      await readEntriesBatch();
     };
     
-    await readEntries();
+    await collectFiles(directoryEntry);
+    
+    console.log('Collected files:', Array.from(fileMap.keys()));
+    
+    // 先找出所有 GLTF/GLB 文件喵！
+    const gltfFiles = [];
+    for (const [relativePath, file] of fileMap) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (ext === 'gltf' || ext === 'glb') {
+        gltfFiles.push({ relativePath, file, ext });
+      }
+    }
+    
+    console.log('Found GLTF files:', gltfFiles);
+    
+    // 如果有 GLTF/GLB 文件，只导入这些文件，其他文件作为资源喵！
+    if (gltfFiles.length > 0) {
+      for (const { relativePath, file, ext } of gltfFiles) {
+        if (ext === 'gltf') {
+          // GLTF 文件需要特殊处理，传递资源映射喵！
+          const gltfFileWithResources = {
+            file: file,
+            resourceMap: new Map(),
+            relativePath: relativePath
+          };
+          
+          // 找到同目录下的所有资源文件喵！
+          const gltfDir = relativePath.substring(0, relativePath.lastIndexOf('/')) || '';
+          console.log('GLTF directory:', gltfDir);
+          
+          for (const [resourcePath, resourceFile] of fileMap) {
+            if (resourcePath !== relativePath) {
+              // 检查是否在同目录或子目录下喵！
+              const resourceDir = resourcePath.substring(0, resourcePath.lastIndexOf('/')) || '';
+              if (resourceDir === gltfDir || resourceDir.startsWith(gltfDir + '/')) {
+                // 计算相对于 GLTF 文件的路径喵！
+                let relativeToGltf;
+                if (gltfDir === '') {
+                  relativeToGltf = resourcePath;
+                } else {
+                  relativeToGltf = resourcePath.substring(gltfDir.length + 1);
+                }
+                console.log('Adding resource:', relativeToGltf, 'for GLTF:', relativePath);
+                gltfFileWithResources.resourceMap.set(relativeToGltf, resourceFile);
+              }
+            }
+          }
+          
+          console.log('GLTF file with resources:', gltfFileWithResources);
+          console.log('resourceMap keys:', Array.from(gltfFileWithResources.resourceMap.keys()));
+          
+          // 导入 GLTF 文件喵！
+          onImport(gltfFileWithResources);
+        } else {
+          // GLB 文件是自包含的，直接导入喵！
+          onImport(file);
+        }
+      }
+    } else {
+      // 没有 GLTF/GLB 文件，导入所有其他文件喵！
+      for (const [relativePath, file] of fileMap) {
+        onImport(file);
+      }
+    }
   };
 
   const handleContextMenu = (e, asset) => {

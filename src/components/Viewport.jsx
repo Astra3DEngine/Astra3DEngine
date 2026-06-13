@@ -2033,7 +2033,7 @@ function Viewport({
                 
                 mesh.traverse((child) => {
                   if (child.isMesh && child.material) {
-                    // 材质类型检查和转换喵！无论什么材质类型，都转换为 MeshStandardMaterial
+                    // 材质类型检查和转换。无论什么材质类型，都转换为 MeshStandardMaterial
                     const ensureStandardMaterial = (mat) => {
                       // MeshStandardMaterial 已经是正确的类型，只需要更新贴图喵
                       if (mat.type === 'MeshStandardMaterial') {
@@ -2045,7 +2045,7 @@ function Viewport({
                       // 其他材质类型都需要转换为 MeshStandardMaterial 喵
                       const oldMat = mat;
                       
-                      // specular 值影响 metalness 喵
+                      // specular 值影响 metalness
                       let specularIntensity = 0;
                       if (oldMat.specular) {
                         specularIntensity = (oldMat.specular.r + oldMat.specular.g + oldMat.specular.b) / 3;
@@ -2252,36 +2252,71 @@ function Viewport({
         }
         
         if (obj.type === 'mesh' && obj.assetId && obj.meshPath) {
+          console.log('Rendering mesh part:', obj);
+          console.log('meshPath:', obj.meshPath);
+          
           const asset = assetsRef.current.find(a => a.id === obj.assetId);
+          console.log('Found asset for mesh:', asset);
+          console.log('asset.gltfScene:', asset?.gltfScene);
+          console.log('asset.gltfScene.name:', asset?.gltfScene?.name);
+          console.log('asset.gltfScene.children:', asset?.gltfScene?.children?.map(c => c.name));
+          
           if (asset && asset.gltfScene) {
-            // 根据 meshPath 查找嵌套的 mesh
-            // meshPath 格式：'Group1/Group2/MeshName' 或 'MeshName'（扁平）
-            const pathParts = obj.meshPath.split('/');
+            /**
+             * 根据 meshPath 查找 mesh（简化版）
+             * 
+             * meshPath 不包含 asset.gltfScene.name，直接从子对象开始。
+             * 
+             * meshPath 格式：
+             * - 空字符串 ''：asset.gltfScene 本身是 mesh
+             * - 'MeshName'：asset.gltfScene.children 中名为 MeshName 的 mesh
+             * - 'Group1/MeshName'：asset.gltfScene.children 中名为 Group1 的子对象，其 children 中名为 MeshName 的 mesh
+             */
             let targetMesh = null;
             
-            if (pathParts.length === 1) {
-              // 扁平路径，直接遍历查找
-              asset.gltfScene.traverse((child) => {
-                if (child.isMesh && child.name === obj.meshPath) {
-                  targetMesh = child;
-                }
-              });
+            if (obj.meshPath === '') {
+              // meshPath 是空字符串，说明 asset.gltfScene 本身是 mesh 。
+              if (asset.gltfScene.isMesh) {
+                targetMesh = asset.gltfScene;
+                console.log('Found mesh at root (meshPath is empty):', targetMesh);
+              } else {
+                console.log('meshPath is empty but gltfScene is not a mesh!');
+              }
             } else {
-              // 嵌套路径，按层级查找
+              // meshPath 不是空字符串，从 asset.gltfScene.children 开始查找。
+              const pathParts = obj.meshPath.split('/');
+              console.log('pathParts:', pathParts);
+              
+              // 从 asset.gltfScene.children 开始查找。
               let currentObj = asset.gltfScene;
               for (let i = 0; i < pathParts.length; i++) {
                 const part = pathParts[i];
+                console.log('Looking for part:', part, 'in currentObj:', currentObj?.name, 'children:', currentObj?.children?.map(c => c.name));
+                
+                // 在 currentObj.children 中查找名为 part 的子对象。
                 currentObj = currentObj.children.find(c => c.name === part);
-                if (!currentObj) break;
+                
+                if (!currentObj) {
+                  console.log('Failed to find part:', part);
+                  break;
+                }
+                
+                console.log('Found currentObj:', currentObj?.name, 'isMesh:', currentObj?.isMesh);
               }
+              
               if (currentObj && currentObj.isMesh) {
                 targetMesh = currentObj;
+                console.log('Found targetMesh:', targetMesh?.name);
+              } else {
+                console.log('currentObj is not a mesh:', currentObj);
               }
             }
             
             if (targetMesh) {
+              console.log('Creating mesh from targetMesh:', targetMesh?.name);
+              
               const geometry = targetMesh.geometry.clone();
-              // 确保法线存在喵！clone() 后法线应该还在，但以防万一
+              // 确保法线存在。clone() 后法线应该还在，但以防万一
               if (!geometry.attributes.normal) {
                 geometry.computeVertexNormals();
               }
@@ -2294,7 +2329,7 @@ function Viewport({
                 material = targetMesh.material.clone();
               }
               
-                // 材质类型检查和转换喵！无论什么材质类型，都转换为 MeshStandardMaterial
+                // 材质类型检查和转换。无论什么材质类型，都转换为 MeshStandardMaterial
                 // OBJ 模型可能使用 MeshBasicMaterial 或其他类型，不支持光照
                 const ensureStandardMaterial = (mat) => {
                   // MeshStandardMaterial 已经是正确的类型，不需要转换喵
@@ -2345,11 +2380,13 @@ function Viewport({
               mesh.scale.set(obj.scale[0], obj.scale[1], obj.scale[2]);
               mesh.userData = { id: obj.id, isMeshPart: true };
               
-              // 设置阴影属性喵！这是关键！
+              // 设置阴影属性。这是关键！
               mesh.castShadow = true;
               mesh.receiveShadow = true;
               
-              // 应用贴图喵！如果用户给这个 mesh 部件指定了贴图
+              console.log('Created mesh:', mesh);
+              
+              // 应用贴图。如果用户给这个 mesh 部件指定了贴图
               if (obj.textureId) {
                 const textureAsset = assetsRef.current.find(a => a.id === obj.textureId);
                 if (textureAsset && textureAsset.texture) {
@@ -2400,7 +2437,12 @@ function Viewport({
               
               sceneRef.current.add(mesh);
               meshesRef.current[obj.id] = mesh;
+              console.log('Added mesh to scene:', mesh);
+            } else {
+              console.log('Failed to find targetMesh for meshPath:', obj.meshPath);
             }
+          } else {
+            console.log('Asset or gltfScene not found for mesh:', obj);
           }
           return;
         }
@@ -2425,7 +2467,7 @@ function Viewport({
             // clone() 后材质类型保持不变，需要再次检查和转换喵
             modelContent.traverse((child) => {
               if (child.isMesh) {
-                // 确保法线存在喵！clone() 后法线应该还在，但以防万一
+                // 确保法线存在。clone() 后法线应该还在，但以防万一
                 if (!child.geometry.attributes.normal) {
                   child.geometry.computeVertexNormals();
                 }
@@ -2433,7 +2475,7 @@ function Viewport({
                 child.castShadow = true;
                 child.receiveShadow = true;
                 
-                // 材质类型检查和转换喵！无论什么材质类型，都转换为 MeshStandardMaterial
+                // 材质类型检查和转换。无论什么材质类型，都转换为 MeshStandardMaterial
                 // OBJ 模型 clone() 后可能仍然是 MeshBasicMaterial 或其他类型
                 const ensureStandardMaterial = (mat) => {
                   // MeshStandardMaterial 已经是正确的类型，不需要转换喵

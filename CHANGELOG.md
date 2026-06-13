@@ -1,5 +1,39 @@
 # 更新日志
 
+## 2026-06-11 Pivot 变换系统全面修复
+
+### BUG修复
+- **Pivot 变换系统失效**：
+  - 选择模型时创建的 pivot（几何中心支点）功能失效
+  - 旋转和缩放相对于模型原点而不是 pivot 中心进行
+  - 根本原因：`geoCenterOffset` 使用了错误的坐标系（世界坐标系而不是局部坐标系）
+  - 修复：将 `geoCenterOffset` 改为局部坐标系偏移，变换时正确转换到世界坐标系
+- **缩放时错位**：
+  - 缩放时 `worldGeoCenterOffset` 计算没有考虑 scale 的影响
+  - 修复：正确的转换顺序为 `geoCenterOffset.multiply(scale).applyEuler(rotation)`
+- **函数作用域问题**：
+  - `calculateSelectionsCenter` 函数未定义错误
+  - 修复：将函数移到组件顶层，使用 `useCallback` 定义
+- **空边界盒导致 NaN**：
+  - 空 Group（模型还没加载完成）导致 `Box3.setFromObject` 返回空边界盒
+  - 修复：添加 `box.isEmpty()` 检查，使用 mesh.position 作为临时中心
+- **文件夹选择变换失效**：
+  - 文件夹对象没有 mesh，导致 pivot 无法创建
+  - 修复：meshes 为空时使用文件夹对象的位置作为 pivot，正确计算文件夹变换
+- **光源对象中心计算**：
+  - `getMeshGeometryCenterWorld` 函数没有处理 `isLight` 类型
+  - 修复：光源没有 geometry，直接使用 position 作为中心
+
+### 技术改进
+- **坐标系转换逻辑统一**：
+  - 所有几何中心计算使用统一的 `getMeshGeometryCenterWorld` 函数
+  - 所有多选中心计算使用统一的 `calculateSelectionsCenter` 函数
+  - pivot 更新和拖拽开始时使用相同的 center 计算逻辑
+- **变换逻辑完善**：
+  - 旋转时正确计算新的世界坐标系偏移（scale 不变，只旋转）
+  - 缩放时正确计算新的世界坐标系偏移（旋转不变，只缩放）
+  - 文件夹对象支持完整的平移、旋转、缩放变换
+
 ## 2026-06-10 光渲染开关 + 阴影系统完整实现
 
 ### 新增功能

@@ -474,8 +474,183 @@ function AppContent() {
    * 
    * 使用 URL.createObjectURL 创建临时 URL，删除资源时要 URL.revokeObjectURL 释放内存，
    * 不然内存泄漏了直接老冯飞天。
+   *
+   * 对于带 resourceMap 的 GLTF 文件，使用 URL modifier 来拦截资源加载请求喵！
    */
-  const handleImportAsset = useCallback((file) => {
+  const handleImportAsset = useCallback((fileOrObject) => {
+    // 检查是否是带 resourceMap 的对象喵！
+    if (fileOrObject && fileOrObject.file && fileOrObject.resourceMap) {
+      console.log('Importing GLTF with resourceMap:', fileOrObject);
+      console.log('resourceMap keys:', Array.from(fileOrObject.resourceMap.keys()));
+      
+      const file = fileOrObject.file;
+      const resourceMap = fileOrObject.resourceMap;
+      
+      const asset = {
+        id: Date.now(),
+        name: file.name,
+        type: 'gltf',
+        assetType: 'model',
+        file: file,
+        url: URL.createObjectURL(file)
+      };
+      
+      // 创建 URL modifier 来拦截资源加载请求喵！
+      // 将 GLTF 文件中引用的资源路径转换为 blob URL
+      const urlMap = new Map();
+      
+      // 为每个资源文件创建 blob URL
+      // 难以想象为什么会有人导入模型文件夹
+      for (const [relativePath, resourceFile] of resourceMap) {
+        const blobUrl = URL.createObjectURL(resourceFile);
+        urlMap.set(relativePath, blobUrl);
+        console.log('Created blob URL for', relativePath, ':', blobUrl);
+      }
+      
+      console.log('urlMap keys:', Array.from(urlMap.keys()));
+      
+      // 创建自定义的 LoadingManager 喵！
+      const manager = new THREE.LoadingManager();
+      
+      // 使用 setURLModifier 来拦截 URL 喵！
+      manager.setURLModifier((url) => {
+        console.log('URL modifier received:', url);
+        
+        // 尝试多种路径格式来匹配喵！
+        // GLTF 文件中的路径可能是：
+        // - 相对路径（如 textures/xxx.jpg）
+        // - 文件名（如 xxx.bin）
+        // - 带 ./ 前缀的路径（如 ./textures/xxx.jpg）
+        
+        // 1. 直接匹配
+        if (urlMap.has(url)) {
+          console.log('URL matched directly:', url, '->', urlMap.get(url));
+          return urlMap.get(url);
+        }
+        
+        // 2. 去掉 ./ 前缀后匹配
+        const urlWithoutDotSlash = url.startsWith('./') ? url.substring(2) : url;
+        if (urlMap.has(urlWithoutDotSlash)) {
+          console.log('URL matched after removing ./:', url, '->', urlMap.get(urlWithoutDotSlash));
+          return urlMap.get(urlWithoutDotSlash);
+        }
+        
+        // 3. 添加 ./ 前缀后匹配
+        const urlWithDotSlash = './' + url;
+        if (urlMap.has(urlWithDotSlash)) {
+          console.log('URL matched after adding ./:', url, '->', urlMap.get(urlWithDotSlash));
+          return urlMap.get(urlWithDotSlash);
+        }
+        
+        // 4. 尝试匹配文件名
+        const fileName = url.split('/').pop();
+        for (const [key, blobUrl] of urlMap) {
+          const keyFileName = key.split('/').pop();
+          if (keyFileName === fileName) {
+            console.log('URL matched by filename:', url, '->', blobUrl);
+            return blobUrl;
+          }
+        }
+        
+        console.log('URL not matched:', url);
+        return url;
+      });
+      
+      // 创建 GLTFLoader 并使用自定义的 LoadingManager 
+      const gltfLoader = new GLTFLoader(manager);
+      
+      // 使用 FileReader 读取 GLTF 文件内容
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const arrayBuffer = e.target.result;
+        
+        // 使用 parse 方法而不是 load 方法
+        // parse 方法不会修改 URL，这样 URL modifier 可以正确拦截
+        gltfLoader.parse(
+          arrayBuffer,
+          '', // path 参数设置为空字符串
+          (gltf) => {
+            console.log('GLTF parsed successfully:', gltf);
+            
+            const box = new THREE.Box3().setFromObject(gltf.scene);
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            
+            asset.gltfScene = gltf.scene;
+            asset.center = center.clone();
+            asset.size = box.getSize(new THREE.Vector3());
+            
+            console.log('GLTF scene:', gltf.scene);
+            console.log('GLTF scene children:', gltf.scene.children);
+            console.log('GLTF center:', center);
+            console.log('GLTF size:', asset.size);
+            
+            // 加载时就设置阴影属性和材质转换喵
+            gltf.scene.traverse((child) => {
+              if (child.isMesh) {
+                child.geometry.computeBoundingBox();
+                child.geometry.computeVertexNormals();
+                child.castShadow = true;
+                child.receiveShadow = true;
+                
+                if (child.material) {
+                  const convertMaterial = (mat) => {
+                    if (mat.type === 'MeshBasicMaterial' || 
+                        mat.type === 'MeshLambertMaterial' || 
+                        mat.type === 'MeshPhongMaterial') {
+                      const oldMat = mat;
+                      const newMat = new THREE.MeshStandardMaterial({
+                        color: oldMat.color || 0xffffff,
+                        map: oldMat.map,
+                        transparent: oldMat.transparent,
+                        opacity: oldMat.opacity,
+                        side: THREE.FrontSide,
+                        metalness: mat.type === 'MeshPhongMaterial' ? 
+                          (oldMat.shininess ? Math.min(oldMat.shininess / 100, 1) : 0.1) : 0.1,
+                        roughness: mat.type === 'MeshPhongMaterial' ? 
+                          (oldMat.shininess ? 1 - Math.min(oldMat.shininess / 100, 1) : 0.8) : 0.8,
+                        emissive: oldMat.emissive || 0x000000
+                      });
+                      newMat.needsUpdate = true;
+                      return newMat;
+                    }
+                    return mat;
+                  };
+                  
+                  if (Array.isArray(child.material)) {
+                    child.material = child.material.map(convertMaterial);
+                  } else {
+                    child.material = convertMaterial(child.material);
+                  }
+                }
+              }
+            });
+            
+            setAssets(prev => [...prev, asset]);
+            console.log('Asset added:', asset);
+            
+            // 释放 blob URL 喵！
+            for (const blobUrl of urlMap.values()) {
+              URL.revokeObjectURL(blobUrl);
+            }
+          },
+          (error) => {
+            console.error('Error parsing GLTF:', error);
+            
+            // 你坏了你也给我释放 blob URL 喵！
+            for (const blobUrl of urlMap.values()) {
+              URL.revokeObjectURL(blobUrl);
+            }
+          }
+        );
+      };
+      
+      reader.readAsArrayBuffer(file);
+      return;
+    }
+    
+    // 正常的文件导入
+    const file = fileOrObject;
     const fileExt = file.name.split('.').pop().toLowerCase();
     const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'];
     const modelExts = ['gltf', 'glb', 'obj'];
@@ -519,35 +694,21 @@ function AppContent() {
             obj.traverse((child) => {
               if (child.isMesh) {
                 child.geometry.computeBoundingBox();
-                // 强制重新计算法线以确保光照正确渲染喵
-                // OBJ 模型的法线可能不正确，需要重新计算
                 child.geometry.computeVertexNormals();
-                // 将 Mesh 的位置相对于 Group 的中心点偏移
-                // 这样 modelContent.position.sub(center) 后，Mesh 的相对位置正确
                 child.position.sub(center);
                 
-                // 设置阴影属性喵
                 child.castShadow = true;
                 child.receiveShadow = true;
                 
-                // 转换材质为 MeshStandardMaterial 以支持阴影喵
                 if (child.material) {
                   const convertMaterial = (mat) => {
-                    // 无论什么材质类型，都转换为 MeshStandardMaterial 以支持光照喵
-                    // OBJLoader 可能创建各种材质类型，包括 MeshBasicMaterial、MeshPhongMaterial 等
                     const oldMat = mat;
                     
-                    // specular 值影响 metalness 喵
-                    // specular 越低，metalness 应该越低（非金属材质）
-                    // specular 的亮度可以用 r/g/b 的平均值来估算
                     let specularIntensity = 0;
                     if (oldMat.specular) {
                       specularIntensity = (oldMat.specular.r + oldMat.specular.g + oldMat.specular.b) / 3;
                     }
                     
-                    // 根据 specular 和 shininess 计算 metalness 和 roughness 喵
-                    // specular 很低（如 0.0056）表示非金属材质，metalness 应该接近 0
-                    // shininess 越高，roughness 越低
                     const metalness = specularIntensity < 0.1 ? 0.0 : Math.min(specularIntensity, 0.5);
                     const roughness = oldMat.shininess ? Math.max(1 - oldMat.shininess / 100, 0.5) : 0.8;
                     
@@ -556,8 +717,6 @@ function AppContent() {
                       map: oldMat.map,
                       transparent: oldMat.transparent,
                       opacity: oldMat.opacity,
-                      // 强制使用 FrontSide 以正确渲染阴影喵
-                      // DoubleSide 会导致阴影渲染不正确
                       side: THREE.FrontSide,
                       metalness: metalness,
                       roughness: roughness,
@@ -577,7 +736,6 @@ function AppContent() {
               }
             });
             
-            // 重置 Group 的位置，因为子 Mesh 已经偏移了
             obj.position.set(0, 0, 0);
             
             setAssets(prev => [...prev, asset]);
@@ -600,18 +758,13 @@ function AppContent() {
             asset.center = center.clone();
             asset.size = box.getSize(new THREE.Vector3());
             
-            // 加载时就设置阴影属性和材质转换喵
             gltf.scene.traverse((child) => {
               if (child.isMesh) {
                 child.geometry.computeBoundingBox();
-                // 强制重新计算法线以确保光照正确渲染喵
-                // 模型的法线可能不正确，需要重新计算
                 child.geometry.computeVertexNormals();
-                // 设置阴影属性喵
                 child.castShadow = true;
                 child.receiveShadow = true;
                 
-                // 转换材质为 MeshStandardMaterial 以支持阴影喵
                 if (child.material) {
                   const convertMaterial = (mat) => {
                     if (mat.type === 'MeshBasicMaterial' || 
@@ -623,8 +776,6 @@ function AppContent() {
                         map: oldMat.map,
                         transparent: oldMat.transparent,
                         opacity: oldMat.opacity,
-                        // 强制使用 FrontSide 以正确渲染阴影喵
-                        // DoubleSide 会导致阴影渲染不正确
                         side: THREE.FrontSide,
                         metalness: mat.type === 'MeshPhongMaterial' ? 
                           (oldMat.shininess ? Math.min(oldMat.shininess / 100, 1) : 0.1) : 0.1,
@@ -691,44 +842,54 @@ function AppContent() {
   }, [handleAddObject]);
 
   /**
-   * 导入模型为部件层级
+   * 导入模型为部件层级（重写版本喵）
    * 
    * 解析GLTF/OBJ模型的内部层级结构，保留原本的分组关系。
    * Group 转换成 folder 对象，Mesh 转换成 mesh 对象。
    * 
-   * 部件的位置是相对于模型中心点的偏移，这样移动文件夹时所有部件会一起移动。
-   * 
-   * @param {Object} asset - 模型资源
+   * meshPath 不包含 gltfScene.name，直接从子对象开始喵！
+   * 这样 Viewport.jsx 的查找逻辑就简单了喵！
    */
   const handleImportModelParts = useCallback((asset) => {
-    if (!asset || !asset.gltfScene) return;
+    console.log('handleImportModelParts called with asset:', asset);
+    console.log('asset.gltfScene:', asset?.gltfScene);
+    console.log('asset.gltfScene.name:', asset?.gltfScene?.name);
+    console.log('asset.gltfScene.children:', asset?.gltfScene?.children?.map(c => ({ name: c.name, isMesh: c.isMesh, isGroup: c.isGroup })));
+    
+    if (!asset || !asset.gltfScene) {
+      console.log('handleImportModelParts: asset or gltfScene is null, returning');
+      return;
+    }
 
     setSceneObjectsWithHistory(prev => {
+      console.log('handleImportModelParts: starting to parse model');
+      
       const modelBaseName = asset.name.replace(/\.[^.]+$/, '');
       const rootFolderName = generateUniqueName(modelBaseName, prev);
       const baseId = Date.now();
       
       const modelCenter = asset.center || new THREE.Vector3(0, 0, 0);
-      
-      // 检查是否是 OBJ 模型（通过文件名判断）
-      const isObjModel = asset.name && asset.name.toLowerCase().endsWith('.obj');
+      console.log('modelCenter:', modelCenter);
       
       const allNewObjects = [];
       let idCounter = 0;
       
       /**
-       * 递归解析模型层级结构
+       * 递归解析模型层级结构（简化版本喵）
+       * 
+       * meshPath 不包含根节点的名称，直接从子对象开始
+       * 这样 Viewport.jsx 的查找逻辑就简单了喵！
+       * 
+       * 这样创建场景模型的时候就可以正常显示和拖动了。
        * 
        * @param {THREE.Object3D} threeObj - Three.js 对象（Group 或 Mesh）
        * @param {number} parentId - 父对象 ID
-       * @param {string} parentPath - 父对象的 meshPath（用于 Viewport 查找）
+       * @param {string} meshPath - mesh 的路径（不包含根节点名称）
        * @returns {Object} 创建的场景对象
        */
-      const parseObject3D = (threeObj, parentId, parentPath = '') => {
+      const parseObject3D = (threeObj, parentId, meshPath) => {
         const objId = baseId + idCounter;
         idCounter++;
-        
-        const currentPath = parentPath ? `${parentPath}/${threeObj.name}` : threeObj.name;
         
         // 获取世界变换
         const worldPos = new THREE.Vector3();
@@ -738,13 +899,17 @@ function AppContent() {
         threeObj.getWorldQuaternion(worldQuat);
         threeObj.getWorldScale(worldScale);
         
-        // OBJ 模型的子 Mesh 已经在加载时偏移过了，worldPos 就是相对于模型中心的坐标
-        // GLTF 模型需要减去 modelCenter 来计算相对位置
-        const relativePos = isObjModel ? worldPos.clone() : worldPos.clone().sub(modelCenter);
+        // 计算相对于模型中心的位置喵
+        const relativePos = worldPos.clone().sub(modelCenter);
         const worldEuler = new THREE.Euler().setFromQuaternion(worldQuat);
         
         // 生成唯一名称
+        // 如果有名称，就用它，否则用 Mesh 或 Group 名称
+        // 这样可以确保每个对象都有一个唯一的名称，方便查找和管理
+        // 以及用来设置父子对象
         const objName = generateUniqueName(threeObj.name || (threeObj.isMesh ? 'Mesh' : 'Group'), [...prev, ...allNewObjects]);
+        
+        console.log('parseObject3D: threeObj.name=', threeObj.name, 'meshPath=', meshPath, 'isMesh=', threeObj.isMesh);
         
         if (threeObj.isMesh) {
           // Mesh 类型，支持单独贴图喵
@@ -761,15 +926,15 @@ function AppContent() {
             scale: [worldScale.x, worldScale.y, worldScale.z],
             parentId: parentId,
             assetId: asset.id,
-            meshPath: currentPath,
-            // 贴图相关属性，用户可以给单个 mesh 换贴图喵
+            meshPath: meshPath, // 直接使用传入的 meshPath 喵！
             textureId: null,
             uvScale: [1, 1],
             uvOffset: [0, 0]
           };
+          console.log('Created mesh object:', meshObj);
           allNewObjects.push(meshObj);
           return meshObj;
-        } else if (threeObj.isGroup || threeObj.children.length > 0) {
+        } else {
           // Group 类型（包括有子对象的任意 Object3D）
           const folderObj = {
             id: objId,
@@ -786,12 +951,16 @@ function AppContent() {
             children: [],
             parentId: parentId,
             assetId: asset.id,
-            meshPath: currentPath
+            meshPath: meshPath
           };
+          console.log('Created folder object:', folderObj);
           
-          // 递归处理子对象
+          // 递归处理子对象，meshPath 是子对象的名称喵！
           threeObj.children.forEach(child => {
-            const childObj = parseObject3D(child, objId, currentPath);
+            // 子对象的 meshPath 是父对象的 meshPath + '/' + 子对象的名称
+            // 如果父对象的 meshPath 是空字符串，子对象的 meshPath 就是子对象的名称喵！
+            const childMeshPath = meshPath ? `${meshPath}/${child.name}` : child.name;
+            const childObj = parseObject3D(child, objId, childMeshPath);
             if (childObj) {
               folderObj.children.push(childObj.id);
             }
@@ -800,27 +969,28 @@ function AppContent() {
           allNewObjects.push(folderObj);
           return folderObj;
         }
-        
-        return null;
       };
       
-      // 从模型的根节点开始解析
-      // 注意：asset.gltfScene 本身可能是一个 Group，需要保留它的层级结构
-      const rootObj = parseObject3D(asset.gltfScene, null);
+      // 从模型的根节点开始解析喵！
+      // 根节点的 meshPath 是空字符串（不包含根节点的名称）
+      // 这样 Viewport.jsx 的查找逻辑就简单了喵！
+      const rootObj = parseObject3D(asset.gltfScene, null, '');
       
-      // 如果根对象没有名称，重命名为模型名称
-      if (rootObj && rootObj.name !== rootFolderName) {
+      // 重命名根对象为模型名称喵
+      if (rootObj) {
         const existingNames = [...prev, ...allNewObjects.filter(o => o.id !== rootObj.id)];
         rootObj.name = generateUniqueName(rootFolderName, existingNames);
+        console.log('Renamed root object to:', rootObj.name);
       }
       
-      // 选中根文件夹
+      // 选中根文件夹和所有新创建的对象喵
       if (rootObj) {
         setSelectedObject(rootObj);
-        // 选中所有新创建的对象
         setSelectedObjects(allNewObjects);
+        console.log('Selected root object and all new objects:', allNewObjects.length);
       }
       
+      console.log('handleImportModelParts: created objects:', allNewObjects);
       return [...prev, ...allNewObjects];
     });
   }, [setSceneObjectsWithHistory, generateUniqueName]);
