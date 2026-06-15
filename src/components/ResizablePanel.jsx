@@ -20,6 +20,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
  *   minWidth={200} 
  *   maxWidth={500} 
  *   defaultWidth={280}
+ *   storageKey="astra-left-sidebar-width"
  * >
  *   <HierarchyPanel ... />
  * </ResizablePanel>
@@ -30,6 +31,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
  *   minHeight={100} 
  *   maxHeight={400} 
  *   defaultHeight={150}
+ *   storageKey="astra-bottom-panel-height"
  * >
  *   <AssetsPanel ... />
  * </ResizablePanel>
@@ -43,7 +45,9 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
  * @param {number} props.minHeight - 最小高度（垂直方向）
  * @param {number} props.maxHeight - 最大高度（垂直方向）
  * @param {number} props.defaultHeight - 默认高度（垂直方向）
- * @param {string} props.className - 颮外的CSS类名
+ * @param {string} props.className - 鮮外的CSS类名
+ * @param {string} props.storageKey - localStorage 键名（用于持久化尺寸）
+ * @param {boolean} props.collapsed - 是否折叠
  * @param {Function} props.onWidthChange - 宽度变化回调
  * @param {Function} props.onHeightChange - 高度变化回调
  * @param {React.ReactNode} props.children - 子组件
@@ -59,19 +63,55 @@ function ResizablePanel({
   maxHeight = 400,
   defaultHeight = 150,
   className = '',
+  storageKey,
   collapsed = false,
   onWidthChange,
   onHeightChange,
   children
 }) {
-  const [width, setWidth] = useState(defaultWidth);
-  const [height, setHeight] = useState(defaultHeight);
+  // 从 localStorage 读取持久化的尺寸喵
+  const getInitialWidth = () => {
+    if (storageKey) {
+      const saved = localStorage.getItem(`${storageKey}-width`);
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (parsed >= minWidth && parsed <= maxWidth) {
+          return parsed;
+        }
+      }
+    }
+    return defaultWidth;
+  };
+
+  const getInitialHeight = () => {
+    if (storageKey) {
+      const saved = localStorage.getItem(`${storageKey}-height`);
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (parsed >= minHeight && parsed <= maxHeight) {
+          return parsed;
+        }
+      }
+    }
+    return defaultHeight;
+  };
+
+  const [width, setWidth] = useState(getInitialWidth);
+  const [height, setHeight] = useState(getInitialHeight);
   const [isDragging, setIsDragging] = useState(false);
   const panelRef = useRef(null);
   const startXRef = useRef(0);
   const startYRef = useRef(0);
   const startWidthRef = useRef(0);
   const startHeightRef = useRef(0);
+  const widthRef = useRef(width); // 用于保存最新的宽度喵
+  const heightRef = useRef(height); // 用于保存最新的高度喵
+
+  // 同步 width 和 height 到 ref 喵
+  useEffect(() => {
+    widthRef.current = width;
+    heightRef.current = height;
+  }, [width, height]);
 
   /**
    * 开始拖拽
@@ -121,11 +161,16 @@ function ResizablePanel({
   }, [isDragging, direction, side, minWidth, maxWidth, minHeight, maxHeight, onWidthChange, onHeightChange]);
 
   /**
-   * 结束拖拽
+   * 结束拖拽，保存尺寸到 localStorage 喵
    */
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-  }, []);
+    // 拖拽结束时保存尺寸喵
+    if (storageKey) {
+      localStorage.setItem(`${storageKey}-width`, String(widthRef.current));
+      localStorage.setItem(`${storageKey}-height`, String(heightRef.current));
+    }
+  }, [storageKey]);
 
   /**
    * 全局鼠标事件监听

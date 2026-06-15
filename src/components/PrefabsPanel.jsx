@@ -22,6 +22,7 @@ import IconDelete from '../icons/delete.svg?react';
  * @param {Function} props.onDeletePrefab - 删除预制件回调
  * @param {boolean} props.vertical - 是否垂直布局
  * @param {Function} props.onCollapseChange - 折叠状态变化回调
+ * @param {Object} props.style - 自定义样式
  * @returns {JSX.Element} 预制件面板组件
  */
 function PrefabsPanel({ 
@@ -32,7 +33,8 @@ function PrefabsPanel({
   onInstantiatePrefab, 
   onDeletePrefab,
   vertical,
-  onCollapseChange
+  onCollapseChange,
+  style
 }) {
   const getInstanceCount = (prefabId) => {
     return sceneObjects.filter(obj => obj.prefabId === prefabId).length;
@@ -54,6 +56,7 @@ function PrefabsPanel({
       storageKey="astra-panel-prefabs-collapsed"
       vertical={vertical}
       onCollapseChange={onCollapseChange}
+      style={style}
     >
       <div className="panel-content">
         {prefabs.length === 0 ? (

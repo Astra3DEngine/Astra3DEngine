@@ -250,8 +250,9 @@ function Viewport({
         rendererRef.current.shadowMap.enabled = true;
       }
     } else {
-      // 关闭光渲染：环境光高强度，所有光源不工作，像贴图世界一样喵
-      ambientLightRef.current.intensity = 1.5;
+      // 关闭光渲染：环境光适中，阴影系统启用但光源不投射阴影喵
+      // 这样模型会有明暗对比但不会产生影子
+      ambientLightRef.current.intensity = 0.8;
       sceneRef.current.traverse((child) => {
         // AmbientLight 不支持阴影，要排除掉喵
         if (child.isLight && child.type !== 'AmbientLight') {
@@ -260,6 +261,7 @@ function Viewport({
             child.userData.originalIntensity = child.intensity;
           }
           child.intensity = 0;
+          // 光源不投射阴影，但阴影系统仍然启用喵
           if (child.castShadow !== undefined) {
             child.castShadow = false;
           }
@@ -270,8 +272,9 @@ function Viewport({
         defaultLightRef.current.intensity = 0;
         defaultLightRef.current.castShadow = false;
       }
+      // 阴影系统保持启用，但因为没有光源投射阴影所以不会产生影子喵
       if (rendererRef.current) {
-        rendererRef.current.shadowMap.enabled = false;
+        rendererRef.current.shadowMap.enabled = true;
       }
     }
   }, [lightRenderingEnabled]);
@@ -320,8 +323,8 @@ function Viewport({
     scene.add(axesHelper);
 
     // 环境光，用于在没有光渲染时提供均匀亮度
-    // 光渲染开启时环境光强度稍微提高一点，不然模型太黑了喵
-    const ambientLight = new THREE.AmbientLight(0xffffff, lightRenderingEnabled ? 0.3 : 1.5);
+    // 光渲染开启时环境光强度适中，关闭时稍高但不会太亮喵
+    const ambientLight = new THREE.AmbientLight(0xffffff, lightRenderingEnabled ? 0.3 : 0.8);
     scene.add(ambientLight);
     ambientLightRef.current = ambientLight;
 

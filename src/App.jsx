@@ -67,11 +67,8 @@ function AppContent() {
   const [currentTool, setCurrentTool] = useState('select');
   const [isPlaying, setIsPlaying] = useState(false);
   const [locale, setLocaleState] = useState(getLocale());
-  // 光渲染开关状态，默认开启喵
-  const [lightRenderingEnabled, setLightRenderingEnabled] = useState(() => {
-    const saved = localStorage.getItem('astra-light-rendering');
-    return saved !== 'false'; // 默认开启，只有明确设置为 'false' 才关闭
-  });
+  // 光渲染开关状态，默认关闭
+  const [lightRenderingEnabled, setLightRenderingEnabled] = useState(false);
   
   useEffect(() => {
     setPluginLocale(getLocale());
@@ -80,9 +77,11 @@ function AppContent() {
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [prefabs, setPrefabs] = useState([]);
   const [selectedPrefab, setSelectedPrefab] = useState(null);
+  // 你说为啥必须不同文件用不同的加载器呢
   const gltfLoaderRef = useRef(new GLTFLoader());
   const objLoaderRef = useRef(new OBJLoader());
   const fileHandleRef = useRef(null);
+  const prefabsPanelDragRef = useRef(null); // 用于跟踪预制件面板拖拽状态
   const [projectFileName, setProjectFileName] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [theme, setTheme] = useState(() => {
@@ -123,6 +122,18 @@ function AppContent() {
     const saved = localStorage.getItem('astra-panel-inspector-collapsed');
     return saved === 'true';
   });
+  
+  // 预制件面板高度，可以通过拖拽调整喵
+  const [prefabsPanelHeight, setPrefabsPanelHeight] = useState(() => {
+    const saved = localStorage.getItem('astra-prefabs-panel-height');
+    return saved ? parseInt(saved, 10) : 200;
+  });
+  const prefabsPanelHeightRef = useRef(prefabsPanelHeight); // 用于保存最新的高度值
+
+  // 同步高度到 ref 
+  useEffect(() => {
+    prefabsPanelHeightRef.current = prefabsPanelHeight;
+  }, [prefabsPanelHeight]);
   
   const leftSidebarAllCollapsed = hierarchyCollapsed && prefabsCollapsed;
 
@@ -171,10 +182,35 @@ function AppContent() {
     localStorage.setItem('astra-max-snapshots', String(clampedValue));
   }, []);
 
-  // 光渲染开关变化处理喵
+  // 光渲染开关变化处理
   const handleLightRenderingChange = useCallback((enabled) => {
     setLightRenderingEnabled(enabled);
-    localStorage.setItem('astra-light-rendering', String(enabled));
+  }, []);
+
+  // 预制件面板高度拖拽处理喵
+  const handlePrefabsPanelDragStart = useCallback((e) => {
+    e.preventDefault();
+    prefabsPanelDragRef.current = {
+      startY: e.clientY,
+      startHeight: prefabsPanelHeight
+    };
+    document.addEventListener('mousemove', handlePrefabsPanelDrag);
+    document.addEventListener('mouseup', handlePrefabsPanelDragEnd);
+  }, [prefabsPanelHeight]);
+
+  const handlePrefabsPanelDrag = useCallback((e) => {
+    if (!prefabsPanelDragRef.current) return;
+    const delta = prefabsPanelDragRef.current.startY - e.clientY;
+    const newHeight = Math.min(Math.max(prefabsPanelDragRef.current.startHeight + delta, 100), 400);
+    setPrefabsPanelHeight(newHeight);
+  }, []);
+
+  const handlePrefabsPanelDragEnd = useCallback(() => {
+    // 使用 ref 保存最新的高度值到 localStorage 喵
+    localStorage.setItem('astra-prefabs-panel-height', String(prefabsPanelHeightRef.current));
+    prefabsPanelDragRef.current = null;
+    document.removeEventListener('mousemove', handlePrefabsPanelDrag);
+    document.removeEventListener('mouseup', handlePrefabsPanelDragEnd);
   }, []);
 
   useEffect(() => {
@@ -475,7 +511,7 @@ function AppContent() {
    * 使用 URL.createObjectURL 创建临时 URL，删除资源时要 URL.revokeObjectURL 释放内存，
    * 不然内存泄漏了直接老冯飞天。
    *
-   * 对于带 resourceMap 的 GLTF 文件，使用 URL modifier 来拦截资源加载请求喵！
+   * 对于带 resourceMap 的 GLTF 文件，使用 URL modifier 来拦截资源加载请求！
    */
   const handleImportAsset = useCallback((fileOrObject) => {
     // 检查是否是带 resourceMap 的对象喵！
@@ -2050,6 +2086,7 @@ function AppContent() {
             minWidth={200} 
             maxWidth={500} 
             defaultWidth={280}
+            storageKey="astra-left-sidebar"
             className={`left-sidebar ${leftSidebarAllCollapsed ? 'all-collapsed' : ''}`}
           >
             <HierarchyPanel
@@ -2071,6 +2108,13 @@ function AppContent() {
               onCollapseChange={setHierarchyCollapsed}
               onReorderObjects={handleReorderObjects}
             />
+            {/* 两个面板都展开时显示可拖拽分隔条喵 */}
+            {!hierarchyCollapsed && !prefabsCollapsed && (
+              <div 
+                className="panel-resize-handle"
+                onMouseDown={handlePrefabsPanelDragStart}
+              />
+            )}
             <PrefabsPanel
               prefabs={prefabs}
               sceneObjects={sceneObjects}
@@ -2080,6 +2124,7 @@ function AppContent() {
               onDeletePrefab={handleDeletePrefab}
               vertical={leftSidebarAllCollapsed}
               onCollapseChange={setPrefabsCollapsed}
+              style={!prefabsCollapsed ? { height: prefabsPanelHeight, flex: 'none' } : {}}
             />
           </ResizablePanel>
 
@@ -2128,6 +2173,7 @@ function AppContent() {
           minHeight={80} 
           maxHeight={400} 
           defaultHeight={150}
+          storageKey="astra-bottom-panel"
           className="bottom-area"
           collapsed={isAssetsPanelCollapsed}
         >

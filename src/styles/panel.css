@@ -205,6 +205,24 @@
   min-height: 0 !important;
 }
 
+/* 预制件面板和层级面板之间的拖拽分隔条喵 */
+.panel-resize-handle {
+  height: 4px;
+  width: 100%;
+  background: transparent;
+  cursor: ns-resize;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.panel-resize-handle:hover {
+  background: var(--accent);
+}
+
+.panel-resize-handle:active {
+  background: var(--accent-active);
+}
+
 .prefabs-panel .prefabs-empty {
   color: var(--text-secondary);
   text-align: center;

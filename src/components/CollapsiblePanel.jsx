@@ -22,6 +22,7 @@ import IconChevronRight from '../icons/chevron-right.svg?react';
  * @param {string} props.storageKey - localStorage 键名（用于持久化折叠状态）
  * @param {boolean} props.vertical - 是否垂直折叠
  * @param {Function} props.onCollapseChange - 折叠状态变化回调
+ * @param {Object} props.style - 自定义样式
  * @returns {JSX.Element} 可折叠面板组件
  */
 function CollapsiblePanel({ 
@@ -32,7 +33,8 @@ function CollapsiblePanel({
   headerRight,
   storageKey,
   vertical = false,
-  onCollapseChange
+  onCollapseChange,
+  style
 }) {
   const getInitialState = () => {
     if (storageKey) {
@@ -63,6 +65,7 @@ function CollapsiblePanel({
         className={`panel collapsible-panel vertical-collapsed ${className}`}
         onClick={handleToggle}
         title={title}
+        style={style}
       >
         <div className="panel-vertical-title">
           {title.split('').map((char, i) => (
@@ -74,7 +77,7 @@ function CollapsiblePanel({
   }
 
   return (
-    <div className={`panel collapsible-panel ${className} ${collapsed ? 'collapsed' : ''}`}>
+    <div className={`panel collapsible-panel ${className} ${collapsed ? 'collapsed' : ''}`} style={style}>
       <div className="panel-header" onClick={handleToggle}>
         <span className="panel-header-left">
           <span className="panel-collapse-icon">
