@@ -1,6 +1,5 @@
 {
   "app.title": "Astra 3D Engine",
-  "app.version": "v0.1.0",
 
   "importModel.title": "Import Model",
   "importModel.description": "Choose import method:",
@@ -248,5 +247,21 @@
   "fileBrowser.open": "Open",
   "fileBrowser.folderNamePlaceholder": "Folder name",
   "fileBrowser.create": "Create",
-  "fileBrowser.drives": "Drives"
+  "fileBrowser.drives": "Drives",
+
+  "scene.createNew": "New Scene",
+  "scene.rename": "Rename Scene",
+  "scene.delete": "Delete Scene",
+  "scene.setMain": "Set as Main Scene",
+  "scene.isMain": "Main Scene",
+  "scene.cannotDeleteLast": "Cannot delete the last scene",
+  "scene.cannotDeleteMain": "Cannot delete the main scene",
+  "scene.switched": "Switched to scene",
+  "scene.created": "Created new scene",
+  "scene.deleted": "Deleted scene",
+  "scene.renamed": "Renamed scene",
+  "scene.mainSet": "Set as main scene",
+  "scene.panelTitle": "Scenes",
+  "scene.empty": "No scenes",
+  "scene.currentScene": "Current Scene"
 }

@@ -21,6 +21,7 @@ import HierarchyPanel from './components/HierarchyPanel.jsx';
 import InspectorPanel from './components/InspectorPanel.jsx';
 import AssetsPanel from './components/AssetsPanel.jsx';
 import PrefabsPanel from './components/PrefabsPanel.jsx';
+import ScenePanel from './components/ScenePanel.jsx';
 import Toolbar from './components/Toolbar.jsx';
 import PreferencesModal from './components/PreferencesModal.jsx';
 import SnapshotsModal from './components/SnapshotsModal.jsx';
@@ -28,6 +29,7 @@ import PluginSettingsModal from './components/PluginSettingsModal.jsx';
 import ResizablePanel from './components/ResizablePanel.jsx';
 import FileBrowserDialog from './components/FileBrowserDialog.jsx';
 import { msg, toggleLocale, getLocale, setLocale } from './i18n/index.js';
+import { ENGINE_VERSION, PROJECT_FORMAT_VERSION } from './meta.js';
 import { useHistory } from './hooks/useHistory.js';
 import { useAutoSave } from './hooks/useAutoSave.js';
 import { useRecentProjects } from './hooks/useRecentProjects.js';
@@ -54,16 +56,170 @@ function AppContent() {
   const toast = useToast();
   const [selectedObject, setSelectedObject] = useState(null);
   const [selectedObjects, setSelectedObjects] = useState([]);
+  
+  // 多场景系统：scenes 数组 + currentSceneId 喵！
+  // 每个场景独立管理自己的对象层级，场景切换时不丢失数据
+  const [scenes, setScenes] = useState([
+    {
+      id: 'scene-main-001',
+      name: 'Main Scene',
+      objects: [],
+      isMain: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      settings: {
+        ambientLight: { color: '#ffffff', intensity: 0.5 },
+        backgroundColor: '#1a1a2e',
+        fog: { enabled: false }
+      }
+    }
+  ]);
+  const [currentSceneId, setCurrentSceneId] = useState('scene-main-001');
+  
+  // 计算属性：获取当前场景的对象列表喵！
+  // 这样其他组件可以继续使用 sceneObjects，不需要大改
+  const currentScene = scenes.find(s => s.id === currentSceneId);
+  const sceneObjects = currentScene?.objects || [];
+  
+  // useHistory 现在管理整个 scenes 数组，而不是单个 sceneObjects 喵！
   const {
-    state: sceneObjects,
-    setState: setSceneObjectsWithHistory,
+    state: historyScenes,
+    setState: setScenesWithHistory,
     recordCurrentState,
     undo,
     redo,
     canUndo,
     canRedo,
     reset: resetHistory
-  } = useHistory([]);
+  } = useHistory(scenes);
+  
+  // 同步 scenes 和 historyScenes 喵！
+  // historyScenes 是 useHistory 内部管理的状态，需要同步到 scenes
+  useEffect(() => {
+    if (historyScenes !== scenes) {
+      setScenes(historyScenes);
+    }
+  }, [historyScenes]);
+  
+  // 更新当前场景对象的辅助函数喵！
+  // 这个函数会更新当前场景的 objects 数组，同时更新 updatedAt 时间戳
+  const updateCurrentSceneObjects = useCallback((newObjects, recordHistory = true) => {
+    const now = new Date().toISOString();
+    setScenesWithHistory(prev => prev.map(s => 
+      s.id === currentSceneId
+        ? { ...s, objects: newObjects, updatedAt: now }
+        : s
+    ), recordHistory);
+  }, [currentSceneId, setScenesWithHistory]);
+
+  // ========== 多场景系统：场景 CRUD 操作函数喵！ ==========
+
+  /**
+   * 切换场景
+   * 切换场景时会清空选中状态，避免跨场景选中混乱喵！
+   */
+  const handleSwitchScene = useCallback((sceneId) => {
+    if (sceneId === currentSceneId) return;
+    
+    setCurrentSceneId(sceneId);
+    setSelectedObject(null);
+    setSelectedObjects([]);
+    setSelectedPrefab(null);
+    setSelectedAsset(null);
+    
+    console.log('Switched to scene:', sceneId);
+  }, [currentSceneId]);
+
+  /**
+   * 创建新场景
+   * 新场景会自动命名为 "Scene N"，N 是场景数量喵！
+   */
+  const handleCreateScene = useCallback(() => {
+    const newSceneId = `scene-${Date.now()}`;
+    const sceneCount = scenes.length;
+    const newScene = {
+      id: newSceneId,
+      name: `Scene ${sceneCount + 1}`,
+      objects: [],
+      isMain: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      settings: {
+        ambientLight: { color: '#ffffff', intensity: 0.5 },
+        backgroundColor: '#1a1a2e',
+        fog: { enabled: false }
+      }
+    };
+    
+    setScenesWithHistory(prev => [...prev, newScene]);
+    setCurrentSceneId(newSceneId);
+    setSelectedObject(null);
+    setSelectedObjects([]);
+    
+    console.log('Created new scene:', newSceneId);
+  }, [scenes, setScenesWithHistory]);
+
+  /**
+   * 删除场景
+   * 不能删除最后一个场景，也不能删除主场景喵！
+   */
+  const handleDeleteScene = useCallback((sceneId) => {
+    if (scenes.length <= 1) {
+      console.warn('Cannot delete the last scene');
+      return;
+    }
+    
+    const sceneToDelete = scenes.find(s => s.id === sceneId);
+    if (sceneToDelete?.isMain) {
+      console.warn('Cannot delete the main scene');
+      return;
+    }
+    
+    setScenesWithHistory(prev => prev.filter(s => s.id !== sceneId));
+    
+    // 如果删除的是当前场景，切换到主场景或第一个场景喵！
+    if (sceneId === currentSceneId) {
+      const mainScene = scenes.find(s => s.isMain && s.id !== sceneId);
+      const firstScene = scenes.find(s => s.id !== sceneId);
+      const newCurrentId = mainScene?.id || firstScene?.id;
+      setCurrentSceneId(newCurrentId);
+      setSelectedObject(null);
+      setSelectedObjects([]);
+    }
+    
+    console.log('Deleted scene:', sceneId);
+  }, [scenes, currentSceneId, setScenesWithHistory]);
+
+  /**
+   * 重命名场景
+   */
+  const handleRenameScene = useCallback((sceneId, newName) => {
+    const now = new Date().toISOString();
+    setScenesWithHistory(prev => prev.map(s => 
+      s.id === sceneId
+        ? { ...s, name: newName, updatedAt: now }
+        : s
+    ));
+    
+    console.log('Renamed scene:', sceneId, 'to', newName);
+  }, [setScenesWithHistory]);
+
+  /**
+   * 设置主场景
+   * 主场景是项目的入口场景，只能有一个喵！
+   */
+  const handleSetMainScene = useCallback((sceneId) => {
+    setScenesWithHistory(prev => prev.map(s => 
+      s.id === sceneId
+        ? { ...s, isMain: true }
+        : { ...s, isMain: false }
+    ));
+    
+    console.log('Set main scene:', sceneId);
+  }, [setScenesWithHistory]);
+
+  // ========== 多场景系统：场景 CRUD 操作函数结束喵！ ==========
+
   const [currentTool, setCurrentTool] = useState('select');
   const [isPlaying, setIsPlaying] = useState(false);
   const [locale, setLocaleState] = useState(getLocale());
@@ -114,6 +270,27 @@ function AppContent() {
     const saved = localStorage.getItem('astra-panel-hierarchy-collapsed');
     return saved === 'true';
   });
+  
+  // 多场景系统：场景面板折叠状态喵！
+  const [scenePanelCollapsed, setScenePanelCollapsed] = useState(() => {
+    const saved = localStorage.getItem('astra-panel-scene-collapsed');
+    return saved === 'true';
+  });
+  
+  // 多场景系统：场景面板高度占比（0-1之间），可以通过拖拽调整喵！
+  // 使用占比而不是固定高度，让布局更灵活喵！
+  const [scenePanelRatio, setScenePanelRatio] = useState(() => {
+    const saved = localStorage.getItem('astra-scene-panel-ratio');
+    return saved ? parseFloat(saved) : 0.15; // 默认占比 15%
+  });
+  const scenePanelRatioRef = useRef(scenePanelRatio); // 用于保存最新的占比值喵！
+  const scenePanelDragRef = useRef(null); // 拖拽状态引用喵！
+  
+  // 同步占比到 ref 喵！
+  useEffect(() => {
+    scenePanelRatioRef.current = scenePanelRatio;
+  }, [scenePanelRatio]);
+  
   const [prefabsCollapsed, setPrefabsCollapsed] = useState(() => {
     const saved = localStorage.getItem('astra-panel-prefabs-collapsed');
     return saved === 'true';
@@ -123,19 +300,20 @@ function AppContent() {
     return saved === 'true';
   });
   
-  // 预制件面板高度，可以通过拖拽调整喵
-  const [prefabsPanelHeight, setPrefabsPanelHeight] = useState(() => {
-    const saved = localStorage.getItem('astra-prefabs-panel-height');
-    return saved ? parseInt(saved, 10) : 200;
+  // 预制件面板高度占比（0-1之间），可以通过拖拽调整喵！
+  // 使用占比而不是固定高度，让布局更灵活喵！
+  const [prefabsPanelRatio, setPrefabsPanelRatio] = useState(() => {
+    const saved = localStorage.getItem('astra-prefabs-panel-ratio');
+    return saved ? parseFloat(saved) : 0.2; // 默认占比 20%
   });
-  const prefabsPanelHeightRef = useRef(prefabsPanelHeight); // 用于保存最新的高度值
+  const prefabsPanelRatioRef = useRef(prefabsPanelRatio); // 用于保存最新的占比值喵！
 
-  // 同步高度到 ref 
+  // 同步占比到 ref 喵！
   useEffect(() => {
-    prefabsPanelHeightRef.current = prefabsPanelHeight;
-  }, [prefabsPanelHeight]);
+    prefabsPanelRatioRef.current = prefabsPanelRatio;
+  }, [prefabsPanelRatio]);
   
-  const leftSidebarAllCollapsed = hierarchyCollapsed && prefabsCollapsed;
+  const leftSidebarAllCollapsed = hierarchyCollapsed && prefabsCollapsed && scenePanelCollapsed;
 
   const hasFileSystemAccess = 'showSaveFilePicker' in window && 'showOpenFilePicker' in window;
   const isElectron = typeof window !== 'undefined' && !!window.electronAPI;
@@ -187,30 +365,80 @@ function AppContent() {
     setLightRenderingEnabled(enabled);
   }, []);
 
-  // 预制件面板高度拖拽处理喵
+  // 预制件面板高度占比拖拽处理喵！
   const handlePrefabsPanelDragStart = useCallback((e) => {
     e.preventDefault();
+    // 获取左侧边栏的总高度喵！
+    const sidebar = e.target.closest('.left-sidebar');
+    const sidebarHeight = sidebar?.offsetHeight || 0;
+    
     prefabsPanelDragRef.current = {
       startY: e.clientY,
-      startHeight: prefabsPanelHeight
+      startRatio: prefabsPanelRatio,
+      sidebarHeight
     };
     document.addEventListener('mousemove', handlePrefabsPanelDrag);
     document.addEventListener('mouseup', handlePrefabsPanelDragEnd);
-  }, [prefabsPanelHeight]);
+  }, [prefabsPanelRatio]);
 
   const handlePrefabsPanelDrag = useCallback((e) => {
     if (!prefabsPanelDragRef.current) return;
+    // 计算拖拽距离并转换为占比变化喵！
     const delta = prefabsPanelDragRef.current.startY - e.clientY;
-    const newHeight = Math.min(Math.max(prefabsPanelDragRef.current.startHeight + delta, 100), 400);
-    setPrefabsPanelHeight(newHeight);
+    const sidebarHeight = prefabsPanelDragRef.current.sidebarHeight;
+    
+    if (sidebarHeight > 0) {
+      // 将像素距离转换为占比变化喵！
+      const ratioDelta = delta / sidebarHeight;
+      const newRatio = Math.min(Math.max(prefabsPanelDragRef.current.startRatio + ratioDelta, 0.1), 0.35);
+      setPrefabsPanelRatio(newRatio);
+    }
   }, []);
 
   const handlePrefabsPanelDragEnd = useCallback(() => {
-    // 使用 ref 保存最新的高度值到 localStorage 喵
-    localStorage.setItem('astra-prefabs-panel-height', String(prefabsPanelHeightRef.current));
+    // 使用 ref 保存最新的占比值到 localStorage 喵！
+    localStorage.setItem('astra-prefabs-panel-ratio', String(prefabsPanelRatioRef.current));
     prefabsPanelDragRef.current = null;
     document.removeEventListener('mousemove', handlePrefabsPanelDrag);
     document.removeEventListener('mouseup', handlePrefabsPanelDragEnd);
+  }, []);
+
+  // 多场景系统：场景面板高度占比拖拽处理喵！
+  const handleScenePanelDragStart = useCallback((e) => {
+    e.preventDefault();
+    // 获取左侧边栏的总高度喵！
+    const sidebar = e.target.closest('.left-sidebar');
+    const sidebarHeight = sidebar?.offsetHeight || 0;
+    
+    scenePanelDragRef.current = {
+      startY: e.clientY,
+      startRatio: scenePanelRatio,
+      sidebarHeight
+    };
+    document.addEventListener('mousemove', handleScenePanelDrag);
+    document.addEventListener('mouseup', handleScenePanelDragEnd);
+  }, [scenePanelRatio]);
+
+  const handleScenePanelDrag = useCallback((e) => {
+    if (!scenePanelDragRef.current) return;
+    // 计算拖拽距离并转换为占比变化喵！
+    const delta = e.clientY - scenePanelDragRef.current.startY;
+    const sidebarHeight = scenePanelDragRef.current.sidebarHeight;
+    
+    if (sidebarHeight > 0) {
+      // 将像素距离转换为占比变化喵！
+      const ratioDelta = delta / sidebarHeight;
+      const newRatio = Math.min(Math.max(scenePanelDragRef.current.startRatio + ratioDelta, 0.1), 0.4);
+      setScenePanelRatio(newRatio);
+    }
+  }, []);
+
+  const handleScenePanelDragEnd = useCallback(() => {
+    // 使用 ref 保存最新的占比值到 localStorage 喵！
+    localStorage.setItem('astra-scene-panel-ratio', String(scenePanelRatioRef.current));
+    scenePanelDragRef.current = null;
+    document.removeEventListener('mousemove', handleScenePanelDrag);
+    document.removeEventListener('mouseup', handleScenePanelDragEnd);
   }, []);
 
   useEffect(() => {
@@ -369,132 +597,136 @@ function AppContent() {
    * - plane：平面
    * - folder：文件夹（用于组织对象）
    * - model：模型（需要asset参数）
+   * - pointLight/directionalLight/spotLight：光源
+   * 
+   * 多场景系统：对象添加到当前激活的场景中喵！
    * 
    * @param {string} type - 对象类型
    * @param {Object} asset - 资源对象（模型时使用）
    */
   const handleAddObject = useCallback((type, asset = null) => {
-    setSceneObjectsWithHistory(prev => {
-      let baseName;
-      let newObject;
+    // 使用当前场景的对象列表喵！
+    const currentObjects = sceneObjects;
+    let baseName;
+    let newObject;
+    
+    if (type === 'folder') {
+      baseName = 'Folder';
+      const uniqueName = generateUniqueName(baseName, currentObjects);
       
-      if (type === 'folder') {
-        baseName = 'Folder';
-        const uniqueName = generateUniqueName(baseName, prev);
-        
-        newObject = {
-          id: Date.now(),
-          name: uniqueName,
-          type: 'folder',
-          position: [0, 0, 0],
-          rotation: [0, 0, 0],
-          scale: [1, 1, 1],
-          isFolder: true,
-          children: []
-        };
-      } else if (type === 'pointLight') {
-        baseName = 'Point Light';
-        const uniqueName = generateUniqueName(baseName, prev);
-        
-        newObject = {
-          id: Date.now(),
-          name: uniqueName,
-          type: 'pointLight',
-          position: [0, 2, 0],
-          rotation: [0, 0, 0],
-          scale: [1, 1, 1],
-          color: '#ffffff',
-          intensity: 2, // 提高默认强度
-          distance: 10, // 设置有效距离
-          decay: 1, // 降低衰减
-          isLight: true,
-          lightType: 'point'
-        };
-      } else if (type === 'directionalLight') {
-        baseName = 'Directional Light';
-        const uniqueName = generateUniqueName(baseName, prev);
-        
-        newObject = {
-          id: Date.now(),
-          name: uniqueName,
-          type: 'directionalLight',
-          position: [1, 2, 1],
-          rotation: [0, 0, 0],
-          scale: [1, 1, 1],
-          color: '#ffffff',
-          intensity: 1.5, // 提高默认强度
-          isLight: true,
-          lightType: 'directional'
-        };
-      } else if (type === 'spotLight') {
-        baseName = 'Spot Light';
-        const uniqueName = generateUniqueName(baseName, prev);
-        
-        newObject = {
-          id: Date.now(),
-          name: uniqueName,
-          type: 'spotLight',
-          position: [0, 2, 0],
-          rotation: [-Math.PI / 4, 0, 0],
-          scale: [1, 1, 1],
-          color: '#ffffff',
-          intensity: 3, // 提高默认强度
-          distance: 10, // 设置有效距离
-          decay: 1, // 降低衰减
-          angle: Math.PI / 4, // 增大角度
-          penumbra: 0.3, // 添加半影
-          isLight: true,
-          lightType: 'spot'
-        };
-      } else if (asset && (asset.type === 'gltf' || asset.type === 'glb' || asset.type === 'obj')) {
-        baseName = asset.name.replace(/\.[^.]+$/, '');
-        const uniqueName = generateUniqueName(baseName, prev);
-        
-        newObject = {
-          id: Date.now(),
-          name: uniqueName,
-          type: 'model',
-          position: [0, 0, 0],
-          rotation: [0, 0, 0],
-          scale: [1, 1, 1],
-          color: '#ffffff',
-          assetId: asset.id,
-          isModel: true,
-          textureId: null,
-          uvScale: [1, 1],
-          uvOffset: [0, 0]
-        };
-      } else {
-        baseName = type.charAt(0).toUpperCase() + type.slice(1);
-        const uniqueName = generateUniqueName(baseName, prev);
-        
-        newObject = {
-          id: Date.now(),
-          name: uniqueName,
-          type: type,
-          position: [0, 0, 0],
-          rotation: [0, 0, 0],
-          scale: [1, 1, 1],
-          color: '#66ccff',
-          faceTextures: type === 'cube' ? {
-            right: null,
-            left: null,
-            top: null,
-            bottom: null,
-            front: null,
-            back: null
-          } : undefined,
-          textureId: (type === 'sphere' || type === 'plane') ? null : undefined,
-          uvScale: (type === 'sphere' || type === 'plane') ? [1, 1] : undefined,
-          uvOffset: (type === 'sphere' || type === 'plane') ? [0, 0] : undefined
-        };
-      }
+      newObject = {
+        id: Date.now(),
+        name: uniqueName,
+        type: 'folder',
+        position: [0, 0, 0],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1],
+        isFolder: true,
+        children: []
+      };
+    } else if (type === 'pointLight') {
+      baseName = 'Point Light';
+      const uniqueName = generateUniqueName(baseName, currentObjects);
       
-      setSelectedObject(newObject);
-      setSelectedObjects([newObject]);
-      return [...prev, newObject];
-    });
-  }, [setSceneObjectsWithHistory, generateUniqueName]);
+      newObject = {
+        id: Date.now(),
+        name: uniqueName,
+        type: 'pointLight',
+        position: [0, 2, 0],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1],
+        color: '#ffffff',
+        intensity: 2,
+        distance: 10,
+        decay: 1,
+        isLight: true,
+        lightType: 'point'
+      };
+    } else if (type === 'directionalLight') {
+      baseName = 'Directional Light';
+      const uniqueName = generateUniqueName(baseName, currentObjects);
+      
+      newObject = {
+        id: Date.now(),
+        name: uniqueName,
+        type: 'directionalLight',
+        position: [1, 2, 1],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1],
+        color: '#ffffff',
+        intensity: 1.5,
+        isLight: true,
+        lightType: 'directional'
+      };
+    } else if (type === 'spotLight') {
+      baseName = 'Spot Light';
+      const uniqueName = generateUniqueName(baseName, currentObjects);
+      
+      newObject = {
+        id: Date.now(),
+        name: uniqueName,
+        type: 'spotLight',
+        position: [0, 2, 0],
+        rotation: [-Math.PI / 4, 0, 0],
+        scale: [1, 1, 1],
+        color: '#ffffff',
+        intensity: 3,
+        distance: 10,
+        decay: 1,
+        angle: Math.PI / 4,
+        penumbra: 0.3,
+        isLight: true,
+        lightType: 'spot'
+      };
+    } else if (asset && (asset.type === 'gltf' || asset.type === 'glb' || asset.type === 'obj')) {
+      baseName = asset.name.replace(/\.[^.]+$/, '');
+      const uniqueName = generateUniqueName(baseName, currentObjects);
+      
+      newObject = {
+        id: Date.now(),
+        name: uniqueName,
+        type: 'model',
+        position: [0, 0, 0],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1],
+        color: '#ffffff',
+        assetId: asset.id,
+        isModel: true,
+        textureId: null,
+        uvScale: [1, 1],
+        uvOffset: [0, 0]
+      };
+    } else {
+      baseName = type.charAt(0).toUpperCase() + type.slice(1);
+      const uniqueName = generateUniqueName(baseName, currentObjects);
+      
+      newObject = {
+        id: Date.now(),
+        name: uniqueName,
+        type: type,
+        position: [0, 0, 0],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1],
+        color: '#66ccff',
+        faceTextures: type === 'cube' ? {
+          right: null,
+          left: null,
+          top: null,
+          bottom: null,
+          front: null,
+          back: null
+        } : undefined,
+        textureId: (type === 'sphere' || type === 'plane') ? null : undefined,
+        uvScale: (type === 'sphere' || type === 'plane') ? [1, 1] : undefined,
+        uvOffset: (type === 'sphere' || type === 'plane') ? [0, 0] : undefined
+      };
+    }
+    
+    setSelectedObject(newObject);
+    setSelectedObjects([newObject]);
+    // 添加到当前场景喵！
+    updateCurrentSceneObjects([...currentObjects, newObject]);
+  }, [sceneObjects, generateUniqueName, updateCurrentSceneObjects]);
 
   const textureLoaderRef = useRef(new THREE.TextureLoader());
 
@@ -885,6 +1117,8 @@ function AppContent() {
    * 
    * meshPath 不包含 gltfScene.name，直接从子对象开始喵！
    * 这样 Viewport.jsx 的查找逻辑就简单了喵！
+   * 
+   * 多场景系统：导入到当前激活的场景中喵！
    */
   const handleImportModelParts = useCallback((asset) => {
     console.log('handleImportModelParts called with asset:', asset);
@@ -897,139 +1131,140 @@ function AppContent() {
       return;
     }
 
-    setSceneObjectsWithHistory(prev => {
-      console.log('handleImportModelParts: starting to parse model');
+    // 使用当前场景的对象列表喵！
+    const currentObjects = sceneObjects;
+    console.log('handleImportModelParts: starting to parse model');
+    
+    const modelBaseName = asset.name.replace(/\.[^.]+$/, '');
+    const rootFolderName = generateUniqueName(modelBaseName, currentObjects);
+    const baseId = Date.now();
+    
+    const modelCenter = asset.center || new THREE.Vector3(0, 0, 0);
+    console.log('modelCenter:', modelCenter);
+    
+    const allNewObjects = [];
+    let idCounter = 0;
+    
+    /**
+     * 递归解析模型层级结构（简化版本喵）
+     * 
+     * meshPath 不包含根节点的名称，直接从子对象开始
+     * 这样 Viewport.jsx 的查找逻辑就简单了喵！
+     * 
+     * 这样创建场景模型的时候就可以正常显示和拖动了。
+     * 
+     * @param {THREE.Object3D} threeObj - Three.js 对象（Group 或 Mesh）
+     * @param {number} parentId - 父对象 ID
+     * @param {string} meshPath - mesh 的路径（不包含根节点名称）
+     * @returns {Object} 创建的场景对象
+     */
+    const parseObject3D = (threeObj, parentId, meshPath) => {
+      const objId = baseId + idCounter;
+      idCounter++;
       
-      const modelBaseName = asset.name.replace(/\.[^.]+$/, '');
-      const rootFolderName = generateUniqueName(modelBaseName, prev);
-      const baseId = Date.now();
+      // 获取世界变换
+      const worldPos = new THREE.Vector3();
+      const worldQuat = new THREE.Quaternion();
+      const worldScale = new THREE.Vector3();
+      threeObj.getWorldPosition(worldPos);
+      threeObj.getWorldQuaternion(worldQuat);
+      threeObj.getWorldScale(worldScale);
       
-      const modelCenter = asset.center || new THREE.Vector3(0, 0, 0);
-      console.log('modelCenter:', modelCenter);
+      // 计算相对于模型中心的位置喵
+      const relativePos = worldPos.clone().sub(modelCenter);
+      const worldEuler = new THREE.Euler().setFromQuaternion(worldQuat);
       
-      const allNewObjects = [];
-      let idCounter = 0;
+      // 生成唯一名称
+      // 如果有名称，就用它，否则用 Mesh 或 Group 名称
+      // 这样可以确保每个对象都有一个唯一的名称，方便查找和管理
+      // 以及用来设置父子对象
+      const objName = generateUniqueName(threeObj.name || (threeObj.isMesh ? 'Mesh' : 'Group'), [...currentObjects, ...allNewObjects]);
       
-      /**
-       * 递归解析模型层级结构（简化版本喵）
-       * 
-       * meshPath 不包含根节点的名称，直接从子对象开始
-       * 这样 Viewport.jsx 的查找逻辑就简单了喵！
-       * 
-       * 这样创建场景模型的时候就可以正常显示和拖动了。
-       * 
-       * @param {THREE.Object3D} threeObj - Three.js 对象（Group 或 Mesh）
-       * @param {number} parentId - 父对象 ID
-       * @param {string} meshPath - mesh 的路径（不包含根节点名称）
-       * @returns {Object} 创建的场景对象
-       */
-      const parseObject3D = (threeObj, parentId, meshPath) => {
-        const objId = baseId + idCounter;
-        idCounter++;
+      console.log('parseObject3D: threeObj.name=', threeObj.name, 'meshPath=', meshPath, 'isMesh=', threeObj.isMesh);
+      
+      if (threeObj.isMesh) {
+        // Mesh 类型，支持单独贴图喵
+        const meshObj = {
+          id: objId,
+          name: objName,
+          type: 'mesh',
+          position: [relativePos.x, relativePos.y, relativePos.z],
+          rotation: [
+            THREE.MathUtils.radToDeg(worldEuler.x),
+            THREE.MathUtils.radToDeg(worldEuler.y),
+            THREE.MathUtils.radToDeg(worldEuler.z)
+          ],
+          scale: [worldScale.x, worldScale.y, worldScale.z],
+          parentId: parentId,
+          assetId: asset.id,
+          meshPath: meshPath, // 直接使用传入的 meshPath 喵！
+          textureId: null,
+          uvScale: [1, 1],
+          uvOffset: [0, 0]
+        };
+        console.log('Created mesh object:', meshObj);
+        allNewObjects.push(meshObj);
+        return meshObj;
+      } else {
+        // Group 类型（包括有子对象的任意 Object3D）
+        const folderObj = {
+          id: objId,
+          name: objName,
+          type: 'folder',
+          position: [relativePos.x, relativePos.y, relativePos.z],
+          rotation: [
+            THREE.MathUtils.radToDeg(worldEuler.x),
+            THREE.MathUtils.radToDeg(worldEuler.y),
+            THREE.MathUtils.radToDeg(worldEuler.z)
+          ],
+          scale: [worldScale.x, worldScale.y, worldScale.z],
+          isFolder: true,
+          children: [],
+          parentId: parentId,
+          assetId: asset.id,
+          meshPath: meshPath
+        };
+        console.log('Created folder object:', folderObj);
         
-        // 获取世界变换
-        const worldPos = new THREE.Vector3();
-        const worldQuat = new THREE.Quaternion();
-        const worldScale = new THREE.Vector3();
-        threeObj.getWorldPosition(worldPos);
-        threeObj.getWorldQuaternion(worldQuat);
-        threeObj.getWorldScale(worldScale);
+        // 递归处理子对象，meshPath 是子对象的名称喵！
+        threeObj.children.forEach(child => {
+          // 子对象的 meshPath 是父对象的 meshPath + '/' + 子对象的名称
+          // 如果父对象的 meshPath 是空字符串，子对象的 meshPath 就是子对象的名称喵！
+          const childMeshPath = meshPath ? `${meshPath}/${child.name}` : child.name;
+          const childObj = parseObject3D(child, objId, childMeshPath);
+          if (childObj) {
+            folderObj.children.push(childObj.id);
+          }
+        });
         
-        // 计算相对于模型中心的位置喵
-        const relativePos = worldPos.clone().sub(modelCenter);
-        const worldEuler = new THREE.Euler().setFromQuaternion(worldQuat);
-        
-        // 生成唯一名称
-        // 如果有名称，就用它，否则用 Mesh 或 Group 名称
-        // 这样可以确保每个对象都有一个唯一的名称，方便查找和管理
-        // 以及用来设置父子对象
-        const objName = generateUniqueName(threeObj.name || (threeObj.isMesh ? 'Mesh' : 'Group'), [...prev, ...allNewObjects]);
-        
-        console.log('parseObject3D: threeObj.name=', threeObj.name, 'meshPath=', meshPath, 'isMesh=', threeObj.isMesh);
-        
-        if (threeObj.isMesh) {
-          // Mesh 类型，支持单独贴图喵
-          const meshObj = {
-            id: objId,
-            name: objName,
-            type: 'mesh',
-            position: [relativePos.x, relativePos.y, relativePos.z],
-            rotation: [
-              THREE.MathUtils.radToDeg(worldEuler.x),
-              THREE.MathUtils.radToDeg(worldEuler.y),
-              THREE.MathUtils.radToDeg(worldEuler.z)
-            ],
-            scale: [worldScale.x, worldScale.y, worldScale.z],
-            parentId: parentId,
-            assetId: asset.id,
-            meshPath: meshPath, // 直接使用传入的 meshPath 喵！
-            textureId: null,
-            uvScale: [1, 1],
-            uvOffset: [0, 0]
-          };
-          console.log('Created mesh object:', meshObj);
-          allNewObjects.push(meshObj);
-          return meshObj;
-        } else {
-          // Group 类型（包括有子对象的任意 Object3D）
-          const folderObj = {
-            id: objId,
-            name: objName,
-            type: 'folder',
-            position: [relativePos.x, relativePos.y, relativePos.z],
-            rotation: [
-              THREE.MathUtils.radToDeg(worldEuler.x),
-              THREE.MathUtils.radToDeg(worldEuler.y),
-              THREE.MathUtils.radToDeg(worldEuler.z)
-            ],
-            scale: [worldScale.x, worldScale.y, worldScale.z],
-            isFolder: true,
-            children: [],
-            parentId: parentId,
-            assetId: asset.id,
-            meshPath: meshPath
-          };
-          console.log('Created folder object:', folderObj);
-          
-          // 递归处理子对象，meshPath 是子对象的名称喵！
-          threeObj.children.forEach(child => {
-            // 子对象的 meshPath 是父对象的 meshPath + '/' + 子对象的名称
-            // 如果父对象的 meshPath 是空字符串，子对象的 meshPath 就是子对象的名称喵！
-            const childMeshPath = meshPath ? `${meshPath}/${child.name}` : child.name;
-            const childObj = parseObject3D(child, objId, childMeshPath);
-            if (childObj) {
-              folderObj.children.push(childObj.id);
-            }
-          });
-          
-          allNewObjects.push(folderObj);
-          return folderObj;
-        }
-      };
-      
-      // 从模型的根节点开始解析喵！
-      // 根节点的 meshPath 是空字符串（不包含根节点的名称）
-      // 这样 Viewport.jsx 的查找逻辑就简单了喵！
-      const rootObj = parseObject3D(asset.gltfScene, null, '');
-      
-      // 重命名根对象为模型名称喵
-      if (rootObj) {
-        const existingNames = [...prev, ...allNewObjects.filter(o => o.id !== rootObj.id)];
-        rootObj.name = generateUniqueName(rootFolderName, existingNames);
-        console.log('Renamed root object to:', rootObj.name);
+        allNewObjects.push(folderObj);
+        return folderObj;
       }
-      
-      // 选中根文件夹和所有新创建的对象喵
-      if (rootObj) {
-        setSelectedObject(rootObj);
-        setSelectedObjects(allNewObjects);
-        console.log('Selected root object and all new objects:', allNewObjects.length);
-      }
-      
-      console.log('handleImportModelParts: created objects:', allNewObjects);
-      return [...prev, ...allNewObjects];
-    });
-  }, [setSceneObjectsWithHistory, generateUniqueName]);
+    };
+    
+    // 从模型的根节点开始解析喵！
+    // 根节点的 meshPath 是空字符串（不包含根节点的名称）
+    // 这样 Viewport.jsx 的查找逻辑就简单了喵！
+    const rootObj = parseObject3D(asset.gltfScene, null, '');
+    
+    // 重命名根对象为模型名称喵
+    if (rootObj) {
+      const existingNames = [...currentObjects, ...allNewObjects.filter(o => o.id !== rootObj.id)];
+      rootObj.name = generateUniqueName(rootFolderName, existingNames);
+      console.log('Renamed root object to:', rootObj.name);
+    }
+    
+    // 选中根文件夹和所有新创建的对象喵
+    if (rootObj) {
+      setSelectedObject(rootObj);
+      setSelectedObjects(allNewObjects);
+      console.log('Selected root object and all new objects:', allNewObjects.length);
+    }
+    
+    console.log('handleImportModelParts: created objects:', allNewObjects);
+    // 添加到当前场景喵！
+    updateCurrentSceneObjects([...currentObjects, ...allNewObjects]);
+  }, [sceneObjects, generateUniqueName, updateCurrentSceneObjects]);
 
   const handleDeleteAsset = useCallback((asset) => {
     if (asset.url) {
@@ -1047,20 +1282,21 @@ function AppContent() {
     ));
   }, []);
 
+  // 多场景系统：删除当前场景中的对象喵！
   const handleDeleteObject = useCallback((id) => {
-    setSceneObjectsWithHistory(prev => prev.filter(obj => obj.id !== id));
+    updateCurrentSceneObjects(sceneObjects.filter(obj => obj.id !== id));
     setSelectedObject(prev => prev && prev.id === id ? null : prev);
     setSelectedObjects(prev => prev.filter(o => o.id !== id));
-  }, [setSceneObjectsWithHistory]);
+  }, [sceneObjects, updateCurrentSceneObjects]);
 
   const handleDeleteSelectedObjects = useCallback(() => {
     if (selectedObjects.length === 0) return;
     
     const idsToDelete = selectedObjects.filter(o => o).map(o => o.id);
-    setSceneObjectsWithHistory(prev => prev.filter(obj => !idsToDelete.includes(obj.id)));
+    updateCurrentSceneObjects(sceneObjects.filter(obj => !idsToDelete.includes(obj.id)));
     setSelectedObject(null);
     setSelectedObjects([]);
-  }, [selectedObjects, setSceneObjectsWithHistory]);
+  }, [selectedObjects, sceneObjects, updateCurrentSceneObjects]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -1097,12 +1333,13 @@ function AppContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedObject, selectedObjects, handleDeleteObject, handleDeleteSelectedObjects]);
 
+  // 多场景系统：更新当前场景中的对象喵！
   const handleUpdateObject = useCallback((id, updates, recordHistory = true) => {
-    setSceneObjectsWithHistory(prev => prev.map(obj =>
+    updateCurrentSceneObjects(sceneObjects.map(obj =>
       obj.id === id ? { ...obj, ...updates } : obj
     ), recordHistory);
     setSelectedObject(prev => prev && prev.id === id ? { ...prev, ...updates } : prev);
-  }, [setSceneObjectsWithHistory]);
+  }, [sceneObjects, updateCurrentSceneObjects]);
 
   const [clipboard, setClipboard] = useState(null);
 
@@ -1135,99 +1372,22 @@ function AppContent() {
    * - 多选：粘贴所有对象，每个对象位置偏移1单位
    * 
    * 粘贴后会自动选中新创建的对象。
+   * 
+   * 多场景系统：粘贴到当前激活的场景中喵！
    */
   const handlePasteObject = useCallback(() => {
     if (!clipboard) return null;
 
-    setSceneObjectsWithHistory(prev => {
-      if (clipboard.type === 'multi') {
-        const newObjects = clipboard.objects.map((obj, index) => {
-          const baseName = obj.name;
-          const uniqueName = generateUniqueName(baseName, prev);
-          
-          return {
-            ...obj,
-            id: Date.now() + index,
-            name: uniqueName,
-            position: [
-              obj.position[0] + 1,
-              obj.position[1],
-              obj.position[2]
-            ],
-            parentId: null
-          };
-        });
-        
-        setSelectedObject(newObjects[0]);
-        setSelectedObjects(newObjects);
-        return [...prev, ...newObjects];
-      } else {
-        const baseName = clipboard.object.name;
-        const uniqueName = generateUniqueName(baseName, prev);
-
-        const newObj = {
-          ...clipboard.object,
-          id: Date.now(),
-          name: uniqueName,
-          position: [
-            clipboard.object.position[0] + 1,
-            clipboard.object.position[1],
-            clipboard.object.position[2]
-          ],
-          parentId: null
-        };
-
-        setSelectedObject(newObj);
-        setSelectedObjects([newObj]);
-        return [...prev, newObj];
-      }
-    });
-    return true;
-  }, [clipboard, setSceneObjectsWithHistory, generateUniqueName]);
-
-  /**
-   * 复制对象（原地复制）
-   * 
-   * 支持单选和多选复制：
-   * - 单选：复制单个对象，位置偏移1单位
-   * - 多选：复制所有选中的对象，每个对象位置偏移1单位
-   * 
-   * @param {number} id - 要复制的对象ID（单选时使用）
-   */
-  const handleDuplicateObject = useCallback((id) => {
-    setSceneObjectsWithHistory(prev => {
-      if (selectedObjects && selectedObjects.length > 1 && 
-          selectedObjects.some(o => o && o.id === id)) {
-        const newObjects = selectedObjects.map((obj, index) => {
-          const baseName = obj.name;
-          const uniqueName = generateUniqueName(baseName, prev);
-          
-          return {
-            ...obj,
-            id: Date.now() + index,
-            name: uniqueName,
-            position: [
-              obj.position[0] + 1,
-              obj.position[1],
-              obj.position[2]
-            ],
-            parentId: null
-          };
-        });
-        
-        setSelectedObject(newObjects[0]);
-        setSelectedObjects(newObjects);
-        return [...prev, ...newObjects];
-      } else {
-        const obj = prev.find(o => o.id === id);
-        if (!obj) return prev;
-
+    const currentObjects = sceneObjects;
+    
+    if (clipboard.type === 'multi') {
+      const newObjects = clipboard.objects.map((obj, index) => {
         const baseName = obj.name;
-        const uniqueName = generateUniqueName(baseName, prev);
-
-        const newObj = {
+        const uniqueName = generateUniqueName(baseName, currentObjects);
+        
+        return {
           ...obj,
-          id: Date.now(),
+          id: Date.now() + index,
           name: uniqueName,
           position: [
             obj.position[0] + 1,
@@ -1236,98 +1396,179 @@ function AppContent() {
           ],
           parentId: null
         };
+      });
+      
+      setSelectedObject(newObjects[0]);
+      setSelectedObjects(newObjects);
+      updateCurrentSceneObjects([...currentObjects, ...newObjects]);
+    } else {
+      const baseName = clipboard.object.name;
+      const uniqueName = generateUniqueName(baseName, currentObjects);
 
-        setSelectedObject(newObj);
-        setSelectedObjects([newObj]);
-        return [...prev, newObj];
-      }
-    });
-    return true;
-  }, [setSceneObjectsWithHistory, generateUniqueName, selectedObjects]);
-
-  const handleRenameObject = useCallback((id, newName) => {
-    setSceneObjectsWithHistory(prev => {
-      const uniqueName = generateUniqueName(newName, prev, id);
-      const updatedObjects = prev.map(obj =>
-        obj.id === id ? { ...obj, name: uniqueName } : obj
-      );
-      setSelectedObject(prev => prev && prev.id === id ? { ...prev, name: uniqueName } : prev);
-      return updatedObjects;
-    }, true);
-  }, [setSceneObjectsWithHistory, generateUniqueName]);
-
-  const handleReorderObjects = useCallback((draggedId, targetId, position) => {
-    setSceneObjectsWithHistory(prev => {
-      const objects = [...prev];
-
-      const draggedIndex = objects.findIndex(o => o.id === draggedId);
-      if (draggedIndex === -1) return prev;
-
-      const draggedObj = { ...objects[draggedIndex] };
-
-      const getAllDescendantIds = (parentId) => {
-        const descendants = new Set([parentId]);
-        objects.filter(o => o.parentId === parentId).forEach(child => {
-          const childDescendants = getAllDescendantIds(child.id);
-          childDescendants.forEach(id => descendants.add(id));
-        });
-        return descendants;
+      const newObj = {
+        ...clipboard.object,
+        id: Date.now(),
+        name: uniqueName,
+        position: [
+          clipboard.object.position[0] + 1,
+          clipboard.object.position[1],
+          clipboard.object.position[2]
+        ],
+        parentId: null
       };
 
-      const draggedDescendants = getAllDescendantIds(draggedId);
+      setSelectedObject(newObj);
+      setSelectedObjects([newObj]);
+      updateCurrentSceneObjects([...currentObjects, newObj]);
+    }
+    return true;
+  }, [clipboard, sceneObjects, generateUniqueName, updateCurrentSceneObjects]);
 
-      if (targetId === null) {
-        draggedObj.parentId = null;
-        objects.splice(draggedIndex, 1);
-        objects.push(draggedObj);
-        return objects;
-      }
+  /**
+   * 复制对象（原地复制）
+   * 
+   * 支持单选和多选复制：
+   * - 单选：复制单个对象，位置偏移1单位
+   * - 多选：复制所有选中的对象，每个对象位置偏移1单位
+   * 
+   * 多场景系统：复制到当前激活的场景中喵！
+   * 
+   * @param {number} id - 要复制的对象ID（单选时使用）
+   */
+  const handleDuplicateObject = useCallback((id) => {
+    const currentObjects = sceneObjects;
+    
+    if (selectedObjects && selectedObjects.length > 1 && 
+        selectedObjects.some(o => o && o.id === id)) {
+      const newObjects = selectedObjects.map((obj, index) => {
+        const baseName = obj.name;
+        const uniqueName = generateUniqueName(baseName, currentObjects);
+        
+        return {
+          ...obj,
+          id: Date.now() + index,
+          name: uniqueName,
+          position: [
+            obj.position[0] + 1,
+            obj.position[1],
+            obj.position[2]
+          ],
+          parentId: null
+        };
+      });
+      
+      setSelectedObject(newObjects[0]);
+      setSelectedObjects(newObjects);
+      updateCurrentSceneObjects([...currentObjects, ...newObjects]);
+    } else {
+      const obj = currentObjects.find(o => o.id === id);
+      if (!obj) return false;
 
-      if (draggedDescendants.has(targetId)) return prev;
+      const baseName = obj.name;
+      const uniqueName = generateUniqueName(baseName, currentObjects);
 
-      const targetIndex = objects.findIndex(o => o.id === targetId);
-      if (targetIndex === -1) return prev;
+      const newObj = {
+        ...obj,
+        id: Date.now(),
+        name: uniqueName,
+        position: [
+          obj.position[0] + 1,
+          obj.position[1],
+          obj.position[2]
+        ],
+        parentId: null
+      };
 
-      const targetObj = objects[targetIndex];
+      setSelectedObject(newObj);
+      setSelectedObjects([newObj]);
+      updateCurrentSceneObjects([...currentObjects, newObj]);
+    }
+    return true;
+  }, [sceneObjects, generateUniqueName, selectedObjects, updateCurrentSceneObjects]);
 
-      if (position === 'inside') {
-        draggedObj.parentId = targetId;
-      } else {
-        draggedObj.parentId = targetObj.parentId || null;
-      }
+  // 多场景系统：重命名当前场景中的对象喵！
+  const handleRenameObject = useCallback((id, newName) => {
+    const uniqueName = generateUniqueName(newName, sceneObjects, id);
+    const updatedObjects = sceneObjects.map(obj =>
+      obj.id === id ? { ...obj, name: uniqueName } : obj
+    );
+    updateCurrentSceneObjects(updatedObjects, true);
+    setSelectedObject(prev => prev && prev.id === id ? { ...prev, name: uniqueName } : prev);
+  }, [sceneObjects, generateUniqueName, updateCurrentSceneObjects]);
 
+  // 多场景系统：重排序当前场景中的对象喵！
+  const handleReorderObjects = useCallback((draggedId, targetId, position) => {
+    const objects = [...sceneObjects];
+
+    const draggedIndex = objects.findIndex(o => o.id === draggedId);
+    if (draggedIndex === -1) return;
+
+    const draggedObj = { ...objects[draggedIndex] };
+
+    const getAllDescendantIds = (parentId) => {
+      const descendants = new Set([parentId]);
+      objects.filter(o => o.parentId === parentId).forEach(child => {
+        const childDescendants = getAllDescendantIds(child.id);
+        childDescendants.forEach(id => descendants.add(id));
+      });
+      return descendants;
+    };
+
+    const draggedDescendants = getAllDescendantIds(draggedId);
+
+    if (targetId === null) {
+      draggedObj.parentId = null;
       objects.splice(draggedIndex, 1);
+      objects.push(draggedObj);
+      updateCurrentSceneObjects(objects);
+      return;
+    }
 
-      const newTargetIndex = objects.findIndex(o => o.id === targetId);
-      if (newTargetIndex === -1) {
-        objects.push(draggedObj);
-        return objects;
+    if (draggedDescendants.has(targetId)) return;
+
+    const targetIndex = objects.findIndex(o => o.id === targetId);
+    if (targetIndex === -1) return;
+
+    const targetObj = objects[targetIndex];
+
+    if (position === 'inside') {
+      draggedObj.parentId = targetId;
+    } else {
+      draggedObj.parentId = targetObj.parentId || null;
+    }
+
+    objects.splice(draggedIndex, 1);
+
+    const newTargetIndex = objects.findIndex(o => o.id === targetId);
+    if (newTargetIndex === -1) {
+      objects.push(draggedObj);
+      updateCurrentSceneObjects(objects);
+      return;
+    }
+
+    let insertIndex;
+    if (position === 'inside') {
+      insertIndex = newTargetIndex + 1;
+      for (let i = newTargetIndex + 1; i < objects.length; i++) {
+        if (objects[i].parentId === targetId) insertIndex = i + 1;
+        else break;
       }
-
-      let insertIndex;
-      if (position === 'inside') {
-        insertIndex = newTargetIndex + 1;
+    } else if (position === 'before') {
+      insertIndex = newTargetIndex;
+    } else {
+      insertIndex = newTargetIndex + 1;
+      const targetParentId = targetObj.parentId;
+      if (targetParentId) {
         for (let i = newTargetIndex + 1; i < objects.length; i++) {
-          if (objects[i].parentId === targetId) insertIndex = i + 1;
+          if (objects[i].parentId === targetParentId) insertIndex = i + 1;
           else break;
         }
-      } else if (position === 'before') {
-        insertIndex = newTargetIndex;
-      } else {
-        insertIndex = newTargetIndex + 1;
-        const targetParentId = targetObj.parentId;
-        if (targetParentId) {
-          for (let i = newTargetIndex + 1; i < objects.length; i++) {
-            if (objects[i].parentId === targetParentId) insertIndex = i + 1;
-            else break;
-          }
-        }
       }
+    }
 
-      objects.splice(insertIndex, 0, draggedObj);
-      return objects;
-    });
-  }, [setSceneObjectsWithHistory]);
+    objects.splice(insertIndex, 0, draggedObj);
+    updateCurrentSceneObjects(objects);
+  }, [sceneObjects, updateCurrentSceneObjects]);
 
   const handleCreatePrefab = useCallback((objectId) => {
     const obj = sceneObjects.find(o => o.id === objectId);
@@ -1349,7 +1590,8 @@ function AppContent() {
 
     setPrefabs(prev => [...prev, prefab]);
 
-    setSceneObjectsWithHistory(prev => prev.map(o =>
+    // 多场景系统：更新当前场景中的对象喵！
+    updateCurrentSceneObjects(sceneObjects.map(o =>
       o.id === objectId ? { 
         ...o, 
         prefabId: prefab.id,
@@ -1358,8 +1600,9 @@ function AppContent() {
     ));
 
     return prefab;
-  }, [sceneObjects, setSceneObjectsWithHistory]);
+  }, [sceneObjects, updateCurrentSceneObjects]);
 
+  // 多场景系统：预制件实例化到当前场景喵！
   const handleInstantiatePrefab = useCallback((prefabId, position = null) => {
     const prefab = prefabs.find(p => p.id === prefabId);
     if (!prefab) return;
@@ -1379,12 +1622,13 @@ function AppContent() {
       overrides: { scale: false, color: false }
     };
 
-    setSceneObjectsWithHistory(prev => [...prev, instance]);
+    updateCurrentSceneObjects([...sceneObjects, instance]);
     return instance;
-  }, [prefabs, setSceneObjectsWithHistory]);
+  }, [prefabs, sceneObjects, updateCurrentSceneObjects]);
 
   const handleDeletePrefab = useCallback((prefabId) => {
-    setSceneObjectsWithHistory(prev => prev.map(obj => 
+    // 多场景系统：更新当前场景中的对象喵！
+    updateCurrentSceneObjects(sceneObjects.map(obj => 
       obj.prefabId === prefabId 
         ? { 
             ...obj, 
@@ -1397,14 +1641,15 @@ function AppContent() {
 
     setPrefabs(prev => prev.filter(p => p.id !== prefabId));
     setSelectedPrefab(prev => prev && prev.id === prefabId ? null : prev);
-  }, [prefabs, setSceneObjectsWithHistory]);
+  }, [prefabs, sceneObjects, updateCurrentSceneObjects]);
 
   const handleUpdatePrefab = useCallback((prefabId, updates) => {
     setPrefabs(prev => prev.map(p => 
       p.id === prefabId ? { ...p, ...updates } : p
     ));
 
-    setSceneObjectsWithHistory(prev => prev.map(obj => {
+    // 多场景系统：更新当前场景中的对象喵！
+    updateCurrentSceneObjects(sceneObjects.map(obj => {
       if (obj.prefabId !== prefabId) return obj;
 
       const prefab = prefabs.find(p => p.id === prefabId);
@@ -1421,7 +1666,7 @@ function AppContent() {
 
       return newObj;
     }), false);
-  }, [prefabs, setSceneObjectsWithHistory]);
+  }, [prefabs, sceneObjects, updateCurrentSceneObjects]);
 
   const handleDisconnectPrefab = useCallback((objectId) => {
     const obj = sceneObjects.find(o => o.id === objectId);
@@ -1429,7 +1674,8 @@ function AppContent() {
 
     const prefab = prefabs.find(p => p.id === obj.prefabId);
     
-    setSceneObjectsWithHistory(prev => prev.map(o =>
+    // 多场景系统：更新当前场景中的对象喵！
+    updateCurrentSceneObjects(sceneObjects.map(o =>
       o.id === objectId ? { 
         ...o, 
         prefabId: null,
@@ -1439,7 +1685,7 @@ function AppContent() {
         overrides: undefined
       } : o
     ));
-  }, [sceneObjects, prefabs, setSceneObjectsWithHistory]);
+  }, [sceneObjects, prefabs, updateCurrentSceneObjects]);
 
   const handleApplyToPrefab = useCallback((objectId) => {
     const obj = sceneObjects.find(o => o.id === objectId);
@@ -1453,21 +1699,31 @@ function AppContent() {
       }
     });
 
-    setSceneObjectsWithHistory(prev => prev.map(o =>
+    // 多场景系统：更新当前场景中的对象喵！
+    updateCurrentSceneObjects(sceneObjects.map(o =>
       o.id === objectId ? { 
         ...o, 
         overrides: { scale: false, color: false }
       } : o
     ));
-  }, [sceneObjects, prefabs, handleUpdatePrefab, setSceneObjectsWithHistory]);
+  }, [sceneObjects, prefabs, handleUpdatePrefab, updateCurrentSceneObjects]);
 
+  // 多场景系统：项目数据格式更新喵！
   const getProjectData = useCallback(() => {
+    const mainScene = scenes.find(s => s.isMain);
     return {
-      version: '0.1.0',
+      version: PROJECT_FORMAT_VERSION, // 使用 meta.js 中的版本号喵！
       name: projectFileName || 'Untitled Project',
       timestamp: new Date().toISOString(),
-      scene: {
-        objects: sceneObjects.map(obj => ({
+      mainScene: mainScene?.id || currentSceneId,
+      scenes: scenes.map(scene => ({
+        id: scene.id,
+        name: scene.name,
+        isMain: scene.isMain,
+        createdAt: scene.createdAt,
+        updatedAt: scene.updatedAt,
+        settings: scene.settings,
+        objects: scene.objects.map(obj => ({
           id: obj.id,
           name: obj.name,
           type: obj.type,
@@ -1481,7 +1737,7 @@ function AppContent() {
           parentId: obj.parentId || null,
           overrides: obj.overrides
         }))
-      },
+      })),
       prefabs: prefabs.map(prefab => ({
         id: prefab.id,
         name: prefab.name,
@@ -1494,7 +1750,7 @@ function AppContent() {
         assetType: asset.assetType
       }))
     };
-  }, [sceneObjects, prefabs, assets, projectFileName]);
+  }, [scenes, currentSceneId, prefabs, assets, projectFileName]);
 
   const { save: autoSave, scheduleSave, loadSnapshots, loadSnapshot, deleteSnapshot, clearAll: clearAutoSave } = useAutoSave(getProjectData, 60000, maxSnapshots);
   
@@ -1692,6 +1948,56 @@ function AppContent() {
     handleSaveAsProject();
   }, [getProjectData, hasFileSystemAccess, isElectron, projectFileName, dialog, handleSaveAsProject, toast]);
 
+  /**
+   * 加载项目数据到状态（多场景系统）
+   * 
+   * 支持两种格式：
+   * - 新格式（多场景）：projectData.scenes 数组
+   * - 旧格式（单场景）：projectData.scene.objects 数组
+   * 
+   * 旧格式会自动转换为新格式喵！
+   */
+  const loadProjectData = useCallback((projectData, projectName) => {
+    // 检查项目格式喵！
+    if (projectData.scenes && Array.isArray(projectData.scenes)) {
+      // 新格式：多场景系统喵！
+      setScenesWithHistory(projectData.scenes);
+      setCurrentSceneId(projectData.mainScene || projectData.scenes[0]?.id || 'scene-main-001');
+      setPrefabs(projectData.prefabs || []);
+      setAssets(projectData.assets || []);
+    } else if (projectData.scene && projectData.scene.objects) {
+      // 旧格式：单场景系统，需要转换喵！
+      const convertedScenes = [
+        {
+          id: 'scene-main-001',
+          name: 'Main Scene',
+          objects: projectData.scene.objects || [],
+          isMain: true,
+          createdAt: projectData.timestamp || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          settings: {
+            ambientLight: { color: '#ffffff', intensity: 0.5 },
+            backgroundColor: '#1a1a2e',
+            fog: { enabled: false }
+          }
+        }
+      ];
+      setScenesWithHistory(convertedScenes);
+      setCurrentSceneId('scene-main-001');
+      setPrefabs(projectData.prefabs || []);
+      setAssets(projectData.assets || []);
+    } else {
+      throw new Error('Invalid project file format');
+    }
+    
+    setProjectFileName(projectName);
+    setSelectedObject(null);
+    setSelectedObjects([]);
+    setSelectedPrefab(null);
+    setHasUnsavedChanges(false);
+    clearAutoSave();
+  }, [setScenesWithHistory, clearAutoSave]);
+
   const handleLoadProject = useCallback(async () => {
     if (isElectron) {
       try {
@@ -1713,26 +2019,13 @@ function AppContent() {
         }
         
         const projectData = JSON.parse(readResult.content);
+        const fileName = getBasename(filePath);
+        const projectName = projectData.name || fileName.replace('.json', '');
         
-        if (projectData.version && projectData.scene) {
-          const fileName = getBasename(filePath);
-          const projectName = projectData.name || fileName.replace('.json', '');
-          
-          fileHandleRef.current = filePath;
-          setProjectFileName(projectName);
-          resetHistory(projectData.scene.objects || []);
-          setPrefabs(projectData.prefabs || []);
-          setSelectedObject(null);
-          setSelectedObjects([]);
-          setSelectedPrefab(null);
-          setAssets(projectData.assets || []);
-          setHasUnsavedChanges(false);
-          clearAutoSave();
-          toast.success(`已打开: ${projectName}`);
-          console.log('Project loaded:', projectName);
-        } else {
-          toast.error('无效的项目文件格式');
-        }
+        fileHandleRef.current = filePath;
+        loadProjectData(projectData, projectName);
+        toast.success(`已打开: ${projectName}`);
+        console.log('Project loaded:', projectName);
       } catch (error) {
         console.error('Error loading file:', error);
         toast.error('打开失败: ' + error.message);
@@ -1752,23 +2045,12 @@ function AppContent() {
         const file = await handle.getFile();
         const text = await file.text();
         const projectData = JSON.parse(text);
+        const projectName = projectData.name || handle.name.replace('.json', '');
         
-        if (projectData.version && projectData.scene) {
-          fileHandleRef.current = handle;
-          const projectName = projectData.name || handle.name.replace('.json', '');
-          setProjectFileName(projectName);
-          resetHistory(projectData.scene.objects || []);
-          setPrefabs(projectData.prefabs || []);
-          setSelectedObject(null);
-          setSelectedObjects([]);
-          setSelectedPrefab(null);
-          setHasUnsavedChanges(false);
-          clearAutoSave();
-          addRecentProject(projectName, handle);
-          console.log('Project loaded:', projectName);
-        } else {
-          console.error('Invalid project file format');
-        }
+        fileHandleRef.current = handle;
+        loadProjectData(projectData, projectName);
+        addRecentProject(projectName, handle);
+        console.log('Project loaded:', projectName);
       } catch (error) {
         if (error.name !== 'AbortError') {
           console.error('Error loading file:', error);
@@ -1786,21 +2068,10 @@ function AppContent() {
         try {
           const text = await file.text();
           const projectData = JSON.parse(text);
+          const projectName = projectData.name || file.name.replace('.json', '');
           
-          if (projectData.version && projectData.scene) {
-            const projectName = projectData.name || file.name.replace('.json', '');
-            setProjectFileName(projectName);
-            resetHistory(projectData.scene.objects || []);
-            setPrefabs(projectData.prefabs || []);
-            setSelectedObject(null);
-            setSelectedObjects([]);
-            setSelectedPrefab(null);
-            setHasUnsavedChanges(false);
-            clearAutoSave();
-            console.log('Project loaded:', projectName);
-          } else {
-            console.error('Invalid project file format');
-          }
+          loadProjectData(projectData, projectName);
+          console.log('Project loaded:', projectName);
         } catch (error) {
           console.error('Error parsing project file:', error);
         }
@@ -1808,17 +2079,34 @@ function AppContent() {
       
       input.click();
     }
-  }, [hasFileSystemAccess, isElectron, resetHistory, clearAutoSave, addRecentProject, toast, openFileBrowser]);
+  }, [hasFileSystemAccess, isElectron, loadProjectData, addRecentProject, toast, openFileBrowser]);
 
+  // 多场景系统：新建项目时创建默认场景喵！
   const handleNewProject = useCallback(async () => {
-    if (hasUnsavedChanges || sceneObjects.length > 0) {
+    if (hasUnsavedChanges || scenes.some(s => s.objects.length > 0)) {
       const confirmNew = await dialog.confirm(msg('menu.confirmNew'), msg('menu.newProject'));
       if (!confirmNew) return;
     }
     
     fileHandleRef.current = null;
     setProjectFileName(null);
-    resetHistory([]);
+    // 创建默认场景喵！
+    setScenesWithHistory([
+      {
+        id: 'scene-main-001',
+        name: 'Main Scene',
+        objects: [],
+        isMain: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        settings: {
+          ambientLight: { color: '#ffffff', intensity: 0.5 },
+          backgroundColor: '#1a1a2e',
+          fog: { enabled: false }
+        }
+      }
+    ]);
+    setCurrentSceneId('scene-main-001');
     setPrefabs([]);
     setSelectedObject(null);
     setSelectedObjects([]);
@@ -1827,7 +2115,7 @@ function AppContent() {
     setSelectedAsset(null);
     setHasUnsavedChanges(false);
     clearAutoSave();
-  }, [sceneObjects.length, hasUnsavedChanges, resetHistory, clearAutoSave, dialog]);
+  }, [scenes, hasUnsavedChanges, setScenesWithHistory, clearAutoSave, dialog]);
 
   const handleOpenRecentProject = useCallback(async (project) => {
     if (!hasFileSystemAccess) {
@@ -1854,20 +2142,12 @@ function AppContent() {
       const data = JSON.parse(text);
       
       fileHandleRef.current = handle;
-      resetHistory(data.scene?.objects || []);
-      setPrefabs(data.prefabs || []);
-      setProjectFileName(project.name);
-      setSelectedObject(null);
-      setSelectedObjects([]);
-      setSelectedPrefab(null);
-      setAssets(data.assets || []);
-      setHasUnsavedChanges(false);
-      
+      loadProjectData(data, project.name);
       addRecentProject(project.name, handle);
     } catch (error) {
       console.error('Failed to open recent project:', error);
     }
-  }, [hasFileSystemAccess, openRecentProject, removeRecentProject, resetHistory, addRecentProject, dialog]);
+  }, [hasFileSystemAccess, openRecentProject, removeRecentProject, loadProjectData, addRecentProject, dialog]);
 
   const handleExportAsAstra = useCallback(async () => {
     try {
@@ -1880,6 +2160,7 @@ function AppContent() {
     }
   }, [getProjectData, dialog]);
 
+  // 多场景系统：导入 .astra 文件喵！
   const handleImportAstra = useCallback(async () => {
     if (isElectron) {
       try {
@@ -1904,14 +2185,7 @@ function AppContent() {
         const file = new File([readResult.content], fileName, { type: 'application/octet-stream' });
         const projectData = await importProjectFromAstra(file);
         
-        setProjectFileName(projectData.name + '.astra');
-        resetHistory(projectData.scene.objects || []);
-        setPrefabs(projectData.prefabs || []);
-        setSelectedObject(null);
-        setSelectedObjects([]);
-        setSelectedPrefab(null);
-        setHasUnsavedChanges(false);
-        clearAutoSave();
+        loadProjectData(projectData, projectData.name + '.astra');
         toast.success(`已导入: ${projectData.name}.astra`);
         console.log('Project imported from .astra:', fileName);
       } catch (error) {
@@ -1932,14 +2206,7 @@ function AppContent() {
       try {
         const projectData = await importProjectFromAstra(file);
         
-        setProjectFileName(projectData.name + '.astra');
-        resetHistory(projectData.scene.objects || []);
-        setPrefabs(projectData.prefabs || []);
-        setSelectedObject(null);
-        setSelectedObjects([]);
-        setSelectedPrefab(null);
-        setHasUnsavedChanges(false);
-        clearAutoSave();
+        loadProjectData(projectData, projectData.name + '.astra');
         addRecentProject({
           name: projectData.name,
           path: file.name
@@ -1952,18 +2219,15 @@ function AppContent() {
     };
     
     input.click();
-  }, [resetHistory, clearAutoSave, addRecentProject, dialog, isElectron, openFileBrowser, toast]);
+  }, [loadProjectData, addRecentProject, dialog, isElectron, openFileBrowser, toast]);
 
+  // 多场景系统：恢复快照喵！
   const handleRestoreSnapshot = useCallback((snapshotData) => {
-    if (snapshotData && snapshotData.scene) {
-      resetHistory(snapshotData.scene.objects || []);
-      setPrefabs(snapshotData.prefabs || []);
-      setProjectFileName(snapshotData.name || null);
-      setSelectedObject(null);
-      setSelectedObjects([]);
+    if (snapshotData) {
+      loadProjectData(snapshotData, snapshotData.name || null);
       console.log('Restored snapshot:', snapshotData.name);
     }
-  }, [resetHistory]);
+  }, [loadProjectData]);
 
   useEffect(() => {
     const handleFileShortcuts = (e) => {
@@ -2089,6 +2353,40 @@ function AppContent() {
             storageKey="astra-left-sidebar"
             className={`left-sidebar ${leftSidebarAllCollapsed ? 'all-collapsed' : ''}`}
           >
+            {/* 多场景系统：场景面板喵！ */}
+            {/* 动态布局逻辑：当其他面板折叠时，场景面板自动填充整个侧边栏喵！ */}
+            {/* 只有在所有面板都折叠时才显示为 vertical 模式（左侧一列）喵！ */}
+            <ScenePanel
+              scenes={scenes}
+              currentSceneId={currentSceneId}
+              onSwitchScene={handleSwitchScene}
+              onCreateScene={handleCreateScene}
+              onDeleteScene={handleDeleteScene}
+              onRenameScene={handleRenameScene}
+              onSetMainScene={handleSetMainScene}
+              vertical={leftSidebarAllCollapsed}
+              onCollapseChange={setScenePanelCollapsed}
+              style={{
+                // 当场景面板展开且其他面板折叠时，自动填充整个侧边栏喵！
+                // 否则使用占比方式调整高度喵！
+                flex: !scenePanelCollapsed && (hierarchyCollapsed && prefabsCollapsed) ? '1' : 'none',
+                height: !scenePanelCollapsed && !(hierarchyCollapsed && prefabsCollapsed) 
+                  ? `${scenePanelRatio * 100}%` 
+                  : undefined,
+                minHeight: !scenePanelCollapsed ? '100px' : undefined
+              }}
+            />
+            
+            {/* 场景面板和层级面板之间的分隔条喵 */}
+            {/* 只在场景面板和层级面板都展开时才显示分隔条喵！ */}
+            {/* 预制件面板的状态不影响分隔条显示喵！ */}
+            {!scenePanelCollapsed && !hierarchyCollapsed && (
+              <div 
+                className="panel-resize-handle"
+                onMouseDown={handleScenePanelDragStart}
+              />
+            )}
+            
             <HierarchyPanel
               objects={sceneObjects}
               selectedObject={selectedObject}
@@ -2124,7 +2422,15 @@ function AppContent() {
               onDeletePrefab={handleDeletePrefab}
               vertical={leftSidebarAllCollapsed}
               onCollapseChange={setPrefabsCollapsed}
-              style={!prefabsCollapsed ? { height: prefabsPanelHeight, flex: 'none' } : {}}
+              style={{
+                // 当预制件面板展开且其他面板折叠时，自动填充整个侧边栏喵！
+                // 否则使用占比方式调整高度喵！
+                flex: !prefabsCollapsed && (hierarchyCollapsed && scenePanelCollapsed) ? '1' : 'none',
+                height: !prefabsCollapsed && !(hierarchyCollapsed && scenePanelCollapsed) 
+                  ? `${prefabsPanelRatio * 100}%` 
+                  : undefined,
+                minHeight: !prefabsCollapsed ? '100px' : undefined
+              }}
             />
           </ResizablePanel>
 
@@ -2190,7 +2496,7 @@ function AppContent() {
       </div>
 
       <div className="status-bar">
-        <span>{msg('app.title')} {msg('app.version')}</span>
+        <span>{msg('app.title')} v{ENGINE_VERSION}</span>
         <span>{msg('status.objects', { count: sceneObjects.length })}</span>
         <span>
           {selectedObject

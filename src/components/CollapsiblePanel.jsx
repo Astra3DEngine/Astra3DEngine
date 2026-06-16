@@ -62,7 +62,7 @@ function CollapsiblePanel({
   if (vertical && collapsed) {
     return (
       <div 
-        className={`panel collapsible-panel vertical-collapsed ${className}`}
+        className={`panel collapsible-panel vertical-collapsed ${className} collapsed`}
         onClick={handleToggle}
         title={title}
         style={style}
@@ -72,6 +72,12 @@ function CollapsiblePanel({
             <span key={i}>{char}</span>
           ))}
         </div>
+        {/* 多场景系统：vertical 模式折叠时也显示 headerRight 喵！ */}
+        {headerRight && (
+          <div className="panel-vertical-header-right" onClick={(e) => e.stopPropagation()}>
+            {headerRight}
+          </div>
+        )}
       </div>
     );
   }

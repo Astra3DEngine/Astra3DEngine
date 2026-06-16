@@ -3,6 +3,7 @@
   flex-direction: column;
   background-color: var(--bg-panel);
   overflow: hidden;
+  height: 100%; /* 确保左侧边栏填满父容器高度喵！ */
 }
 
 .left-sidebar.all-collapsed {
@@ -165,6 +166,16 @@
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* 多场景系统：vertical 模式折叠时的 headerRight 样式喵！ */
+.panel-vertical-header-right {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
 }
 
 .left-sidebar.all-collapsed .collapsible-panel.vertical-collapsed {

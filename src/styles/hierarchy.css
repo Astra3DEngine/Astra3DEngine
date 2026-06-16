@@ -267,3 +267,155 @@
   margin-right: 4px;
   flex-shrink: 0;
 }
+
+/* ========== 多场景系统：场景选择器样式喵！ ========== */
+
+.scene-selector-container {
+  position: relative;
+  padding: 6px 8px;
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.scene-selector-trigger {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  background-color: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.1s, border-color 0.1s;
+  gap: 6px;
+  user-select: none;
+}
+
+.scene-selector-trigger:hover {
+  background-color: var(--hover-bg);
+  border-color: var(--accent);
+}
+
+.scene-selector-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.scene-selector-name {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scene-main-badge {
+  width: 12px;
+  height: 12px;
+  color: var(--accent-active);
+  flex-shrink: 0;
+}
+
+.scene-selector-chevron {
+  width: 12px;
+  height: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.scene-selector-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 8px;
+  right: 8px;
+  margin-top: 2px;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.scene-selector-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: background-color 0.1s;
+  gap: 6px;
+  user-select: none;
+}
+
+.scene-selector-item:hover {
+  background-color: var(--hover-bg);
+}
+
+.scene-selector-item.active {
+  background-color: var(--accent);
+}
+
+.scene-selector-item-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.scene-selector-item.active .scene-selector-item-icon {
+  color: var(--text-primary);
+}
+
+.scene-selector-item-name {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scene-item-main-badge {
+  width: 10px;
+  height: 10px;
+  color: var(--accent-active);
+  flex-shrink: 0;
+}
+
+.scene-object-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.scene-selector-divider {
+  height: 1px;
+  background-color: var(--border);
+  margin: 4px 0;
+}
+
+.scene-create-new {
+  color: var(--accent-active);
+}
+
+.scene-create-new:hover {
+  background-color: rgba(64, 120, 192, 0.15);
+}
+
+.scene-rename-input {
+  flex: 1;
+  background-color: var(--bg-dark);
+  border: 1px solid var(--accent-active);
+  border-radius: 3px;
+  padding: 2px 6px;
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+  min-width: 0;
+}
+
+/* ========== 多场景系统：场景选择器样式结束喵！ ========== */

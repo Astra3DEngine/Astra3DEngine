@@ -1,6 +1,5 @@
 {
   "app.title": "Astra 3D 引擎",
-  "app.version": "v0.1.0",
 
   "importModel.title": "导入模型",
   "importModel.description": "选择导入方式：",
@@ -248,5 +247,21 @@
   "fileBrowser.open": "打开",
   "fileBrowser.folderNamePlaceholder": "文件夹名称",
   "fileBrowser.create": "创建",
-  "fileBrowser.drives": "硬盘"
+  "fileBrowser.drives": "硬盘",
+
+  "scene.createNew": "新建场景",
+  "scene.rename": "重命名场景",
+  "scene.delete": "删除场景",
+  "scene.setMain": "设为主场景",
+  "scene.isMain": "主场景",
+  "scene.cannotDeleteLast": "无法删除最后一个场景",
+  "scene.cannotDeleteMain": "无法删除主场景",
+  "scene.switched": "已切换到场景",
+  "scene.created": "已创建新场景",
+  "scene.deleted": "已删除场景",
+  "scene.renamed": "已重命名场景",
+  "scene.mainSet": "已设为主场景",
+  "scene.panelTitle": "场景",
+  "scene.empty": "没有场景",
+  "scene.currentScene": "当前场景"
 }

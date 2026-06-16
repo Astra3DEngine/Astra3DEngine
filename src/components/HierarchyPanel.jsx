@@ -29,7 +29,7 @@ import IconSpotLight from '../icons/light-spot.svg?react';
 /**
  * 层级面板组件
  * @param {Object} props - 组件属性
- * @param {Array} props.objects - 场景对象列表
+ * @param {Array} props.objects - 当前场景的对象列表
  * @param {Object} props.selectedObject - 当前选中的对象
  * @param {Array} props.selectedObjects - 多选对象列表
  * @param {Function} props.onSelectObject - 选择对象回调
@@ -76,6 +76,7 @@ function HierarchyPanel({
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [expandedIds, setExpandedIds] = useState(() => new Set());
+  
   const addMenuRef = useRef(null);
   const contextMenuRef = useRef(null);
   const renameInputRef = useRef(null);

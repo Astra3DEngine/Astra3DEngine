@@ -361,7 +361,18 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 
 - [x] Inspector面板（组件编辑）
 - [x] 资源管理器
-- [ ] 场景保存/加载
+- [x] 多场景系统（详见 [MULTI_SCENE_DESIGN.md](./MULTI_SCENE_DESIGN.md)）
+  - [x] 状态结构改造（scenes 数组 + currentSceneId）
+  - [x] 场景面板独立化（ScenePanel.jsx）
+  - [x] 场景 CRUD 操作（新建、删除、重命名、设置主场景）
+  - [x] 场景切换功能
+  - [x] 项目格式升级（向后兼容）
+  - [x] Undo/Redo 系统适配
+  - [ ] 场景设置面板（ambientLight、backgroundColor、fog 等）
+  - [ ] 场景导出为独立 .scene 文件
+  - [ ] 场景间资源共享（预制件、资源）
+  - [ ] 场景快速切换快捷键
+  - [ ] 场景预览缩略图
 - [x] 预制件系统
 - [x] Undo/Redo
 - [x] 快捷键支持
@@ -382,10 +393,12 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 - [x] 光渲染开关（F1 快捷键，开关状态持久化）
 - [x] 导入文件夹支持
 - [x] 素材栏多排布局
+- [x] 版本号元数据文件（src/meta.js）
+- [x] 面板布局占比方式（场景面板、预制件面板）
 
 **项目格式设计**（详见 [PROJECT_FORMAT_DESIGN.md](./PROJECT_FORMAT_DESIGN.md)）：
 - [ ] 项目文件夹结构实现
-- [ ] 场景文件序列化（JSON格式）
+- [x] 场景文件序列化（JSON格式，多场景支持）
 - [ ] 资源元数据系统（.meta 文件）
 - [ ] GUID 引用机制
 - [ ] 项目导出为 .astra 压缩包
