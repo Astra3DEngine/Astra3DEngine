@@ -164,6 +164,7 @@
   "inspector.revert": "还原",
   "inspector.applyToPrefab": "应用到预制件",
   "inspector.disconnectPrefab": "断开预制件连接",
+  "inspector.clearSelection": "取消选中",
 
   "snapshots.title": "快照管理",
   "snapshots.loading": "加载中...",
@@ -263,5 +264,17 @@
   "scene.mainSet": "已设为主场景",
   "scene.panelTitle": "场景",
   "scene.empty": "没有场景",
-  "scene.currentScene": "当前场景"
+  "scene.currentScene": "当前场景",
+
+  "sceneSettings.title": "场景设置",
+  "sceneSettings.hint": "配置当前场景的环境参数",
+  "sceneSettings.ambientLight": "环境光",
+  "sceneSettings.background": "背景",
+  "sceneSettings.backgroundColor": "背景颜色",
+  "sceneSettings.fog": "雾效",
+  "sceneSettings.enabled": "启用",
+  "sceneSettings.color": "颜色",
+  "sceneSettings.intensity": "强度",
+  "sceneSettings.fogNear": "近距",
+  "sceneSettings.fogFar": "远距"
 }

@@ -150,6 +150,17 @@
   opacity: 0.3;
 }
 
+.inspector-empty-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.scene-settings-panel {
+  /* 场景设置面板样式，继承 inspector-section 的样式喵！ */
+}
+
 .inspector-prefab-section {
   background-color: var(--bg-dark);
   border-radius: 6px;
@@ -223,5 +234,32 @@
 
 .btn-secondary:hover {
   background-color: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.inspector-clear-btn {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.inspector-clear-btn:hover {
+  background-color: var(--hover-bg);
+}
+
+.inspector-clear-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-secondary);
+}
+
+.inspector-clear-btn:hover .inspector-clear-icon {
   color: var(--text-primary);
 }

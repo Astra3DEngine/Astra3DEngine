@@ -10,6 +10,8 @@ import { msg } from '../i18n/index.js';
 import CollapsiblePanel from './CollapsiblePanel.jsx';
 import IconPrefabInstance from '../icons/prefab-instance.svg?react';
 import IconDelete from '../icons/delete.svg?react';
+import SceneSettingsPanel from './SceneSettingsPanel.jsx';
+import IconClose from '../icons/close.svg?react';
 
 /**
  * 属性面板组件
@@ -24,6 +26,8 @@ import IconDelete from '../icons/delete.svg?react';
  * @param {Function} props.onCollapseChange - 折叠状态变化回调
  * @param {Array} props.assets - 资源列表
  * @param {Array} props.objects - 场景对象列表
+ * @param {Object} props.sceneSettings - 当前场景的设置对象
+ * @param {Function} props.onUpdateSettings - 更新场景设置回调
  * @returns {JSX.Element} 属性面板组件
  */
 function InspectorPanel({ 
@@ -36,7 +40,10 @@ function InspectorPanel({
   vertical,
   onCollapseChange,
   assets,
-  objects
+  objects,
+  sceneSettings,
+  onUpdateSettings,
+  onClearSelection
 }) {
   /**
    * 计算子对象相对于父对象的变换（使用四元数）
@@ -332,14 +339,20 @@ function InspectorPanel({
   const parentOptions = getParentOptions();
 
   const renderContent = () => {
+    // 没有选中对象时，显示场景设置面板喵！
     if (!selectedObject) {
       return (
-        <div className="inspector-empty">
-          <div className="inspector-empty-icon">⊘</div>
-          <div>{msg('inspector.empty')}</div>
-          <div style={{ fontSize: '11px', marginTop: '6px' }}>
-            {msg('inspector.emptyHint')}
+        <div className="panel-content">
+          <div className="inspector-section">
+            <div className="inspector-section-title">{msg('sceneSettings.title')}</div>
+            <div className="inspector-empty-hint">
+              {msg('sceneSettings.hint')}
+            </div>
           </div>
+          <SceneSettingsPanel 
+            sceneSettings={sceneSettings}
+            onUpdateSettings={onUpdateSettings}
+          />
         </div>
       );
     }
@@ -788,6 +801,18 @@ function InspectorPanel({
       storageKey="astra-panel-inspector-collapsed"
       vertical={vertical}
       onCollapseChange={onCollapseChange}
+      headerRight={selectedObject && onClearSelection ? (
+        <button 
+          className="inspector-clear-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClearSelection();
+          }}
+          title={msg('inspector.clearSelection')}
+        >
+          <IconClose className="inspector-clear-icon" />
+        </button>
+      ) : null}
     >
       {renderContent()}
     </CollapsiblePanel>

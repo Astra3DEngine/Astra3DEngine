@@ -164,6 +164,7 @@
   "inspector.revert": "Revert",
   "inspector.applyToPrefab": "Apply to Prefab",
   "inspector.disconnectPrefab": "Disconnect Prefab",
+  "inspector.clearSelection": "Clear Selection",
 
   "snapshots.title": "Snapshot Manager",
   "snapshots.loading": "Loading...",
@@ -263,5 +264,17 @@
   "scene.mainSet": "Set as main scene",
   "scene.panelTitle": "Scenes",
   "scene.empty": "No scenes",
-  "scene.currentScene": "Current Scene"
+  "scene.currentScene": "Current Scene",
+
+  "sceneSettings.title": "Scene Settings",
+  "sceneSettings.hint": "Configure environment parameters for current scene",
+  "sceneSettings.ambientLight": "Ambient Light",
+  "sceneSettings.background": "Background",
+  "sceneSettings.backgroundColor": "Background Color",
+  "sceneSettings.fog": "Fog",
+  "sceneSettings.enabled": "Enabled",
+  "sceneSettings.color": "Color",
+  "sceneSettings.intensity": "Intensity",
+  "sceneSettings.fogNear": "Near",
+  "sceneSettings.fogFar": "Far"
 }

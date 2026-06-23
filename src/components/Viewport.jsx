@@ -63,6 +63,7 @@ import IconSunOff from '../icons/sun-off.svg?react';
  * @param {Function} props.onCameraTypeChange - 相机类型变化回调
  * @param {boolean} props.lightRenderingEnabled - 是否启用光渲染（阴影）
  * @param {Function} props.onLightRenderingChange - 光渲染开关变化回调
+ * @param {Object} props.sceneSettings - 场景设置对象（环境光、背景色、雾效等）
  * @returns {JSX.Element} 视口组件
  */
 function Viewport({ 
@@ -86,7 +87,8 @@ function Viewport({
   viewLabel,
   onCameraTypeChange,
   lightRenderingEnabled = true,
-  onLightRenderingChange
+  onLightRenderingChange,
+  sceneSettings
 }) {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
@@ -213,6 +215,36 @@ function Viewport({
     onRecordHistoryRef.current = onRecordHistory;
   }, [onRecordHistory]);
 
+  // 场景设置变化效果：动态更新背景色和环境光喵！
+  useEffect(() => {
+    if (!sceneRef.current || !ambientLightRef.current) return;
+    
+    // 更新背景色
+    if (sceneSettings?.backgroundColor) {
+      sceneRef.current.background = new THREE.Color(sceneSettings.backgroundColor);
+    }
+    
+    // 更新环境光颜色和强度
+    if (sceneSettings?.ambientLight) {
+      if (sceneSettings.ambientLight.color) {
+        ambientLightRef.current.color = new THREE.Color(sceneSettings.ambientLight.color);
+      }
+      if (sceneSettings.ambientLight.intensity !== undefined) {
+        ambientLightRef.current.intensity = sceneSettings.ambientLight.intensity;
+      }
+    }
+    
+    // 更新雾效（如果启用）
+    if (sceneSettings?.fog?.enabled) {
+      const fogColor = sceneSettings.fog.color || '#ffffff';
+      const fogNear = sceneSettings.fog.near || 1;
+      const fogFar = sceneSettings.fog.far || 1000;
+      sceneRef.current.fog = new THREE.Fog(fogColor, fogNear, fogFar);
+    } else {
+      sceneRef.current.fog = null;
+    }
+  }, [sceneSettings]);
+
   // 光渲染开关效果：当关闭时，禁用所有光源，实现均匀亮度喵
   useEffect(() => {
     if (!sceneRef.current || !ambientLightRef.current) return;
@@ -291,7 +323,9 @@ function Viewport({
     }
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(theme === 'light' ? 0xf0f0f0 : 0x1a1a2e);
+    // 使用场景设置中的背景色，如果没有则使用主题默认色喵！
+    const bgColor = sceneSettings?.backgroundColor || (theme === 'light' ? '#f0f0f0' : '#1a1a2e');
+    scene.background = new THREE.Color(bgColor);
     sceneRef.current = scene;
 
     const camPos = initialCameraPosition || [5, 5, 5];
@@ -323,8 +357,10 @@ function Viewport({
     scene.add(axesHelper);
 
     // 环境光，用于在没有光渲染时提供均匀亮度
-    // 光渲染开启时环境光强度适中，关闭时稍高但不会太亮喵
-    const ambientLight = new THREE.AmbientLight(0xffffff, lightRenderingEnabled ? 0.3 : 0.8);
+    // 使用场景设置中的环境光颜色和强度喵！
+    const ambientColor = sceneSettings?.ambientLight?.color || '#ffffff';
+    const ambientIntensity = sceneSettings?.ambientLight?.intensity || (lightRenderingEnabled ? 0.3 : 0.8);
+    const ambientLight = new THREE.AmbientLight(ambientColor, ambientIntensity);
     scene.add(ambientLight);
     ambientLightRef.current = ambientLight;
 
@@ -1477,8 +1513,11 @@ function Viewport({
   useEffect(() => {
     if (!sceneRef.current) return;
     
-    sceneRef.current.background = new THREE.Color(theme === 'light' ? 0xf0f0f0 : 0x1a1a2e);
-  }, [theme]);
+    // 只有当 sceneSettings 中没有背景色时才使用主题默认色喵！
+    if (!sceneSettings?.backgroundColor) {
+      sceneRef.current.background = new THREE.Color(theme === 'light' ? '#f0f0f0' : '#1a1a2e');
+    }
+  }, [theme, sceneSettings]);
 
   useEffect(() => {
     if (!viewCubeRef.current) return;
@@ -1848,6 +1887,8 @@ function Viewport({
   useEffect(() => {
     if (!sceneRef.current) return;
 
+    console.log('Viewport objects useEffect:', 'objects length:', objects.length, 'objects:', objects);
+
     // 检查是否有用户创建的光源喵
     const hasUserLights = objects.some(obj => obj.isLight);
     // 如果有用户光源，禁用默认方向光，避免产生多余阴影喵
@@ -1859,10 +1900,13 @@ function Viewport({
     const existingIds = new Set(Object.keys(meshesRef.current));
     const newIds = new Set(objects.map(obj => obj.id));
 
+    console.log('Viewport objects useEffect:', 'existingIds:', Array.from(existingIds), 'newIds:', Array.from(newIds));
+
     existingIds.forEach(id => {
       if (!newIds.has(parseInt(id))) {
         const mesh = meshesRef.current[id];
         if (mesh) {
+          console.log('Viewport objects useEffect: removing mesh with id', id);
           sceneRef.current.remove(mesh);
           // 光源需要删除 target
           if (mesh.userData.isLight && mesh.target) {
@@ -2821,7 +2865,7 @@ function Viewport({
         meshesRef.current[obj.id] = mesh;
       }
     });
-  }, [objects, assets]);
+  }, [objects, assets, lightRenderingEnabled]);
 
   useEffect(() => {
     if (!transformControlsRef.current || !sceneRef.current) return;
