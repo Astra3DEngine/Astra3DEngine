@@ -81,8 +81,6 @@ function AppContent() {
   const currentScene = scenes.find(s => s.id === currentSceneId);
   const sceneObjects = currentScene?.objects || [];
   
-  console.log('App.jsx sceneObjects calculation:', 'currentSceneId:', currentSceneId, 'scenes length:', scenes.length, 'currentScene:', currentScene?.id, 'sceneObjects length:', sceneObjects.length);
-  
   // useHistory 现在管理整个 scenes 数组，而不是单个 sceneObjects 喵！
   const {
     state: historyScenes,
@@ -98,9 +96,7 @@ function AppContent() {
   // 同步 scenes 和 historyScenes 喵！
   // historyScenes 是 useHistory 内部管理的状态，需要同步到 scenes
   useEffect(() => {
-    console.log('syncing historyScenes to scenes:', 'historyScenes length:', historyScenes.length, 'scenes length:', scenes.length);
     if (historyScenes !== scenes) {
-      console.log('historyScenes is different from scenes, syncing...');
       setScenes(historyScenes);
     }
   }, [historyScenes]);
@@ -108,7 +104,6 @@ function AppContent() {
   // 更新当前场景对象的辅助函数喵！
   // 这个函数会更新当前场景的 objects 数组，同时更新 updatedAt 时间戳
   const updateCurrentSceneObjects = useCallback((newObjects, recordHistory = true) => {
-    console.log('updateCurrentSceneObjects called:', 'newObjects length:', newObjects.length, 'recordHistory:', recordHistory);
     const now = new Date().toISOString();
     setScenesWithHistory(prev => prev.map(s => 
       s.id === currentSceneId
@@ -315,11 +310,6 @@ function AppContent() {
     const saved = localStorage.getItem('astra-panel-prefabs-collapsed');
     return saved === 'true';
   });
-  const [inspectorCollapsed, setInspectorCollapsed] = useState(() => {
-    const saved = localStorage.getItem('astra-panel-inspector-collapsed');
-    return saved === 'true';
-  });
-  
   // 预制件面板高度占比（0-1之间），可以通过拖拽调整喵！
   // 使用占比而不是固定高度，让布局更灵活喵！
   const [prefabsPanelRatio, setPrefabsPanelRatio] = useState(() => {
@@ -1377,7 +1367,6 @@ function AppContent() {
   // 这个函数直接使用 setScenesWithHistory 的函数形式，从 prev 参数中获取当前场景的对象
   // 这样可以避免依赖 sceneObjects，防止 sceneObjects 变成空数组时导致所有对象被删除喵！
   const handleUpdateObject = useCallback((id, updates, recordHistory = true) => {
-    console.log('handleUpdateObject called:', id, updates);
     const now = new Date().toISOString();
     setScenesWithHistory(prev => prev.map(s => 
       s.id === currentSceneId
@@ -2501,29 +2490,19 @@ function AppContent() {
             />
           </div>
 
-          <ResizablePanel 
-            side="right" 
-            minWidth={200} 
-            maxWidth={500} 
-            defaultWidth={300}
-            className={`right-sidebar ${inspectorCollapsed ? 'all-collapsed' : ''}`}
-          >
-            <InspectorPanel
-              selectedObject={selectedObject}
-              onUpdateObject={handleUpdateObject}
-              onDeleteObject={handleDeleteObject}
-              prefabs={prefabs}
-              onDisconnectPrefab={handleDisconnectPrefab}
-              onApplyToPrefab={handleApplyToPrefab}
-              vertical={inspectorCollapsed}
-              onCollapseChange={setInspectorCollapsed}
-              assets={assets}
-              objects={sceneObjects}
-              sceneSettings={currentScene?.settings}
-              onUpdateSettings={handleUpdateSceneSettings}
-              onClearSelection={handleClearSelection}
-            />
-          </ResizablePanel>
+          <InspectorPanel
+            selectedObject={selectedObject}
+            onUpdateObject={handleUpdateObject}
+            onDeleteObject={handleDeleteObject}
+            prefabs={prefabs}
+            onDisconnectPrefab={handleDisconnectPrefab}
+            onApplyToPrefab={handleApplyToPrefab}
+            assets={assets}
+            objects={sceneObjects}
+            sceneSettings={currentScene?.settings}
+            onUpdateSettings={handleUpdateSceneSettings}
+            onClearSelection={handleClearSelection}
+          />
         </div>
 
         <ResizablePanel 

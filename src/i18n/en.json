@@ -165,6 +165,8 @@
   "inspector.applyToPrefab": "Apply to Prefab",
   "inspector.disconnectPrefab": "Disconnect Prefab",
   "inspector.clearSelection": "Clear Selection",
+  "inspector.sceneTab": "Scene",
+  "inspector.objectTab": "Object",
 
   "snapshots.title": "Snapshot Manager",
   "snapshots.loading": "Loading...",

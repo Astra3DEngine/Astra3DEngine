@@ -1,30 +1,3 @@
-.inspector-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.inspector-panel.collapsed {
-  flex: none !important;
-  min-height: 0 !important;
-}
-
-.inspector-panel.vertical-collapsed {
-  width: 24px;
-  min-width: 24px;
-  flex: 1 !important;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--bg-toolbar);
-  border-left: 1px solid var(--border);
-}
-
-.inspector-panel.vertical-collapsed:hover {
-  background-color: var(--hover-bg);
-}
-
 .inspector-section {
   margin-bottom: 14px;
 }
@@ -261,5 +234,142 @@
 }
 
 .inspector-clear-btn:hover .inspector-clear-icon {
+  color: var(--text-primary);
+}
+
+/* VSCode 风格的侧栏容器喵！ */
+.inspector-container {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
+  flex-shrink: 0;
+  width: auto;
+}
+
+/* 面板内容区域喵！ */
+.inspector-content {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  position: relative;
+  width: 280px;
+  min-width: 200px;
+  max-width: 400px;
+}
+
+/* 拉伸把手喵！ */
+.inspector-resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+  background-color: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.inspector-resize-handle:hover {
+  background-color: var(--accent);
+}
+
+/* 面板标题栏喵！ */
+.inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-toolbar);
+  min-height: 36px;
+}
+
+.inspector-header-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* 面板内容主体喵！ */
+.inspector-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px;
+}
+
+/* VSCode 风格的图标按钮栏喵！ */
+.inspector-sidebar {
+  width: 48px;
+  min-width: 48px;
+  height: 100%;
+  background-color: var(--bg-toolbar);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 4px;
+}
+
+/* 当面板收起时，按钮栏需要左边框喵！ */
+.inspector-container:not(.panel-expanded) .inspector-sidebar {
+  border-left: 1px solid var(--border);
+}
+
+/* 当面板展开时，按钮栏不需要左边框，因为面板内容已经有右边框喵！ */
+.inspector-container.panel-expanded .inspector-sidebar {
+  border-left: none;
+}
+
+.inspector-sidebar-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.inspector-sidebar-btn:hover {
+  background-color: var(--hover-bg);
+}
+
+.inspector-sidebar-btn.active {
+  background-color: var(--hover-bg);
+}
+
+/* VSCode 风格的激活指示器：右侧竖线喵！ */
+.inspector-sidebar-btn.active::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background-color: var(--theme-color);
+  border-radius: 1px;
+}
+
+.inspector-sidebar-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.inspector-sidebar-btn:hover .inspector-sidebar-icon {
+  color: var(--text-primary);
+}
+
+.inspector-sidebar-btn.active .inspector-sidebar-icon {
   color: var(--text-primary);
 }

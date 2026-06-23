@@ -1887,8 +1887,6 @@ function Viewport({
   useEffect(() => {
     if (!sceneRef.current) return;
 
-    console.log('Viewport objects useEffect:', 'objects length:', objects.length, 'objects:', objects);
-
     // 检查是否有用户创建的光源喵
     const hasUserLights = objects.some(obj => obj.isLight);
     // 如果有用户光源，禁用默认方向光，避免产生多余阴影喵
@@ -1900,13 +1898,10 @@ function Viewport({
     const existingIds = new Set(Object.keys(meshesRef.current));
     const newIds = new Set(objects.map(obj => obj.id));
 
-    console.log('Viewport objects useEffect:', 'existingIds:', Array.from(existingIds), 'newIds:', Array.from(newIds));
-
     existingIds.forEach(id => {
       if (!newIds.has(parseInt(id))) {
         const mesh = meshesRef.current[id];
         if (mesh) {
-          console.log('Viewport objects useEffect: removing mesh with id', id);
           sceneRef.current.remove(mesh);
           // 光源需要删除 target
           if (mesh.userData.isLight && mesh.target) {

@@ -165,6 +165,8 @@
   "inspector.applyToPrefab": "应用到预制件",
   "inspector.disconnectPrefab": "断开预制件连接",
   "inspector.clearSelection": "取消选中",
+  "inspector.sceneTab": "场景",
+  "inspector.objectTab": "对象",
 
   "snapshots.title": "快照管理",
   "snapshots.loading": "加载中...",
