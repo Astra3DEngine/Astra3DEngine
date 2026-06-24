@@ -86,7 +86,7 @@ function InspectorPanel({
       // 计算新宽度：容器右侧到鼠标位置的距离，减去按钮栏宽度喵！
       // 因为面板内容在左侧，拉伸把手在面板内容的左侧喵！
       const containerRect = containerRef.current.getBoundingClientRect();
-      const sidebarWidth = 48; // 按钮栏宽度 48px 喵！
+      const sidebarWidth = 36; // 按钮栏宽度 36px 喵！
       const newWidth = containerRect.right - e.clientX - sidebarWidth;
       
       // 限制最小和最大宽度喵！

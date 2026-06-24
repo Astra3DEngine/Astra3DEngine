@@ -303,15 +303,18 @@
 
 /* VSCode 风格的图标按钮栏喵！ */
 .inspector-sidebar {
-  width: 48px;
-  min-width: 48px;
+  width: 36px;
+  min-width: 36px;
+  max-width: 36px;
   height: 100%;
   background-color: var(--bg-toolbar);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 8px 0;
-  gap: 4px;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 /* 当面板收起时，按钮栏需要左边框喵！ */
@@ -325,18 +328,37 @@
 }
 
 .inspector-sidebar-btn {
-  width: 40px;
-  height: 40px;
-  padding: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0 8px 0 0;
   border: none;
   background: transparent;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 4px;
+  justify-content: flex-end;
+  border-radius: 0;
   position: relative;
-  transition: all 0.2s ease;
+  overflow: hidden;
+  transition: background-color 0.2s ease;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/* 右侧激活指示器（VSCode 风格） */
+.inspector-sidebar-btn::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background-color: var(--theme-color);
+  transition: width 0.15s ease;
+}
+
+.inspector-sidebar-btn.active::before {
+  width: 2px;
 }
 
 .inspector-sidebar-btn:hover {
@@ -347,18 +369,6 @@
   background-color: var(--hover-bg);
 }
 
-/* VSCode 风格的激活指示器：右侧竖线喵！ */
-.inspector-sidebar-btn.active::before {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 4px;
-  bottom: 4px;
-  width: 2px;
-  background-color: var(--theme-color);
-  border-radius: 1px;
-}
-
 .inspector-sidebar-icon {
   width: 20px;
   height: 20px;
@@ -367,6 +377,10 @@
 }
 
 .inspector-sidebar-btn:hover .inspector-sidebar-icon {
+  color: var(--text-primary);
+}
+
+.inspector-sidebar-btn.active .inspector-sidebar-icon {
   color: var(--text-primary);
 }
 
