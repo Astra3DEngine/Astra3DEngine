@@ -76,7 +76,8 @@ function HierarchyPanel({
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [expandedIds, setExpandedIds] = useState(() => new Set());
-  const [positionForMenu, setPositionForMenu] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [positionForMenu, setPositionForMenu] = useState(position);
   
   const addMenuRef = useRef(null);
   const contextMenuRef = useRef(null);
@@ -132,7 +133,7 @@ function HierarchyPanel({
 
     /**
      * 关于快捷键的方法
-     * 通过检测alt+a，打开创建object的右键菜单
+     * 通过检测alt+q，打开创建object的右键菜单
      * ```
      * 亲爱的 赛博猫猫：
      * 
@@ -159,7 +160,11 @@ function HierarchyPanel({
      * @param {KeyboardEvent} e 
      */
     const handleShortcutKey = (e) => {
-      if(e.altKey && e.key === 'a') setAddMenuOpen(true)
+      if(e.altKey && e.key === 'q') {
+        setAddMenuOpen(false);
+        setPositionForMenu(position);
+        setAddMenuOpen(true);
+      }
     }
     
     document.addEventListener('keydown', handleShortcutKey);
@@ -168,19 +173,18 @@ function HierarchyPanel({
       document.removeEventListener('click', handleClickOutside);
       document.removeEventListener('keydown', handleShortcutKey);
     }
-  }, []);
+  }, [position]);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
-      if(addMenuOpen) return;
-      setPositionForMenu({
+      setPosition({
         x: e.clientX,  // 相对于视口
         y: e.clientY
       });
     };
     document.addEventListener('mousemove', handleMouseMove);
     return () => {
-    document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mousemove', handleMouseMove);
     }
   },[addMenuOpen])
 
@@ -569,7 +573,10 @@ function HierarchyPanel({
     <div className="add-menu-container" ref={addMenuRef}>
       <button 
         className="add-menu-trigger"
-        onClick={() => setAddMenuOpen(!addMenuOpen)}
+        onClick={() =>{
+          setPositionForMenu(position);
+          setAddMenuOpen(!addMenuOpen);
+        }}
         title={msg('hierarchy.addObject')}
       >
         <IconPlus className="add-menu-icon"/>
