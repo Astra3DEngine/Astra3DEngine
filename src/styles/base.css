@@ -40,3 +40,11 @@ body {
 .bottom-area {
   flex-shrink: 0;
 }
+
+input[type="color"]::-webkit-color-swatch {
+  border: none;
+}
+
+input[type="color"]::-moz-color-swatch {
+  border: none;
+}
