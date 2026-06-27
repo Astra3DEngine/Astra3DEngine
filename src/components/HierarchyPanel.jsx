@@ -159,7 +159,7 @@ function HierarchyPanel({
      * @param {KeyboardEvent} e 
      */
     const handleShortcutKey = (e) => {
-      if(e.altKey && e.key === 'q') setAddMenuOpen(true)
+      if(e.altKey && e.key === 'a') setAddMenuOpen(true)
     }
     
     document.addEventListener('keydown', handleShortcutKey);
