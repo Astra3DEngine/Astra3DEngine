@@ -6,10 +6,11 @@
  * 工具栏可以拖的，Electron 场景下。
  */
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { msg, languages, getLocale } from '../i18n/index.js';
 import DropdownMenu from './DropdownMenu.jsx';
 import InfoModal from './InfoModal.jsx';
+import useDropdownMenu from '../hooks/useDropdownMenu.js';
 
 import IconNewProject from '../icons/new-project.svg?react';
 import IconOpenProject from '../icons/open-project.svg?react';
@@ -88,13 +89,13 @@ function Toolbar({
   const editMenuRef = useRef(null);
   const viewMenuRef = useRef(null);
   const runMenuRef = useRef(null);
-  const logoMenuRef = useRef(null);
   
   const [isMaximized, setIsMaximized] = useState(false);
   const [isElectron, setIsElectron] = useState(false);
-  const [logoMenuOpen, setLogoMenuOpen] = useState(false);
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [infoModalType, setInfoModalType] = useState('about');
+  
+  const logoMenu = useDropdownMenu();
 
   useEffect(() => {
     const electronDetected = typeof window !== 'undefined' && !!window.electronAPI;
@@ -106,17 +107,6 @@ function Toolbar({
       window.electronAPI.onMaximize(() => setIsMaximized(true));
       window.electronAPI.onUnmaximize(() => setIsMaximized(false));
     }
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (logoMenuRef.current && !logoMenuRef.current.contains(event.target)) {
-        setLogoMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -276,12 +266,17 @@ function Toolbar({
     if (e.altKey && isElectron) {
       window.electronAPI.openGame();
     } else {
-      setLogoMenuOpen(!logoMenuOpen);
+      if (logoMenu.isOpen) {
+        logoMenu.close();
+      } else {
+        const rect = e.currentTarget.getBoundingClientRect();
+        logoMenu.openAt(rect.left, rect.bottom);
+      }
     }
   };
 
   const handleLogoMenuItemClick = (action) => {
-    setLogoMenuOpen(false);
+    logoMenu.close();
     if (action === 'source') {
       window.open('https://github.com/LanwyWriteXU/Astra3DEngine', '_blank');
     } else {
@@ -290,12 +285,20 @@ function Toolbar({
     }
   };
 
+  const logoMenuItems = useMemo(() => [
+    { label: msg('logo.privacy'), onClick: () => handleLogoMenuItemClick('privacy') },
+    { label: msg('logo.source'), onClick: () => handleLogoMenuItemClick('source') },
+    { label: msg('logo.update'), onClick: () => handleLogoMenuItemClick('update') },
+    { label: msg('logo.about'), onClick: () => handleLogoMenuItemClick('about') },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [msg]);
+
   return (
     <>
       <div className={`toolbar ${isElectron ? 'toolbar-electron' : ''}`}>
         <div className="toolbar-left">
-          <div className="toolbar-logo-wrapper" ref={logoMenuRef}>
-            <button className="toolbar-logo-btn" onClick={handleLogoClick}>
+          <div className="toolbar-logo-wrapper">
+            <button className="toolbar-logo-btn" onMouseDown={(e) => e.stopPropagation()} onClick={handleLogoClick}>
               <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink"
                   height="24" viewBox="0,0,69.99346,66.43688">
                   <g transform="translate(-205.00327,-146.78156)">
@@ -311,22 +314,14 @@ function Toolbar({
                   </g>
               </svg>
             </button>
-            {logoMenuOpen && (
-              <div className="logo-dropdown-menu">
-                <button className="logo-menu-item" onClick={() => handleLogoMenuItemClick('privacy')}>
-                  {msg('logo.privacy')}
-                </button>
-                <button className="logo-menu-item" onClick={() => handleLogoMenuItemClick('source')}>
-                  {msg('logo.source')}
-                </button>
-                <button className="logo-menu-item" onClick={() => handleLogoMenuItemClick('update')}>
-                  {msg('logo.update')}
-                </button>
-                <button className="logo-menu-item" onClick={() => handleLogoMenuItemClick('about')}>
-                  {msg('logo.about')}
-                </button>
-              </div>
-            )}
+            <DropdownMenu
+              isOpen={logoMenu.isOpen}
+              onClose={logoMenu.close}
+              position={logoMenu.position}
+              menuRef={logoMenu.menuRef}
+              roundedCorners="all"
+              items={logoMenuItems}
+            />
           </div>
           <div className="toolbar-menus">
             <DropdownMenu 

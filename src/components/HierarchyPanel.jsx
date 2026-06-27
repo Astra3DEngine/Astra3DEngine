@@ -7,6 +7,8 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { msg } from '../i18n/index.js';
 import CollapsiblePanel from './CollapsiblePanel.jsx';
+import useDropdownMenu from '../hooks/useDropdownMenu.js';
+import DropdownMenu from './DropdownMenu.jsx';
 import IconCube from '../icons/cube.svg?react';
 import IconSphere from '../icons/sphere.svg?react';
 import IconPlane from '../icons/plane.svg?react';
@@ -67,20 +69,21 @@ function HierarchyPanel({
   onCollapseChange,
   onReorderObjects
 }) {
-  const [contextMenu, setContextMenu] = useState(null);
+  const [contextMenuObject, setContextMenuObject] = useState(null);
   const [isRenaming, setIsRenaming] = useState(null);
   const [renameValue, setRenameValue] = useState('');
   const [draggedId, setDraggedId] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const [dropPosition, setDropPosition] = useState(null);
-  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [expandedIds, setExpandedIds] = useState(() => new Set());
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [positionForMenu, setPositionForMenu] = useState(position);
   
-  const addMenuRef = useRef(null);
-  const contextMenuRef = useRef(null);
+  const addMenu = useDropdownMenu();
+  const ctxMenu = useDropdownMenu({
+    onClose: () => setContextMenuObject(null)
+  });
+  
   const renameInputRef = useRef(null);
   const searchInputRef = useRef(null);
   const objectsRef = useRef(objects);
@@ -122,58 +125,22 @@ function HierarchyPanel({
   };
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target)) {
-        setContextMenu(null);
-      }
-      if (addMenuRef.current && !addMenuRef.current.contains(e.target)) {
-        setAddMenuOpen(false);
-      }
-    };
-
     /**
      * 关于快捷键的方法
      * 通过检测alt+q，打开创建object的右键菜单
-     * ```
-     * 亲爱的 赛博猫猫：
-     * 
-     *  我看见你想让我一直做 A3DE 的毅力和决心了，我是时候开始
-     * 为 A3DE 做出一定的贡献了。我于是打开了这个项目，为我最
-     * 想要的一个功能做出准备————快捷键。
-     * 
-     *  但当我找到了关于右键菜单的定义时，我发现这是个极为困难的
-     * 任务，A3DE 的耦合性已经爆炸了。我本以为每个右键菜单应该有个
-     * 工具函数、或者有一个专门的文件定义，直到我看见了这个700多
-     * 行的文件，我爆炸了。
-     * 
-     *  简单来说，你这个右键菜单竟然是用的`useState`分散在每个项目，
-     * 这真的太奇怪了，我不知道你的`人工智能`怎么想的，总之我决定
-     * 在这坨上面继续堆，堆出一坨更大的。于是我在这里——一个`useEffect`
-     * 加入了这个方法，希望你喜欢。
-     * 
-     * 如果你要改的，我建议趁早。
-     *  
-     * 此致，敬礼！
-     *                                              KOSHINO
-     *                                            2026/6/27
-     * ```
-     * @param {KeyboardEvent} e 
      */
     const handleShortcutKey = (e) => {
-      if(e.altKey && e.key === 'q') {
-        setAddMenuOpen(false);
-        setPositionForMenu(position);
-        setAddMenuOpen(true);
+      if (e.altKey && e.key === 'q') {
+        addMenu.close();
+        addMenu.openAt(position.x, position.y);
       }
     }
     
     document.addEventListener('keydown', handleShortcutKey);
-    document.addEventListener('click', handleClickOutside);
     return () => {
-      document.removeEventListener('click', handleClickOutside);
       document.removeEventListener('keydown', handleShortcutKey);
     }
-  }, [position]);
+  }, [position, addMenu]);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -186,7 +153,8 @@ function HierarchyPanel({
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
     }
-  },[addMenuOpen])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // 只绑定一次，不依赖任何状态
 
   useEffect(() => {
     if (isRenaming && renameInputRef.current) {
@@ -201,31 +169,28 @@ function HierarchyPanel({
     
     if (isRenaming) return;
     
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      object: obj
-    });
+    setContextMenuObject(obj);
+    ctxMenu.openAt(e.clientX, e.clientY);
   };
 
   const handleCreatePrefab = () => {
-    if (contextMenu?.object) {
-      if (!contextMenu.object.prefabId) {
-        onCreatePrefab(contextMenu.object.id);
+    if (contextMenuObject) {
+      if (!contextMenuObject.prefabId) {
+        onCreatePrefab(contextMenuObject.id);
       }
     }
-    setContextMenu(null);
+    ctxMenu.close();
   };
 
   const handleDelete = () => {
-    if (contextMenu?.object) {
-      if (selectedObjects.length > 1 && selectedObjects.some(o => o && o.id === contextMenu.object.id)) {
+    if (contextMenuObject) {
+      if (selectedObjects.length > 1 && selectedObjects.some(o => o && o.id === contextMenuObject.id)) {
         onDeleteSelectedObjects();
       } else {
-        onDeleteObject(contextMenu.object.id);
+        onDeleteObject(contextMenuObject.id);
       }
     }
-    setContextMenu(null);
+    ctxMenu.close();
   };
 
   /**
@@ -235,20 +200,20 @@ function HierarchyPanel({
    * 则复制所有选中的对象。否则只复制单个对象。
    */
   const handleCopy = () => {
-    if (contextMenu?.object) {
+    if (contextMenuObject) {
       if (selectedObjects && selectedObjects.length > 1 && 
-          selectedObjects.some(o => o && o.id === contextMenu.object.id)) {
-        onCopyObject(contextMenu.object.id);
+          selectedObjects.some(o => o && o.id === contextMenuObject.id)) {
+        onCopyObject(contextMenuObject.id);
       } else {
-        onCopyObject(contextMenu.object.id);
+        onCopyObject(contextMenuObject.id);
       }
     }
-    setContextMenu(null);
+    ctxMenu.close();
   };
 
   const handlePaste = () => {
     onPasteObject();
-    setContextMenu(null);
+    ctxMenu.close();
   };
 
   /**
@@ -258,18 +223,18 @@ function HierarchyPanel({
    * 则复制所有选中的对象。否则只复制单个对象。
    */
   const handleDuplicate = () => {
-    if (contextMenu?.object) {
-      onDuplicateObject(contextMenu.object.id);
+    if (contextMenuObject) {
+      onDuplicateObject(contextMenuObject.id);
     }
-    setContextMenu(null);
+    ctxMenu.close();
   };
 
   const handleRename = () => {
-    if (contextMenu?.object) {
-      setIsRenaming(contextMenu.object.id);
-      setRenameValue(contextMenu.object.name);
+    if (contextMenuObject) {
+      setIsRenaming(contextMenuObject.id);
+      setRenameValue(contextMenuObject.name);
     }
-    setContextMenu(null);
+    ctxMenu.close();
   };
 
   const handleRenameSubmit = () => {
@@ -569,76 +534,68 @@ function HierarchyPanel({
 
   const isSearching = searchText.trim().length > 0;
 
+  const addMenuItems = useMemo(() => [
+    { label: msg('hierarchy.folder'), icon: <IconFolder className="dropdown-icon" />, onClick: () => { onAddObject('folder'); addMenu.close(); } },
+    { divider: true },
+    { label: msg('hierarchy.cube'), icon: <IconCube className="dropdown-icon" />, onClick: () => { onAddObject('cube'); addMenu.close(); } },
+    { label: msg('hierarchy.sphere'), icon: <IconSphere className="dropdown-icon" />, onClick: () => { onAddObject('sphere'); addMenu.close(); } },
+    { label: msg('hierarchy.plane'), icon: <IconPlane className="dropdown-icon" />, onClick: () => { onAddObject('plane'); addMenu.close(); } },
+    { divider: true },
+    { label: msg('hierarchy.pointLight'), icon: <IconPointLight className="dropdown-icon" />, onClick: () => { onAddObject('pointLight'); addMenu.close(); } },
+    { label: msg('hierarchy.directionalLight'), icon: <IconDirectionalLight className="dropdown-icon" />, onClick: () => { onAddObject('directionalLight'); addMenu.close(); } },
+    { label: msg('hierarchy.spotLight'), icon: <IconSpotLight className="dropdown-icon" />, onClick: () => { onAddObject('spotLight'); addMenu.close(); } },
+  ], [onAddObject, addMenu]);
+
+  const ctxMenuItems = useMemo(() => {
+    if (!contextMenuObject) return [];
+    return [
+      { label: msg('hierarchy.copy'), icon: <IconCopy className="dropdown-icon" />, onClick: handleCopy },
+      { label: msg('hierarchy.paste'), icon: <IconPaste className="dropdown-icon" />, disabled: !clipboard, onClick: handlePaste },
+      { label: msg('hierarchy.duplicate'), icon: <IconDuplicate className="dropdown-icon" />, onClick: handleDuplicate },
+      { label: msg('hierarchy.rename'), icon: <IconRename className="dropdown-icon" />, onClick: handleRename },
+      { divider: true },
+      {
+        label: contextMenuObject?.prefabId ? getPrefabName(contextMenuObject.prefabId) : msg('prefabs.createFromObject'),
+        icon: contextMenuObject?.prefabId ? <IconPrefabInstance className="dropdown-icon" /> : <IconPrefab className="dropdown-icon" />,
+        onClick: handleCreatePrefab
+      },
+      { divider: true },
+      {
+        label: selectedObjects.length > 1 && selectedObjects.some(o => o && o.id === contextMenuObject?.id)
+          ? `${msg('hierarchy.deleteSelected')} (${selectedObjects.length})`
+          : msg('hierarchy.delete'),
+        icon: <IconDelete className="dropdown-icon" />,
+        danger: true,
+        onClick: handleDelete
+      }
+    ];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contextMenuObject, clipboard, selectedObjects, msg]);
+
   const headerRight = (
-    <div className="add-menu-container" ref={addMenuRef}>
+    <div className="add-menu-container">
       <button 
         className="add-menu-trigger"
-        onClick={() =>{
-          setPositionForMenu(position);
-          setAddMenuOpen(!addMenuOpen);
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={() => {
+          if (addMenu.isOpen) {
+            addMenu.close();
+          } else {
+            addMenu.openAt(position.x, position.y);
+          }
         }}
         title={msg('hierarchy.addObject')}
       >
         <IconPlus className="add-menu-icon"/>
       </button>
-      {addMenuOpen && (
-        <div className="add-menu-dropdown" style={{
-          top: `${positionForMenu.y}px`,
-          left: `${positionForMenu.x}px`
-        }}>
-          <div 
-            className="add-menu-item"
-            onClick={() => { onAddObject('folder'); setAddMenuOpen(false); }}
-          >
-            <IconFolder className="add-menu-item-icon" />
-            {msg('hierarchy.folder')}
-          </div>
-          <div className="add-menu-divider" />
-          <div 
-            className="add-menu-item"
-            onClick={() => { onAddObject('cube'); setAddMenuOpen(false); }}
-          >
-            <IconCube className="add-menu-item-icon" />
-            {msg('hierarchy.cube')}
-          </div>
-          <div 
-            className="add-menu-item"
-            onClick={() => { onAddObject('sphere'); setAddMenuOpen(false); }}
-          >
-            <IconSphere className="add-menu-item-icon" />
-            {msg('hierarchy.sphere')}
-          </div>
-          <div 
-            className="add-menu-item"
-            onClick={() => { onAddObject('plane'); setAddMenuOpen(false); }}
-          >
-            <IconPlane className="add-menu-item-icon" />
-            {msg('hierarchy.plane')}
-          </div>
-          <div className="add-menu-divider" />
-          <div 
-            className="add-menu-item"
-            onClick={() => { onAddObject('pointLight'); setAddMenuOpen(false); }}
-          >
-            <IconPointLight className="add-menu-item-icon" />
-            {msg('hierarchy.pointLight')}
-          </div>
-          <div 
-            className="add-menu-item"
-            onClick={() => { onAddObject('directionalLight'); setAddMenuOpen(false); }}
-          >
-            <IconDirectionalLight className="add-menu-item-icon" />
-            {msg('hierarchy.directionalLight')}
-          </div>
-          <div 
-            className="add-menu-item"
-            onClick={() => { onAddObject('spotLight'); setAddMenuOpen(false); }}
-          >
-            <IconSpotLight className="add-menu-item-icon" />
-            {msg('hierarchy.spotLight')}
-          </div>
-        </div>
-      )}
+      <DropdownMenu
+        isOpen={addMenu.isOpen}
+        onClose={addMenu.close}
+        position={addMenu.position}
+        menuRef={addMenu.menuRef}
+        roundedCorners="all"
+        items={addMenuItems}
+      />
     </div>
   );
 
@@ -702,49 +659,14 @@ function HierarchyPanel({
         )}
       </div>
 
-      {contextMenu && (
-        <div 
-          ref={contextMenuRef}
-          className="context-menu"
-          style={{
-            position: 'fixed',
-            left: contextMenu.x,
-            top: contextMenu.y,
-            zIndex: 1000
-          }}
-        >
-          <div className="context-menu-item" onClick={handleCopy}>
-            <IconCopy className="context-menu-icon" /> {msg('hierarchy.copy')}
-          </div>
-          <div 
-            className={`context-menu-item ${!clipboard ? 'context-menu-disabled' : ''}`} 
-            onClick={clipboard ? handlePaste : undefined}
-          >
-            <IconPaste className="context-menu-icon" /> {msg('hierarchy.paste')}
-          </div>
-          <div className="context-menu-item" onClick={handleDuplicate}>
-            <IconDuplicate className="context-menu-icon" /> {msg('hierarchy.duplicate')}
-          </div>
-          <div className="context-menu-item" onClick={handleRename}>
-            <IconRename className="context-menu-icon" /> {msg('hierarchy.rename')}
-          </div>
-          <div className="context-menu-divider" />
-          <div className="context-menu-item" onClick={handleCreatePrefab}>
-            {contextMenu.object.prefabId 
-              ? <><IconPrefabInstance className="context-menu-icon" /> {getPrefabName(contextMenu.object.prefabId)}</>
-              : <><IconPrefab className="context-menu-icon" /> {msg('prefabs.createFromObject')}</>
-            }
-          </div>
-          <div className="context-menu-divider" />
-          <div className="context-menu-item context-menu-danger" onClick={handleDelete}>
-            <IconDelete className="context-menu-icon" /> 
-            {selectedObjects.length > 1 && selectedObjects.some(o => o && o.id === contextMenu?.object?.id)
-              ? `${msg('hierarchy.deleteSelected')} (${selectedObjects.length})`
-              : msg('hierarchy.delete')
-            }
-          </div>
-        </div>
-      )}
+      <DropdownMenu
+        isOpen={ctxMenu.isOpen}
+        onClose={ctxMenu.close}
+        position={ctxMenu.position}
+        menuRef={ctxMenu.menuRef}
+        roundedCorners="all"
+        items={ctxMenuItems}
+      />
     </CollapsiblePanel>
   );
 }

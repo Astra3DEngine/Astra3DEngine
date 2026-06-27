@@ -101,8 +101,8 @@
 }
 
 .dropdown-icon {
-  width: 16px;
-  height: 16px;
+  width: auto;
+  height: 14px;
   margin-right: 6px;
   display: flex;
   align-items: center;

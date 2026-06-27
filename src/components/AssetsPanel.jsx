@@ -2,6 +2,8 @@ import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react'
 import { msg } from '../i18n/index.js';
 import CollapsiblePanel from './CollapsiblePanel.jsx';
 import FileBrowserDialog from './FileBrowserDialog.jsx';
+import useDropdownMenu from '../hooks/useDropdownMenu.js';
+import DropdownMenu from './DropdownMenu.jsx';
 import IconModel from '../icons/cube.svg?react';
 import IconImage from '../icons/image.svg?react';
 import IconFile from '../icons/file.svg?react';
@@ -34,26 +36,18 @@ const getBasename = (filePath) => {
 
 function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteAsset, onRenameAsset, onCollapseChange }) {
   const fileInputRef = useRef(null);
-  const contextMenuRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [contextMenu, setContextMenu] = useState(null);
+  const [contextMenuAsset, setContextMenuAsset] = useState(null);
   const [editingAsset, setEditingAsset] = useState(null);
   const [editName, setEditName] = useState('');
   const [filter, setFilter] = useState('all');
   const [isFileBrowserOpen, setIsFileBrowserOpen] = useState(false);
   
+  const ctxMenu = useDropdownMenu({
+    onClose: () => setContextMenuAsset(null)
+  });
+  
   const isElectron = typeof window !== 'undefined' && window.electronAPI?.fs;
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target)) {
-        setContextMenu(null);
-      }
-    };
-    
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
 
   const handleImportClick = useCallback(() => {
     if (isElectron) {
@@ -308,28 +302,25 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
   const handleContextMenu = (e, asset) => {
     e.preventDefault();
     e.stopPropagation();
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      asset
-    });
+    setContextMenuAsset(asset);
+    ctxMenu.openAt(e.clientX, e.clientY);
   };
 
   const handleCloseContextMenu = () => {
-    setContextMenu(null);
+    ctxMenu.close();
   };
 
   const handleDelete = (asset) => {
     if (onDeleteAsset) {
       onDeleteAsset(asset);
     }
-    setContextMenu(null);
+    ctxMenu.close();
   };
 
   const handleStartRename = (asset) => {
     setEditingAsset(asset);
     setEditName(asset.name);
-    setContextMenu(null);
+    ctxMenu.close();
   };
 
   const handleFinishRename = (asset) => {
@@ -391,6 +382,15 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
     }
     return <IconFile className="asset-type-icon" />;
   };
+
+  const ctxMenuItems = useMemo(() => {
+    if (!contextMenuAsset) return [];
+    return [
+      { label: msg('assets.rename'), icon: <IconRename className="dropdown-icon" />, onClick: () => handleStartRename(contextMenuAsset) },
+      { label: msg('assets.delete'), icon: <IconDelete className="dropdown-icon" />, danger: true, onClick: () => handleDelete(contextMenuAsset) }
+    ];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contextMenuAsset, msg]);
 
   return (
     <CollapsiblePanel 
@@ -496,34 +496,14 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
         )}
       </div>
 
-      {contextMenu && (
-        <div 
-          ref={contextMenuRef}
-          className="context-menu"
-          style={{
-            position: 'fixed',
-            left: contextMenu.x,
-            top: contextMenu.y,
-            zIndex: 1000
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div 
-            className="context-menu-item"
-            onClick={() => handleStartRename(contextMenu.asset)}
-          >
-            <IconRename className="context-menu-icon" />
-            {msg('assets.rename')}
-          </div>
-          <div 
-            className="context-menu-item context-menu-danger"
-            onClick={() => handleDelete(contextMenu.asset)}
-          >
-            <IconDelete className="context-menu-icon" />
-            {msg('assets.delete')}
-          </div>
-        </div>
-      )}
+      <DropdownMenu
+        isOpen={ctxMenu.isOpen}
+        onClose={ctxMenu.close}
+        position={ctxMenu.position}
+        menuRef={ctxMenu.menuRef}
+        roundedCorners="all"
+        items={ctxMenuItems}
+      />
 
       <FileBrowserDialog
         isOpen={isFileBrowserOpen}
