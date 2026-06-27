@@ -54,7 +54,7 @@
   "hierarchy.emptyHint": "Click + button to create one.",
   "hierarchy.searchPlaceholder": "Search...",
   "hierarchy.noResults": "No matching objects found",
-  "hierarchy.addObject": "Add Object",
+  "hierarchy.addObject": "Add Object (alt+q)",
   "hierarchy.folder": "Folder",
   "hierarchy.cube": "Cube",
   "hierarchy.sphere": "Sphere",

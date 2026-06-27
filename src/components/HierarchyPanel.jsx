@@ -76,6 +76,7 @@ function HierarchyPanel({
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [expandedIds, setExpandedIds] = useState(() => new Set());
+  const [positionForMenu, setPositionForMenu] = useState({ x: 0, y: 0 });
   
   const addMenuRef = useRef(null);
   const contextMenuRef = useRef(null);
@@ -128,10 +129,60 @@ function HierarchyPanel({
         setAddMenuOpen(false);
       }
     };
+
+    /**
+     * 关于快捷键的方法
+     * 通过检测alt+a，打开创建object的右键菜单
+     * ```
+     * 亲爱的 赛博猫猫：
+     * 
+     *  我看见你想让我一直做 A3DE 的毅力和决心了，我是时候开始
+     * 为 A3DE 做出一定的贡献了。我于是打开了这个项目，为我最
+     * 想要的一个功能做出准备————快捷键。
+     * 
+     *  但当我找到了关于右键菜单的定义时，我发现这是个极为困难的
+     * 任务，A3DE 的耦合性已经爆炸了。我本以为每个右键菜单应该有个
+     * 工具函数、或者有一个专门的文件定义，直到我看见了这个700多
+     * 行的文件，我爆炸了。
+     * 
+     *  简单来说，你这个右键菜单竟然是用的`useState`分散在每个项目，
+     * 这真的太奇怪了，我不知道你的`人工智能`怎么想的，总之我决定
+     * 在这坨上面继续堆，堆出一坨更大的。于是我在这里——一个`useEffect`
+     * 加入了这个方法，希望你喜欢。
+     * 
+     * 如果你要改的，我建议趁早。
+     *  
+     * 此致，敬礼！
+     *                                              KOSHINO
+     *                                            2026/6/27
+     * ```
+     * @param {KeyboardEvent} e 
+     */
+    const handleShortcutKey = (e) => {
+      if(e.altKey && e.key === 'q') setAddMenuOpen(true)
+    }
     
+    document.addEventListener('keydown', handleShortcutKey);
     document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('keydown', handleShortcutKey);
+    }
   }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if(addMenuOpen) return;
+      setPositionForMenu({
+        x: e.clientX,  // 相对于视口
+        y: e.clientY
+      });
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    return () => {
+    document.removeEventListener('mousemove', handleMouseMove);
+    }
+  },[addMenuOpen])
 
   useEffect(() => {
     if (isRenaming && renameInputRef.current) {
@@ -521,10 +572,13 @@ function HierarchyPanel({
         onClick={() => setAddMenuOpen(!addMenuOpen)}
         title={msg('hierarchy.addObject')}
       >
-        <IconPlus className="add-menu-icon" />
+        <IconPlus className="add-menu-icon"/>
       </button>
       {addMenuOpen && (
-        <div className="add-menu-dropdown">
+        <div className="add-menu-dropdown" style={{
+          top: `${positionForMenu.y}px`,
+          left: `${positionForMenu.x}px`
+        }}>
           <div 
             className="add-menu-item"
             onClick={() => { onAddObject('folder'); setAddMenuOpen(false); }}

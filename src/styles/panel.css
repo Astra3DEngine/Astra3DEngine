@@ -335,9 +335,7 @@
 }
 
 .add-menu-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
+  position: fixed;
   margin-top: 2px;
   background: var(--bg-panel);
   border: 1px solid var(--border);

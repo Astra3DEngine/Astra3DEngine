@@ -31,7 +31,7 @@
   "hierarchy.title": "Hierarchia",
   "hierarchy.empty": "Nulla objecta in scena.",
   "hierarchy.emptyHint": "Preme + ad creandum.",
-  "hierarchy.addObject": "Addere Objectum",
+  "hierarchy.addObject": "Addere Objectum (alt+q)",
   "hierarchy.cube": "Cubus",
   "hierarchy.sphere": "Sphaera",
   "hierarchy.plane": "Planum",

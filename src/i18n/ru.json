@@ -31,7 +31,7 @@
   "hierarchy.title": "Иерархия",
   "hierarchy.empty": "В сцене нет объектов.",
   "hierarchy.emptyHint": "Нажмите + для создания.",
-  "hierarchy.addObject": "Добавить объект",
+  "hierarchy.addObject": "Добавить объект (alt+q)",
   "hierarchy.cube": "Куб",
   "hierarchy.sphere": "Сфера",
   "hierarchy.plane": "Плоскость",

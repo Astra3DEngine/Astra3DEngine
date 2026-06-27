@@ -31,7 +31,7 @@
   "hierarchy.title": "ヒエラルキー",
   "hierarchy.empty": "シーンにオブジェクトがありません。",
   "hierarchy.emptyHint": "+ ボタンをクリックして作成。",
-  "hierarchy.addObject": "オブジェクト追加",
+  "hierarchy.addObject": "オブジェクト追加 (alt+q)",
   "hierarchy.cube": "キューブ",
   "hierarchy.sphere": "球体",
   "hierarchy.plane": "平面",
