@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { msg } from '../i18n/index.js';
+import { useDialog } from '../hooks/useDialog.jsx';
+import Modal from './Modal.jsx';
 
 import ArrowLeftIcon from '../icons/arrow-left.svg';
 import ArrowRightIcon from '../icons/arrow-right.svg';
 import ArrowUpIcon from '../icons/arrow-up.svg';
 import FolderIcon from '../icons/folder.svg';
 import FileIcon from '../icons/file.svg';
-import CloseIcon from '../icons/close.svg';
 import PlusIcon from '../icons/plus.svg';
 import HomeIcon from '../icons/home.svg';
 import DesktopIcon from '../icons/desktop.svg';
@@ -71,7 +72,6 @@ function saveLastPath(p) {
 const FileBrowserDialog = ({
   isOpen,
   onClose,
-  onSelect,
   mode = 'open',
   title,
   defaultPath,
@@ -80,6 +80,7 @@ const FileBrowserDialog = ({
   showHiddenFiles = false,
   allowSelectFolder = false
 }) => {
+  const dialog = useDialog();
   const [currentPath, setCurrentPath] = useState('');
   const [items, setItems] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
@@ -90,8 +91,6 @@ const FileBrowserDialog = ({
   const [commonDirs, setCommonDirs] = useState(null);
   const [drives, setDrives] = useState([]);
   const [filename, setFilename] = useState('');
-  const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
   const [activeFilterIndex, setActiveFilterIndex] = useState(0);
   const [isEditingPath, setIsEditingPath] = useState(false);
   const [editedPath, setEditedPath] = useState('');
@@ -327,15 +326,14 @@ const FileBrowserDialog = ({
       }
       
       const fullPath = currentPath + pathSeparator + filename.trim();
-      onSelect(fullPath);
+      onClose(fullPath);
     } else {
       if (selectedItems.length > 0) {
         const paths = selectedItems.map(i => i.path);
-        onSelect(allowMultiple ? paths : paths[0]);
+        onClose(allowMultiple ? paths : paths[0]);
       }
     }
-    onClose();
-  }, [mode, filename, currentPath, pathSeparator, selectedItems, allowMultiple, onSelect, onClose]);
+  }, [mode, filename, currentPath, pathSeparator, selectedItems, allowMultiple, onClose]);
   
   const handleItemDoubleClick = useCallback((item) => {
     if (item.isDirectory) {
@@ -346,23 +344,26 @@ const FileBrowserDialog = ({
   }, [navigateTo, handleConfirm]);
   
   const handleCreateFolder = useCallback(async () => {
-    if (!newFolderName.trim()) return;
+    const folderName = await dialog.prompt(
+      msg('fileBrowser.folderNamePlaceholder'),
+      '',
+      msg('fileBrowser.newFolder')
+    );
+    if (!folderName || !folderName.trim()) return;
     
-    const folderPath = currentPath + pathSeparator + newFolderName.trim();
+    const folderPath = currentPath + pathSeparator + folderName.trim();
     
     try {
       const result = await window.electronAPI.fs.createDirectory(folderPath);
       if (result.success) {
         navigateTo(currentPath, false);
-        setShowNewFolderDialog(false);
-        setNewFolderName('');
       } else {
         setError(result.error);
       }
     } catch (e) {
       setError(e.message);
     }
-  }, [newFolderName, currentPath, pathSeparator, navigateTo]);
+  }, [currentPath, pathSeparator, navigateTo, dialog]);
   
   const formatSize = useCallback((bytes) => {
     if (bytes < 1024) return bytes + ' B';
@@ -417,60 +418,30 @@ const FileBrowserDialog = ({
     // 非 Windows 路径（Unix 风格）
     return '/' + pathParts.slice(0, index + 1).join('/');
   }, [pathParts]);
-  
-  if (!isOpen) return null;
-  
-  if (!isElectron) {
-    return (
-      <div className="file-browser-overlay">
-        <div className="file-browser-dialog">
-          <div className="file-browser-header">
-            <h3>{title || msg('fileBrowser.title')}</h3>
-            <button className="file-browser-close" onClick={onClose}>
-              <Icon src={CloseIcon} size={14} />
-            </button>
-          </div>
-          <div className="file-browser-content">
-            <div className="file-browser-error">
-              {msg('fileBrowser.notElectron')}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  // 初始化阶段：只显示 loading，隐藏所有 UI
-  if (isLoading && items.length === 0) {
-    return (
-      <div className="file-browser-overlay">
-        <div className="file-browser-dialog">
-          <div className="file-browser-header">
-            <h3>{title || (mode === 'save' ? msg('fileBrowser.saveTitle') : msg('fileBrowser.openTitle'))}</h3>
-            <button className="file-browser-close" onClick={onClose}>
-              <Icon src={CloseIcon} size={14} />
-            </button>
-          </div>
-          <div className="file-browser-body">
-            <div className="file-browser-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
-              <div className="file-browser-loading">{msg('fileBrowser.loading')}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const modalTitle = title || (mode === 'save' ? msg('fileBrowser.saveTitle') : msg('fileBrowser.openTitle'));
 
-  return (
-    <div className="file-browser-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="file-browser-dialog">
-        <div className="file-browser-header">
-          <h3>{title || (mode === 'save' ? msg('fileBrowser.saveTitle') : msg('fileBrowser.openTitle'))}</h3>
-          <button className="file-browser-close" onClick={onClose}>
-            <Icon src={CloseIcon} size={14} />
-          </button>
+  const renderContent = () => {
+    if (!isElectron) {
+      return (
+        <div className="file-browser-content">
+          <div className="file-browser-error">
+            {msg('fileBrowser.notElectron')}
+          </div>
         </div>
-        
+      );
+    }
+
+    if (isLoading && items.length === 0) {
+      return (
+        <div className="file-browser-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+          <div className="file-browser-loading">{msg('fileBrowser.loading')}</div>
+        </div>
+      );
+    }
+
+    return (
+      <>
         <div className="file-browser-toolbar">
           <button 
             className="file-browser-nav-btn" 
@@ -531,7 +502,7 @@ const FileBrowserDialog = ({
           
           <button 
             className="file-browser-action-btn"
-            onClick={() => setShowNewFolderDialog(true)}
+            onClick={handleCreateFolder}
             title={msg('fileBrowser.newFolder')}
           >
             <Icon src={FolderIcon} size={14} />
@@ -697,31 +668,20 @@ const FileBrowserDialog = ({
             </button>
           </div>
         </div>
-        
-        {showNewFolderDialog && (
-          <div className="file-browser-new-folder-overlay">
-            <div className="file-browser-new-folder-dialog">
-              <h4>{msg('fileBrowser.newFolder')}</h4>
-              <input
-                type="text"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder={msg('fileBrowser.folderNamePlaceholder')}
-                autoFocus
-              />
-              <div className="file-browser-new-folder-actions">
-                <button onClick={() => setShowNewFolderDialog(false)}>
-                  {msg('fileBrowser.cancel')}
-                </button>
-                <button onClick={handleCreateFolder}>
-                  {msg('fileBrowser.create')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+      </>
+    );
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={modalTitle}
+      width={720}
+      height={500}
+    >
+      {renderContent()}
+    </Modal>
   );
 };
 

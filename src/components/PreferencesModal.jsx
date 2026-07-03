@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { msg, getLocale, languages } from '../i18n/index.js';
-import IconClose from '../icons/close.svg?react';
+import Modal from './Modal.jsx';
 import { getAllThemes, subscribe } from '../utils/themeManager.js';
 
 /**
@@ -22,7 +22,7 @@ import { getAllThemes, subscribe } from '../utils/themeManager.js';
  * @param {Function} props.onToggleAutoSave - 切换自动保存回调
  * @param {number} props.maxSnapshots - 最大快照数量
  * @param {Function} props.onSetMaxSnapshots - 设置最大快照数量回调
- * @returns {JSX.Element|null} 设置模态框组件
+ * @returns {JSX.Element} 设置模态框组件
  */
 function PreferencesModal({ 
   isOpen, 
@@ -47,8 +47,6 @@ function PreferencesModal({
     });
     return unsubscribe;
   }, []);
-
-  if (!isOpen) return null;
 
   const categories = [
     { id: 'appearance', label: msg('preferences.category.appearance') },
@@ -157,34 +155,31 @@ function PreferencesModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content preferences-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{msg('menu.preferences')}</h2>
-          <button className="modal-close-btn" onClick={onClose}>
-            <IconClose className="modal-close-icon" />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={msg('menu.preferences')}
+      width={650}
+      height={420}
+    >
+      <div className="preferences-body">
+        <div className="preferences-sidebar">
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              className={`preferences-category-btn ${activeCategory === cat.id ? 'active' : ''}`}
+              onClick={() => setActiveCategory(cat.id)}
+            >
+              {cat.label}
+            </button>
+          ))}
         </div>
         
-        <div className="preferences-body">
-          <div className="preferences-sidebar">
-            {categories.map(cat => (
-              <button
-                key={cat.id}
-                className={`preferences-category-btn ${activeCategory === cat.id ? 'active' : ''}`}
-                onClick={() => setActiveCategory(cat.id)}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-          
-          <div className="preferences-content">
-            {renderContent()}
-          </div>
+        <div className="preferences-content">
+          {renderContent()}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 

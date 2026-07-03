@@ -130,7 +130,7 @@ function Viewport({
    * 这样才能正确处理多选时的相对位置计算，不然 model 类型的 geoCenterOffset 会是 (0,0,0)，
    * 导致缩放时相对位置计算错误，模型会乱飞。
    * 
-   * 这个函数定义在组件顶层，以便在多个 useEffect 中使用喵~
+   * 这个函数定义在组件顶层，以便在多个 useEffect 中使用
    */
   const getMeshGeometryCenterWorld = useCallback((mesh) => {
     if (mesh.userData.isModel) {

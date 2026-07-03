@@ -1,14 +1,8 @@
-# DropdownMenu 统一组件使用文档
+# 组件模板使用文档
 
-## 背景
+## Dropdown 下拉菜单 内容
 
-项目中原本每个面板（Hierarchy、Assets、Toolbar、Viewport）都各自复制粘贴了 `useState` + `useRef` + `useEffect`（监听点击外部、Escape 键）来管理菜单开关，再加上各写各的 `<div className="context-menu">` / `<div className="add-menu-dropdown">` / `<div className="logo-dropdown-menu">` 渲染层。这些代码散落在多个组件中，维护成本极高，样式也不统一。
-
-现在统一为：**`useDropdownMenu` 负责纯状态管理，`DropdownMenu` 负责统一渲染。**
-
----
-
-## 1. useDropdownMenu Hook
+### 1. useDropdownMenu Hook
 
 纯状态管理，不做任何 DOM 事件监听（点击外部、Escape 都由 `DropdownMenu` 组件统一处理）。
 
@@ -32,11 +26,11 @@ const menu = useDropdownMenu({
 
 ---
 
-## 2. DropdownMenu 组件
+### 2. DropdownMenu 组件
 
 `src/components/DropdownMenu.jsx` 是**唯一**的菜单渲染组件，支持两种模式：
 
-### 模式 A：Trigger 模式（菜单按钮触发）
+#### 模式 A：Trigger 模式（菜单按钮触发）
 
 适用于 Toolbar 的 File / Edit / View / Run 菜单等。组件内部自动管理 `isOpen` 状态，点击按钮开关，点击外部自动关闭。
 
@@ -72,7 +66,7 @@ const menuRef = useRef(null);
 />
 ```
 
-### 模式 B：受控模式（外部 Hook 控制开关和位置）
+#### 模式 B：受控模式（外部 Hook 控制开关和位置）
 
 适用于右键菜单、Add 菜单、Logo 菜单等需要**自定义触发方式**或**自定义位置**的场景。
 
@@ -134,7 +128,7 @@ const menu = useDropdownMenu({
 
 ---
 
-## 3. 菜单项数据结构（items）
+### 3. 菜单项数据结构（items）
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -150,7 +144,7 @@ const menu = useDropdownMenu({
 
 ---
 
-## 4. 圆角 API（roundedCorners）
+### 4. 圆角 API（roundedCorners）
 
 保留原有圆角配置能力，向下兼容。
 
@@ -172,26 +166,26 @@ const menu = useDropdownMenu({
 
 ---
 
-## 5. 各面板当前使用方式
+### 5. 各面板当前使用方式
 
-### Toolbar — Trigger 模式
+#### Toolbar — Trigger 模式
 
 File / Edit / View / Run 四个菜单使用 `ref` + `label` + `items`，快捷键通过 `ref.current?.open()` 控制。
 
 Logo 菜单使用受控模式 + `items` 数组。
 
-### HierarchyPanel — 受控模式
+#### HierarchyPanel — 受控模式
 
 - **Add 菜单**：按钮点击 → `addMenu.openAt(x, y)` → `<DropdownMenu isOpen={addMenu.isOpen} ... items={...} />`
 - **右键菜单**：`onContextMenu` → `ctxMenu.openAt(x, y)` → `<DropdownMenu isOpen={ctxMenu.isOpen} ... items={...} />`
 
-### AssetsPanel — 受控模式
+#### AssetsPanel — 受控模式
 
 右键菜单通过 `ctxMenu.openAt(e.clientX, e.clientY)` 触发，渲染 `<DropdownMenu items={...} />`。
 
 ---
 
-## 6. 样式规范
+### 6. 样式规范
 
 所有菜单项统一使用 `.dropdown-item` / `.dropdown-icon` / `.dropdown-divider` 样式，定义在 `src/styles/dropdown.css` 中。
 
@@ -206,26 +200,119 @@ Logo 菜单使用受控模式 + `items` 数组。
 { icon: <IconCopy className="add-menu-item-icon" /> }
 ```
 
----
-
-## 7. 不再需要的代码（已删除）
-
-以下写法已废弃，各面板已全部迁移：
-
-- `useState(false)` + `useRef()` + `useEffect` 监听点击外部 / Escape → **改为 `useDropdownMenu()`**
-- 手写的 `<div className="context-menu">` / `<div className="add-menu-dropdown">` / `<div className="logo-dropdown-menu">` → **改为 `<DropdownMenu>`**
-- `ContextMenu.jsx` 组件 → **已删除，功能合并到 `DropdownMenu`**
-- 旧的 `.context-menu-item` / `.add-menu-item` / `.logo-menu-item` 等 className → **改为 `.dropdown-item`**
+> **现有规则：任何新的菜单，都不要再手搓 `useState` + `useRef` + `useEffect` 了。**
 
 ---
 
-## 8. 新增菜单的统一流程
+## Modal 模态框 内容
 
-1. 导入 Hook 和组件：`import { useDropdownMenu } from '../hooks/useDropdownMenu.js'; import DropdownMenu from '../components/DropdownMenu.jsx';`
-2. 声明状态：`const menu = useDropdownMenu();`
-3. 触发：`menu.openAt(x, y)` 或 `menu.toggle()`
-4. 渲染：`<DropdownMenu isOpen={menu.isOpen} onClose={menu.close} position={menu.position} menuRef={menu.menuRef} items={[...]} />`
-5. 图标统一：`className="dropdown-icon"`
-6. 不要自己写 `useEffect` 监听点击外部和 Escape。
+### 1. 状态管理层：`useModal.js`
 
-> **规则：任何新的菜单，都不要再手搓 `useState` + `useRef` + `useEffect` 了。**
+| 返回值 | 类型 | 说明 |
+|---|---|---|
+| `isOpen` | `boolean` | 当前模态框是否打开 |
+| `open` | `() => void` | 打开模态框（触发 `onOpen` 回调） |
+| `close` | `() => void` | 关闭模态框（触发 `onClose` 回调） |
+| `toggle` | `() => void` | 切换模态框开关状态 |
+| `modalRef` | `React.RefObject` | 绑定到 Modal 组件的 DOM ref |
+
+```js
+import { useModal } from '../hooks/useModal.js';
+
+const { isOpen, open, close, toggle, modalRef } = useModal({
+  onOpen: () => console.log('opened'),
+  onClose: () => console.log('closed')
+});
+```
+
+---
+
+### 2. 渲染组件层：`Modal.jsx`
+
+| Prop | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `isOpen` | `boolean` | — | 是否显示模态框（必填） |
+| `onClose` | `Function` | — | 关闭回调（必填） |
+| `title` | `string` | — | 标题（不传则不渲染 header） |
+| `children` | `ReactNode` | — | body 内容 |
+| `footer` | `ReactNode` | — | footer 内容（可选） |
+| `width` | `number\|string` | — | 宽度（数字默认单位 px，字符串可写 `60%` 等） |
+| `height` | `number\|string` | — | 高度（同上） |
+| `maxWidth` | `number\|string` | `'90vw'` | 最大宽度 |
+| `maxHeight` | `number\|string` | `'85vh'` | 最大高度 |
+| `className` | `string` | `''` | content 额外类名 |
+| `bodyClassName` | `string` | `''` | body 区域额外类名 |
+| `overlayClassName` | `string` | `''` | overlay 额外类名 |
+| `closeButton` | `boolean` | `true` | 是否显示右上角 × 关闭按钮 |
+| `closeOnOverlayClick` | `boolean` | `true` | 点击遮罩是否关闭 |
+| `closeOnEscape` | `boolean` | `true` | 按 Escape 是否关闭 |
+| `modalRef` | `ref` | — | 绑定到 overlay 的 ref |
+
+```jsx
+<Modal
+  isOpen={isOpen}
+  onClose={close}
+  title="设置"
+  width={650}
+  height={420}
+  footer={<button onClick={close}>确定</button>}
+  modalRef={modalRef}
+>
+  <div>这里是内容</div>
+</Modal>
+```
+
+---
+
+### 3. 全局调度层：`useModalManager.jsx`
+
+| 方法 | 签名 | 返回值 | 说明 |
+|---|---|---|---|
+| `open` | `(Component, props = {}) => Promise` | `Promise<any>` | 打开一个模态框组件，自动注入 `isOpen` 和 `onClose` |
+| `closeAll` | `() => void` | `void` | 关闭所有模态框，所有 pending Promise 以 `null` resolve |
+
+```js
+import { useModalManager } from '../hooks/useModalManager.jsx';
+
+const modalManager = useModalManager();
+
+// 打开单个模态框（获取结果）
+const result = await modalManager.open(FileBrowserDialog, {
+  mode: 'save',
+  filters: [...]
+});
+if (result) { /* 用户点了保存 */ }
+
+// 关闭所有模态框
+modalManager.closeAll();
+```
+
+---
+
+### 三层之间的关系
+
+| 层级 | 用途 | 典型场景 |
+|---|---|---|
+| **`useModal.js`** | 单个模态框的局部状态管理 | 组件内部有模态框，用 `isOpen`/`open`/`close` 控制 |
+| **`Modal.jsx`** | 统一渲染外壳（overlay + header + body + footer） | 所有模态框内容组件都用它包裹 |
+| **`useModalManager.jsx`** | 跨组件/跨层级以 Promise 方式打开模态框 | App.jsx 从 Toolbar 打开 InfoModal，从菜单打开 PreferencesModal |
+
+**三层的组合用法：**
+
+```js
+// 1. 局部状态管理
+const { isOpen, open, close, modalRef } = useModal();
+
+// 2. 渲染组件统一外壳
+<Modal isOpen={isOpen} onClose={close} title="我的模态框" width={480}>
+  <MyContent />
+</Modal>
+
+// 3. 全局调度（从任何地方一键打开）
+const modalManager = useModalManager();
+await modalManager.open(MyModalComponent, { someProp: 'value' });
+```
+
+> **现有规则：任何新的模态框，都不要再手搓 `useState` + `useRef` + `useEffect` 了。**
+
+<small>该文档有部分内容由AI生成，有些东西仍然需要自己研究。</small>

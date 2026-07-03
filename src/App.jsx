@@ -35,6 +35,7 @@ import { useAutoSave } from './hooks/useAutoSave.js';
 import { useRecentProjects } from './hooks/useRecentProjects.js';
 import { useDialog, DialogProvider } from './hooks/useDialog.jsx';
 import { useToast, ToastProvider } from './hooks/useToast.jsx';
+import { useModalManager, ModalManagerProvider } from './hooks/useModalManager.jsx';
 import { exportProjectAsAstra, importProjectFromAstra } from './utils/projectExporter.js';
 import { initPlugins, getPluginManager, setPluginLocale } from './plugins';
 import createPluginApi from './plugins/api.js';
@@ -54,6 +55,7 @@ const getBasename = (filePath) => {
 function AppContent() {
   const dialog = useDialog();
   const toast = useToast();
+  const modal = useModalManager();
   const [selectedObject, setSelectedObject] = useState(null);
   const [selectedObjects, setSelectedObjects] = useState([]);
   
@@ -259,12 +261,6 @@ function AppContent() {
     const saved = localStorage.getItem('astra-theme');
     return saved || 'dark';
   });
-  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
-  const [isSnapshotsOpen, setIsSnapshotsOpen] = useState(false);
-  const [isPluginSettingsOpen, setIsPluginSettingsOpen] = useState(false);
-  const [isFileBrowserOpen, setIsFileBrowserOpen] = useState(false);
-  const [fileBrowserMode, setFileBrowserMode] = useState('open');
-  const [fileBrowserResolve, setFileBrowserResolve] = useState(null);
   const [isAssetsPanelCollapsed, setIsAssetsPanelCollapsed] = useState(() => {
     const saved = localStorage.getItem('astra-panel-assets-collapsed');
     return saved === 'true';
@@ -1813,29 +1809,8 @@ function AppContent() {
   };
 
   const openFileBrowser = useCallback((mode, options = {}) => {
-    setFileBrowserMode(mode);
-    setIsFileBrowserOpen(true);
-    
-    return new Promise((resolve) => {
-      setFileBrowserResolve(() => resolve);
-    });
-  }, []);
-  
-  const handleFileBrowserSelect = useCallback((filePath) => {
-    if (fileBrowserResolve) {
-      fileBrowserResolve(filePath);
-    }
-    setIsFileBrowserOpen(false);
-    setFileBrowserResolve(null);
-  }, [fileBrowserResolve]);
-  
-  const handleFileBrowserClose = useCallback(() => {
-    if (fileBrowserResolve) {
-      fileBrowserResolve(null);
-    }
-    setIsFileBrowserOpen(false);
-    setFileBrowserResolve(null);
-  }, [fileBrowserResolve]);
+    return modal.open(FileBrowserDialog, { mode, ...options });
+  }, [modal]);
 
   const handleSaveAsProject = useCallback(async () => {
     const projectData = getProjectData();
@@ -2331,53 +2306,24 @@ function AppContent() {
         canRedo={canRedo}
         onUndo={undo}
         onRedo={redo}
-        onOpenPreferences={() => setIsPreferencesOpen(true)}
-        recentProjects={recentProjects}
-        onOpenRecentProject={handleOpenRecentProject}
-        onExportAsAstra={handleExportAsAstra}
-        onImportAstra={handleImportAstra}
-        onOpenSnapshots={() => setIsSnapshotsOpen(true)}
-        onOpenPluginSettings={() => setIsPluginSettingsOpen(true)}
-      />
-
-      <PreferencesModal
-        isOpen={isPreferencesOpen}
-        onClose={() => setIsPreferencesOpen(false)}
-        theme={theme}
-        onSetTheme={handleSetTheme}
-        onToggleLocale={handleToggleLocale}
-        onSetLocale={handleSetLocale}
-        autoSaveEnabled={autoSaveEnabled}
-        onToggleAutoSave={handleToggleAutoSave}
-        maxSnapshots={maxSnapshots}
-        onSetMaxSnapshots={handleSetMaxSnapshots}
-      />
-
-      <SnapshotsModal
-        isOpen={isSnapshotsOpen}
-        onClose={() => setIsSnapshotsOpen(false)}
-        onLoadSnapshots={loadSnapshots}
-        onLoadSnapshot={loadSnapshot}
-        onDeleteSnapshot={deleteSnapshot}
-        onClearAll={clearAutoSave}
-        onRestoreSnapshot={handleRestoreSnapshot}
-      />
-
-      <PluginSettingsModal
-        isOpen={isPluginSettingsOpen}
-        onClose={() => setIsPluginSettingsOpen(false)}
-      />
-
-      <FileBrowserDialog
-        isOpen={isFileBrowserOpen}
-        onClose={handleFileBrowserClose}
-        onSelect={handleFileBrowserSelect}
-        mode={fileBrowserMode}
-        title={fileBrowserMode === 'save' ? '保存项目' : '打开项目'}
-        filters={[
-          { name: 'Astra Project', extensions: ['json'] },
-          { name: 'All Files', extensions: ['*'] }
-        ]}
+        onOpenSnapshots={() => modal.open(SnapshotsModal, {
+          onLoadSnapshots: loadSnapshots,
+          onLoadSnapshot: loadSnapshot,
+          onDeleteSnapshot: deleteSnapshot,
+          onClearAll: clearAutoSave,
+          onRestoreSnapshot: handleRestoreSnapshot
+        })}
+        onOpenPluginSettings={() => modal.open(PluginSettingsModal)}
+        onOpenPreferences={() => modal.open(PreferencesModal, {
+          theme,
+          onSetTheme: handleSetTheme,
+          onToggleLocale: handleToggleLocale,
+          onSetLocale: handleSetLocale,
+          autoSaveEnabled,
+          onToggleAutoSave: handleToggleAutoSave,
+          maxSnapshots,
+          onSetMaxSnapshots: handleSetMaxSnapshots
+        })}
       />
 
       <div className="main-content-wrapper">
@@ -2543,7 +2489,9 @@ function App() {
   return (
     <DialogProvider>
       <ToastProvider>
-        <AppContent />
+        <ModalManagerProvider>
+          <AppContent />
+        </ModalManagerProvider>
       </ToastProvider>
     </DialogProvider>
   );

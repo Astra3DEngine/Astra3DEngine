@@ -11,6 +11,7 @@ import { msg, languages, getLocale } from '../i18n/index.js';
 import DropdownMenu from './DropdownMenu.jsx';
 import InfoModal from './InfoModal.jsx';
 import useDropdownMenu from '../hooks/useDropdownMenu.js';
+import { useModalManager } from '../hooks/useModalManager.jsx';
 
 import IconNewProject from '../icons/new-project.svg?react';
 import IconOpenProject from '../icons/open-project.svg?react';
@@ -92,8 +93,7 @@ function Toolbar({
   
   const [isMaximized, setIsMaximized] = useState(false);
   const [isElectron, setIsElectron] = useState(false);
-  const [infoModalOpen, setInfoModalOpen] = useState(false);
-  const [infoModalType, setInfoModalType] = useState('about');
+  const modal = useModalManager();
   
   const logoMenu = useDropdownMenu();
 
@@ -280,8 +280,7 @@ function Toolbar({
     if (action === 'source') {
       window.open('https://github.com/LanwyWriteXU/Astra3DEngine', '_blank');
     } else {
-      setInfoModalType(action);
-      setInfoModalOpen(true);
+      modal.open(InfoModal, { type: action });
     }
   };
 
@@ -373,12 +372,6 @@ function Toolbar({
           </>
         )}
       </div>
-      
-      <InfoModal 
-        isOpen={infoModalOpen} 
-        onClose={() => setInfoModalOpen(false)} 
-        type={infoModalType}
-      />
     </>
   );
 }

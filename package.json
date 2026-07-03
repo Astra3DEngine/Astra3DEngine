@@ -13,7 +13,8 @@
     "desktop": "vite --config vite.config.desktop.js",
     "desktop:build": "vite build --config vite.config.desktop.js && electron-builder",
     "desktop:preview": "electron dist-electron/main.js",
-    "icon:generate": "node scripts/generate-icons.js"
+    "icon:generate": "node scripts/generate-icons.js",
+    "creeper?": "echo Awwwww Man!"
   },
   "dependencies": {
     "cannon-es": "^0.20.0",

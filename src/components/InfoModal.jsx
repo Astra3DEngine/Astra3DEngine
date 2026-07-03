@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { msg } from '../i18n/index.js';
-import IconClose from '../icons/close.svg?react';
+import Modal from './Modal.jsx';
 
 const CURRENT_VERSION = '0.1.0';
 const GITHUB_REPO = 'LanwyWriteXU/Astra3DEngine';
@@ -17,7 +17,7 @@ const GITHUB_REPO = 'LanwyWriteXU/Astra3DEngine';
  * @param {boolean} props.isOpen - 是否打开
  * @param {Function} props.onClose - 关闭回调
  * @param {string} props.type - 类型（privacy/update/about）
- * @returns {JSX.Element|null} 信息模态框组件
+ * @returns {JSX.Element} 信息模态框组件
  */
 function InfoModal({ isOpen, onClose, type }) {
   const [updateState, setUpdateState] = useState('idle');
@@ -46,8 +46,6 @@ function InfoModal({ isOpen, onClose, type }) {
       setUpdateState('error');
     }
   };
-
-  if (!isOpen) return null;
 
   const titles = {
     privacy: msg('info.privacy.title'),
@@ -206,19 +204,16 @@ function InfoModal({ isOpen, onClose, type }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal info-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>{titles[type]}</h3>
-          <button className="modal-close-btn" onClick={onClose}>
-            <IconClose />
-          </button>
-        </div>
-        <div className="modal-body">
-          {contents[type]}
-        </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={titles[type]}
+      width={480}
+    >
+      <div className="info-content">
+        {contents[type]}
       </div>
-    </div>
+    </Modal>
   );
 }
 
