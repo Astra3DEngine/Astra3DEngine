@@ -1,4 +1,10 @@
 {
+  "dock.open": "Open Panel",
+  "dock.terminal": "Debug Terminal",
+  "assets.searchPlaceholder": "Search assets…",
+  "tabs.preview": "Preview",
+  "tabs.code": "Code",
+  "tabs.codePlaceholder": "Code editor pending (Blockly etc.).",
   "app.title": "Astra 3D Engine",
 
   "importModel.title": "Import Model",

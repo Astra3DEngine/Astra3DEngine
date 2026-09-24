@@ -10,7 +10,11 @@ describe('DropdownMenu (controlled mode)', () => {
         isOpen
         onClose={() => {}}
         position={{ x: 100, y: 100 }}
-        items={[{ label: 'Right', onClick: () => {} }, { divider: true }, { label: 'Delete', danger: true }]}
+        items={[
+          { label: 'Right', onClick: () => {} },
+          { divider: true },
+          { label: 'Delete', danger: true },
+        ]}
       />
     );
     const menu = document.body.querySelector('.szh-menu');
@@ -27,9 +31,7 @@ describe('DropdownMenu (controlled mode)', () => {
 
 describe('DropdownMenu (trigger mode)', () => {
   it('渲染触发按钮并在点击后打开（portal 到 body）', () => {
-    render(
-      <DropdownMenu label="菜单" items={[{ label: 'A', onClick: () => {} }]} />
-    );
+    render(<DropdownMenu label="菜单" items={[{ label: 'A', onClick: () => {} }]} />);
     const btn = screen.getByRole('button', { name: '菜单' });
     expect(btn).toBeTruthy();
     act(() => {

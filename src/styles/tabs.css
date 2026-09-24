@@ -1,0 +1,68 @@
+/* ===== 顶部编辑器 Tab 条 ===== */
+.editor-tab-bar {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  flex-shrink: 0;
+  background-color: var(--bg-toolbar);
+  border-bottom: 1px solid var(--border);
+  padding: 0 6px;
+  gap: 2px;
+}
+
+.editor-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 12px;
+  background: transparent;
+  border: none;
+  border-radius: 3px 3px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
+  white-space: nowrap;
+}
+
+.editor-tab:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-panel);
+}
+
+.editor-tab.active {
+  color: var(--text-primary);
+  background-color: var(--bg-panel);
+  box-shadow: inset 0 -2px 0 var(--accent-active);
+}
+
+.editor-tab-icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* 代码编辑器占位 */
+.code-editor-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  background-color: var(--bg-dark);
+}
+
+.code-editor-title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.code-editor-hint {
+  opacity: 0.7;
+  font-size: 12px;
+}

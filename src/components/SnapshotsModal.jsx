@@ -10,7 +10,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { msg } from '../i18n/index.js';
 import { useDialog } from '../hooks/useDialog.jsx';
 import Modal from './Modal.jsx';
-import IconDelete from '../icons/delete.svg?react';
+import IconDelete from '../assets/icons/editor/delete.svg?react';
 
 /**
  * 快照管理模态框组件

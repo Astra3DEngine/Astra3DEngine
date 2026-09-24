@@ -30,10 +30,13 @@
 .toolbar-logo-btn {
   background: transparent;
   border: none;
+  width: 30px;
+  height: 32px;
   padding: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
   border-radius: 2px;
   transition: background-color 0.15s;
 }
@@ -43,6 +46,12 @@
 }
 
 .toolbar-logo-btn svg {
+  display: block;
+}
+
+.toolbar-logo {
+  width: 20px;
+  height: 20px;
   display: block;
 }
 
@@ -133,7 +142,9 @@
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 
 .window-control-btn svg {

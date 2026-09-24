@@ -32,23 +32,23 @@ import {
 } from '../engine/lights.js';
 import { ViewCube, animateCameraToDirection } from '../engine/ViewCube.js';
 
-import IconSelect from '../icons/select.svg?react';
-import IconMove from '../icons/move.svg?react';
-import IconRotate from '../icons/rotate.svg?react';
-import IconScale from '../icons/scale.svg?react';
-import IconUniformScale from '../icons/uniform-scale.svg?react';
+import IconSelect from '../assets/icons/tools/select.svg?react';
+import IconMove from '../assets/icons/tools/move.svg?react';
+import IconRotate from '../assets/icons/tools/rotate.svg?react';
+import IconScale from '../assets/icons/tools/scale.svg?react';
+import IconUniformScale from '../assets/icons/tools/uniform-scale.svg?react';
 
-import IconMouseLeft from '../icons/mouse-left.svg?react';
-import IconMouseRight from '../icons/mouse-right.svg?react';
-import IconKeyShift from '../icons/key-shift.svg?react';
-import IconKeyW from '../icons/key-w.svg?react';
-import IconKeyA from '../icons/key-a.svg?react';
-import IconKeyS from '../icons/key-s.svg?react';
-import IconKeyD from '../icons/key-d.svg?react';
-import IconKeyQ from '../icons/key-q.svg?react';
-import IconKeyE from '../icons/key-e.svg?react';
-import IconSun from '../icons/sun.svg?react';
-import IconSunOff from '../icons/sun-off.svg?react';
+import IconMouseLeft from '../assets/icons/viewport/mouse-left.svg?react';
+import IconMouseRight from '../assets/icons/viewport/mouse-right.svg?react';
+import IconKeyShift from '../assets/icons/viewport/key-shift.svg?react';
+import IconKeyW from '../assets/icons/viewport/key-w.svg?react';
+import IconKeyA from '../assets/icons/viewport/key-a.svg?react';
+import IconKeyS from '../assets/icons/viewport/key-s.svg?react';
+import IconKeyD from '../assets/icons/viewport/key-d.svg?react';
+import IconKeyQ from '../assets/icons/viewport/key-q.svg?react';
+import IconKeyE from '../assets/icons/viewport/key-e.svg?react';
+import IconSun from '../assets/icons/viewport/sun.svg?react';
+import IconSunOff from '../assets/icons/viewport/sun-off.svg?react';
 
 /** cube 的六个面，顺序与 BoxGeometry 材质数组一致 */
 const CUBE_FACE_NAMES = ['right', 'left', 'top', 'bottom', 'front', 'back'];

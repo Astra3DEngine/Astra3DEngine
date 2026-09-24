@@ -7,6 +7,34 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
+}
+
+.assets-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.assets-search-input {
+  flex: 1;
+  min-width: 0;
+  margin-right: auto;
+  background-color: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 3px 6px;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.assets-search-input:focus {
+  outline: none;
+  border-color: var(--accent-active);
 }
 
 .assets-panel.collapsed {

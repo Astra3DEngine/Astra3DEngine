@@ -6,9 +6,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { msg } from '../i18n/index.js';
+import { ENGINE_VERSION } from '../meta.js';
 import Modal from './Modal.jsx';
+import IconLogo from '../assets/icons/logo/logo.svg?react';
 
-const CURRENT_VERSION = '0.1.0';
+const CURRENT_VERSION = ENGINE_VERSION;
 const GITHUB_REPO = 'LanwyWriteXU/Astra3DEngine';
 
 /**
@@ -36,7 +38,7 @@ function InfoModal({ isOpen, onClose, type }) {
       const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
       if (response.ok) {
         const data = await response.json();
-        setLatestVersion(data.tag_name?.replace('v', '') || '0.1.0');
+        setLatestVersion(data.tag_name?.replace('v', '') || ENGINE_VERSION);
         setReleaseUrl(data.html_url);
         setUpdateState('success');
       } else {
@@ -136,34 +138,7 @@ function InfoModal({ isOpen, onClose, type }) {
   const renderAbout = () => (
     <div className="info-content about-content">
       <div className="about-header">
-        <svg
-          className="about-logo"
-          version="1.1"
-          xmlns="http://www.w3.org/2000/svg"
-          height="64"
-          viewBox="0,0,69.99346,66.43688"
-        >
-          <g transform="translate(-205.00327,-146.78156)">
-            <g stroke="#000000" strokeWidth="0" strokeMiterlimit="10">
-              <path
-                d="M274.99673,190.93032l-11.95866,22.28812h-44.44009l13.31277,-22.10459z"
-                fill="#0073bf"
-              />
-              <path
-                d="M216.31868,212.14198l-11.31541,-21.28864l24.21416,-0.00471z"
-                fill="#66ccff"
-              />
-              <path
-                d="M227.50821,146.78156l23.50249,0.00667l23.98603,44.14209l-11.95866,22.28812z"
-                fill="#0099ff"
-              />
-              <path
-                d="M205.06042,188.54619l22.44779,-41.76463l23.50249,0.00667l-20.58917,41.73314z"
-                fill="#66ccff"
-              />
-            </g>
-          </g>
-        </svg>
+        <IconLogo className="about-logo" />
         <div className="about-header-text">
           <h2 className="about-title">{msg('info.about.appName')}</h2>
           <p className="about-version">v{CURRENT_VERSION}</p>

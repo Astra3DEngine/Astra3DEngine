@@ -15,7 +15,9 @@
   border-width: 3px 3px 0 3px;
   border-color: var(--text-secondary) transparent transparent transparent;
   margin-left: 2px;
-  transition: transform 0.15s, border-color 0.15s;
+  transition:
+    transform 0.15s,
+    border-color 0.15s;
 }
 
 .dropdown-trigger:hover::after {
@@ -111,14 +113,30 @@
 }
 
 /* 圆角修饰类（menuClassName） */
-.dropdown-rounded-all { border-radius: 4px; }
-.dropdown-rounded-none { border-radius: 0; }
-.dropdown-rounded-top { border-radius: 4px 4px 0 0; }
-.dropdown-rounded-bottom { border-radius: 0 0 4px 4px; }
-.dropdown-rounded-tl { border-top-left-radius: 4px; }
-.dropdown-rounded-tr { border-top-right-radius: 4px; }
-.dropdown-rounded-bl { border-bottom-left-radius: 4px; }
-.dropdown-rounded-br { border-bottom-right-radius: 4px; }
+.dropdown-rounded-all {
+  border-radius: 4px;
+}
+.dropdown-rounded-none {
+  border-radius: 0;
+}
+.dropdown-rounded-top {
+  border-radius: 4px 4px 0 0;
+}
+.dropdown-rounded-bottom {
+  border-radius: 0 0 4px 4px;
+}
+.dropdown-rounded-tl {
+  border-top-left-radius: 4px;
+}
+.dropdown-rounded-tr {
+  border-top-right-radius: 4px;
+}
+.dropdown-rounded-bl {
+  border-bottom-left-radius: 4px;
+}
+.dropdown-rounded-br {
+  border-bottom-right-radius: 4px;
+}
 
 /* 菜单项内容 */
 .dropdown-label {

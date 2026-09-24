@@ -1,7 +1,18 @@
 .scene-panel {
-  flex: none;
-  min-height: 100px;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.scene-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 /* 当场景面板折叠时（普通折叠，不是 vertical 模式），显示小的折叠栏 */

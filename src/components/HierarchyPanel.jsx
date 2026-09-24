@@ -6,29 +6,32 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { msg } from '../i18n/index.js';
-import CollapsiblePanel from './CollapsiblePanel.jsx';
 import useDropdownMenu from '../hooks/useDropdownMenu.js';
+import usePanelSearch from '../hooks/usePanelSearch.js';
 import DropdownMenu from './DropdownMenu.jsx';
 import { getAllDescendants, getAllDescendantIds } from '../engine/TreeMath.js';
 import RenameInput from './primitives/RenameInput.jsx';
-import IconCube from '../icons/cube.svg?react';
-import IconSphere from '../icons/sphere.svg?react';
-import IconPlane from '../icons/plane.svg?react';
-import IconModel from '../icons/model.svg?react';
-import IconFolder from '../icons/folder.svg?react';
-import IconPrefabInstance from '../icons/prefab-instance.svg?react';
-import IconDelete from '../icons/delete.svg?react';
-import IconPrefab from '../icons/prefab.svg?react';
-import IconCopy from '../icons/copy.svg?react';
-import IconPaste from '../icons/paste.svg?react';
-import IconDuplicate from '../icons/duplicate.svg?react';
-import IconRename from '../icons/rename.svg?react';
-import IconPlus from '../icons/plus.svg?react';
-import IconSearch from '../icons/search.svg?react';
-import IconChevronCollapsed from '../icons/chevron-collapsed.svg?react';
-import IconPointLight from '../icons/light-point.svg?react';
-import IconDirectionalLight from '../icons/light-directional.svg?react';
-import IconSpotLight from '../icons/light-spot.svg?react';
+import { useScenesStore } from '../stores/useScenesStore.js';
+import { useSelectionStore } from '../stores/useSelectionStore.js';
+import { usePrefabsStore } from '../stores/usePrefabsStore.js';
+import IconCube from '../assets/icons/tools/cube.svg?react';
+import IconSphere from '../assets/icons/tools/sphere.svg?react';
+import IconPlane from '../assets/icons/tools/plane.svg?react';
+import IconModel from '../assets/icons/tools/model.svg?react';
+import IconFolder from '../assets/icons/editor/folder.svg?react';
+import IconPrefabInstance from '../assets/icons/tools/prefab-instance.svg?react';
+import IconDelete from '../assets/icons/editor/delete.svg?react';
+import IconPrefab from '../assets/icons/tools/prefab.svg?react';
+import IconCopy from '../assets/icons/editor/copy.svg?react';
+import IconPaste from '../assets/icons/editor/paste.svg?react';
+import IconDuplicate from '../assets/icons/editor/duplicate.svg?react';
+import IconRename from '../assets/icons/editor/rename.svg?react';
+import IconPlus from '../assets/icons/editor/plus.svg?react';
+import IconSearch from '../assets/icons/editor/search.svg?react';
+import IconChevronCollapsed from '../assets/icons/nav/chevron-collapsed.svg?react';
+import IconPointLight from '../assets/icons/tools/light-point.svg?react';
+import IconDirectionalLight from '../assets/icons/tools/light-directional.svg?react';
+import IconSpotLight from '../assets/icons/tools/light-spot.svg?react';
 
 /**
  * 层级面板组件
@@ -47,35 +50,33 @@ import IconSpotLight from '../icons/light-spot.svg?react';
  * @param {Function} props.onDuplicateObject - 复制对象回调
  * @param {Function} props.onRenameObject - 重命名对象回调
  * @param {Object} props.clipboard - 剪贴板内容
- * @param {boolean} props.vertical - 是否垂直布局
- * @param {Function} props.onCollapseChange - 折叠状态变化回调
  * @param {Function} props.onReorderObjects - 重排序对象回调
  * @returns {JSX.Element} 层级面板组件
  */
-function HierarchyPanel({
-  objects,
-  selectedObjects = [],
-  onSelectObject,
-  onAddObject,
-  onDeleteObject,
-  onDeleteSelectedObjects,
-  onCreatePrefab,
-  prefabs,
-  onCopyObject,
-  onPasteObject,
-  onDuplicateObject,
-  onRenameObject,
-  clipboard,
-  vertical,
-  onCollapseChange,
-  onReorderObjects,
-}) {
+function HierarchyPanel() {
+  // ===== 直接读取 store，避免 App 层层传 props =====
+  const objects = useScenesStore(
+    (s) => s.scenes.find((sc) => sc.id === s.currentSceneId)?.objects || []
+  );
+  const selectedObjects = useSelectionStore((s) => s.selectedObjects);
+  const prefabs = usePrefabsStore((s) => s.prefabs);
+  const clipboard = useScenesStore((s) => s.clipboard);
+  const onSelectObject = useSelectionStore.getState().selectObject;
+  const onAddObject = useScenesStore.getState().addObject;
+  const onDeleteObject = useScenesStore.getState().deleteObject;
+  const onDeleteSelectedObjects = useScenesStore.getState().deleteSelectedObjects;
+  const onCreatePrefab = usePrefabsStore.getState().createPrefab;
+  const onCopyObject = useScenesStore.getState().copyObject;
+  const onPasteObject = useScenesStore.getState().pasteObject;
+  const onDuplicateObject = useScenesStore.getState().duplicateObject;
+  const onRenameObject = useScenesStore.getState().renameObject;
+  const onReorderObjects = useScenesStore.getState().reorderObjects;
+
   const [contextMenuObject, setContextMenuObject] = useState(null);
   const [isRenaming, setIsRenaming] = useState(null);
   const [draggedId, setDraggedId] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const [dropPosition, setDropPosition] = useState(null);
-  const [searchText, setSearchText] = useState('');
   const [expandedIds, setExpandedIds] = useState(() => new Set());
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
@@ -84,7 +85,13 @@ function HierarchyPanel({
     onClose: () => setContextMenuObject(null),
   });
 
-  const searchInputRef = useRef(null);
+  const {
+    containerRef: panelRef,
+    inputRef: searchInputRef,
+    searchText,
+    setSearchText,
+    searchVisible,
+  } = usePanelSearch();
   const objectsRef = useRef(objects);
 
   useEffect(() => {
@@ -592,58 +599,49 @@ function HierarchyPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contextMenuObject, clipboard, selectedObjects, msg]);
 
-  const headerRight = (
-    <div className="add-menu-container">
-      <button
-        className="add-menu-trigger"
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={() => {
-          if (addMenu.isOpen) {
-            addMenu.close();
-          } else {
-            addMenu.openAt(position.x, position.y);
-          }
-        }}
-        title={msg('hierarchy.addObject')}
-      >
-        <IconPlus className="add-menu-icon" />
-      </button>
-      <DropdownMenu
-        isOpen={addMenu.isOpen}
-        onClose={addMenu.close}
-        position={addMenu.position}
-        menuRef={addMenu.menuRef}
-        roundedCorners="all"
-        items={addMenuItems}
-      />
-    </div>
-  );
-
   return (
-    <CollapsiblePanel
-      title={msg('hierarchy.title')}
-      className="hierarchy-panel"
-      storageKey="astra-panel-hierarchy-collapsed"
-      vertical={vertical}
-      onCollapseChange={onCollapseChange}
-      headerRight={headerRight}
-    >
-      <div className="hierarchy-search">
-        <IconSearch className="hierarchy-search-icon" />
-        <input
-          ref={searchInputRef}
-          type="text"
-          className="hierarchy-search-input"
-          placeholder={msg('hierarchy.searchPlaceholder')}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-        />
-        {searchText && (
-          <button className="hierarchy-search-clear" onClick={() => setSearchText('')}>
-            ×
-          </button>
-        )}
-      </div>
+    <div className="hierarchy-panel" ref={panelRef}>
+      {searchVisible && (
+        <div className="hierarchy-search">
+          <IconSearch className="hierarchy-search-icon" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            className="hierarchy-search-input"
+            placeholder={msg('hierarchy.searchPlaceholder')}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+          {searchText && (
+            <button className="hierarchy-search-clear" onClick={() => setSearchText('')}>
+              ×
+            </button>
+          )}
+          <div className="add-menu-container">
+            <button
+              className="add-menu-trigger"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => {
+                if (addMenu.isOpen) {
+                  addMenu.close();
+                } else {
+                  addMenu.openAt(position.x, position.y);
+                }
+              }}
+              title={msg('hierarchy.addObject')}
+            >
+              <IconPlus className="add-menu-icon" />
+            </button>
+            <DropdownMenu
+              isOpen={addMenu.isOpen}
+              onClose={addMenu.close}
+              position={addMenu.position}
+              roundedCorners="all"
+              items={addMenuItems}
+            />
+          </div>
+        </div>
+      )}
       <div
         className="panel-content"
         onDragOver={(e) => {
@@ -683,11 +681,10 @@ function HierarchyPanel({
         isOpen={ctxMenu.isOpen}
         onClose={ctxMenu.close}
         position={ctxMenu.position}
-        menuRef={ctxMenu.menuRef}
         roundedCorners="all"
         items={ctxMenuItems}
       />
-    </CollapsiblePanel>
+    </div>
   );
 }
 

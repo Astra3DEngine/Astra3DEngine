@@ -7,13 +7,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { msg } from '../i18n/index.js';
-import IconPrefabInstance from '../icons/prefab-instance.svg?react';
-import IconDelete from '../icons/delete.svg?react';
+import IconPrefabInstance from '../assets/icons/tools/prefab-instance.svg?react';
+import IconDelete from '../assets/icons/editor/delete.svg?react';
 import SceneSettingsPanel from './SceneSettingsPanel.jsx';
 import ColorPicker from './primitives/ColorPicker.jsx';
-import IconClose from '../icons/close.svg?react';
-import IconScene from '../icons/scene.svg?react';
-import IconCube from '../icons/cube.svg?react';
+import IconClose from '../assets/icons/editor/close.svg?react';
+import IconScene from '../assets/icons/tools/scene.svg?react';
+import IconCube from '../assets/icons/tools/cube.svg?react';
 import { getAllDescendantIds } from '../engine/TreeMath.js';
 
 /**

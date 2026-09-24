@@ -285,7 +285,9 @@
   border: 1px solid var(--border);
   border-radius: 3px;
   cursor: pointer;
-  transition: background-color 0.1s, border-color 0.1s;
+  transition:
+    background-color 0.1s,
+    border-color 0.1s;
   gap: 6px;
   user-select: none;
 }

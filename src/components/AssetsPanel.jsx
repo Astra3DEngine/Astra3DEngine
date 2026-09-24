@@ -1,16 +1,17 @@
 import React, { useRef, useState, useMemo, useCallback } from 'react';
 import { msg } from '../i18n/index.js';
-import CollapsiblePanel from './CollapsiblePanel.jsx';
+import usePanelSearch from '../hooks/usePanelSearch.js';
 import FileBrowserDialog from './FileBrowserDialog.jsx';
+import { useAssetsStore } from '../stores/useAssetsStore.js';
 import useDropdownMenu from '../hooks/useDropdownMenu.js';
 import DropdownMenu from './DropdownMenu.jsx';
 import RenameInput from './primitives/RenameInput.jsx';
-import IconModel from '../icons/cube.svg?react';
-import IconImage from '../icons/image.svg?react';
-import IconFile from '../icons/file.svg?react';
-import IconDelete from '../icons/delete.svg?react';
-import IconRename from '../icons/rename.svg?react';
-import IconPlus from '../icons/plus.svg?react';
+import IconModel from '../assets/icons/tools/cube.svg?react';
+import IconImage from '../assets/icons/misc/image.svg?react';
+import IconFile from '../assets/icons/editor/file.svg?react';
+import IconDelete from '../assets/icons/editor/delete.svg?react';
+import IconRename from '../assets/icons/editor/rename.svg?react';
+import IconPlus from '../assets/icons/editor/plus.svg?react';
 
 const getMimeType = (filename) => {
   const ext = filename.split('.').pop()?.toLowerCase();
@@ -119,21 +120,28 @@ export function importFileCollection(fileMap, onImport) {
   }
 }
 
-function AssetsPanel({
-  assets,
-  onImport,
-  onSelectAsset,
-  selectedAsset,
-  onDeleteAsset,
-  onRenameAsset,
-  onCollapseChange,
-}) {
+function AssetsPanel() {
+  // ===== store 驱动 =====
+  const assets = useAssetsStore((s) => s.assets);
+  const selectedAsset = useAssetsStore((s) => s.selectedAsset);
+  const onImport = useAssetsStore.getState().importAsset;
+  const onSelectAsset = useAssetsStore.getState().selectAsset;
+  const onDeleteAsset = useAssetsStore.getState().deleteAsset;
+  const onRenameAsset = useAssetsStore.getState().renameAsset;
+
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [contextMenuAsset, setContextMenuAsset] = useState(null);
   const [editingAsset, setEditingAsset] = useState(null);
   const [filter, setFilter] = useState('all');
   const [isFileBrowserOpen, setIsFileBrowserOpen] = useState(false);
+  const {
+    containerRef: panelRef,
+    inputRef: searchInputRef,
+    searchText,
+    setSearchText,
+    searchVisible,
+  } = usePanelSearch();
 
   const ctxMenu = useDropdownMenu({
     onClose: () => setContextMenuAsset(null),
@@ -328,9 +336,16 @@ function AssetsPanel({
   };
 
   const filteredAssets = useMemo(() => {
-    if (filter === 'all') return assets;
-    return assets.filter((asset) => asset.assetType === filter);
-  }, [assets, filter]);
+    let list = assets;
+    if (filter !== 'all') {
+      list = list.filter((asset) => asset.assetType === filter);
+    }
+    const kw = searchText.trim().toLowerCase();
+    if (kw) {
+      list = list.filter((asset) => asset.name.toLowerCase().includes(kw));
+    }
+    return list;
+  }, [assets, filter, searchText]);
 
   const assetCounts = useMemo(() => {
     return {
@@ -369,52 +384,55 @@ function AssetsPanel({
   }, [contextMenuAsset, msg]);
 
   return (
-    <CollapsiblePanel
-      title={msg('assets.title')}
-      className="assets-panel"
-      storageKey="astra-panel-assets-collapsed"
-      onCollapseChange={onCollapseChange}
-      headerRight={
-        <>
-          <div className="assets-filter">
-            <button
-              className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-              onClick={() => setFilter('all')}
-              title={msg('assets.filterAll')}
-            >
-              {assetCounts.all}
-            </button>
-            <button
-              className={`filter-btn ${filter === 'model' ? 'active' : ''}`}
-              onClick={() => setFilter('model')}
-              title={msg('assets.filterModels')}
-            >
-              <IconModel className="filter-icon" />
-              {assetCounts.model}
-            </button>
-            <button
-              className={`filter-btn ${filter === 'texture' ? 'active' : ''}`}
-              onClick={() => setFilter('texture')}
-              title={msg('assets.filterTextures')}
-            >
-              <IconImage className="filter-icon" />
-              {assetCounts.texture}
-            </button>
-          </div>
-          <button className="import-btn" onClick={handleImportClick} title={msg('assets.import')}>
-            <IconPlus className="import-btn-icon" />
-          </button>
+    <div className="assets-panel" ref={panelRef}>
+      <div className="assets-toolbar">
+        {searchVisible && (
           <input
-            ref={fileInputRef}
-            type="file"
-            accept=".gltf,.glb,.obj,.png,.jpg,.jpeg,.webp"
-            multiple
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
+            ref={searchInputRef}
+            type="text"
+            className="assets-search-input"
+            placeholder={msg('assets.searchPlaceholder')}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
           />
-        </>
-      }
-    >
+        )}
+        <div className="assets-filter">
+          <button
+            className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
+            onClick={() => setFilter('all')}
+            title={msg('assets.filterAll')}
+          >
+            {assetCounts.all}
+          </button>
+          <button
+            className={`filter-btn ${filter === 'model' ? 'active' : ''}`}
+            onClick={() => setFilter('model')}
+            title={msg('assets.filterModels')}
+          >
+            <IconModel className="filter-icon" />
+            {assetCounts.model}
+          </button>
+          <button
+            className={`filter-btn ${filter === 'texture' ? 'active' : ''}`}
+            onClick={() => setFilter('texture')}
+            title={msg('assets.filterTextures')}
+          >
+            <IconImage className="filter-icon" />
+            {assetCounts.texture}
+          </button>
+        </div>
+        <button className="import-btn" onClick={handleImportClick} title={msg('assets.import')}>
+          <IconPlus className="import-btn-icon" />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".gltf,.glb,.obj,.png,.jpg,.jpeg,.webp"
+          multiple
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+      </div>
       <div
         className={`assets-content ${isDragging ? 'dragging' : ''}`}
         onDragOver={handleDragOver}
@@ -475,7 +493,6 @@ function AssetsPanel({
         isOpen={ctxMenu.isOpen}
         onClose={ctxMenu.close}
         position={ctxMenu.position}
-        menuRef={ctxMenu.menuRef}
         roundedCorners="all"
         items={ctxMenuItems}
       />
@@ -497,7 +514,7 @@ function AssetsPanel({
         allowMultiple={true}
         allowSelectFolder={true}
       />
-    </CollapsiblePanel>
+    </div>
   );
 }
 

@@ -29,7 +29,10 @@
 
 .icon-btn {
   opacity: 0;
-  transition: opacity 0.15s, color 0.15s, background-color 0.15s;
+  transition:
+    opacity 0.15s,
+    color 0.15s,
+    background-color 0.15s;
   background: transparent;
   border: none;
   color: var(--text-secondary);

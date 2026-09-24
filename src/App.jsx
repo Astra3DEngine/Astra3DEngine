@@ -13,6 +13,13 @@ import AssetsPanel from './components/AssetsPanel.jsx';
 import PrefabsPanel from './components/PrefabsPanel.jsx';
 import ScenePanel from './components/ScenePanel.jsx';
 import Toolbar from './components/Toolbar.jsx';
+import Sidebar from './components/sidebar/Sidebar.jsx';
+import EditorTabBar from './components/tabs/EditorTabBar.jsx';
+import CodeEditorPlaceholder from './components/tabs/CodeEditorPlaceholder.jsx';
+import { registerSidebarViews } from './components/sidebar/sidebarViews.js';
+import Dock from './components/dock/Dock.jsx';
+import TerminalPlaceholder from './components/dock/TerminalPlaceholder.jsx';
+import { registerDockPanels } from './components/dock/dockPanels.js';
 import PreferencesModal from './components/PreferencesModal.jsx';
 import SnapshotsModal from './components/SnapshotsModal.jsx';
 import ResizablePanel from './components/ResizablePanel.jsx';
@@ -20,7 +27,6 @@ import { msg, toggleLocale, getLocale, setLocale } from './i18n/index.js';
 import { ENGINE_VERSION } from './meta.js';
 import { useAutoSave } from './hooks/useAutoSave.js';
 import { useRecentProjects } from './hooks/useRecentProjects.js';
-import { useRatioDrag } from './hooks/useRatioDrag.js';
 import { DialogProvider, useDialog } from './hooks/useDialog.jsx';
 import { ProjectFileService } from './lib/ProjectFileService.js';
 import { modal } from './lib/ModalManager.js';
@@ -35,7 +41,21 @@ import { usePrefabsStore } from './stores/usePrefabsStore.js';
 import { useEditorStore } from './stores/useEditorStore.js';
 import { useUIStore } from './stores/useUIStore.js';
 import { useProjectStore } from './stores/useProjectStore.js';
+import { useWorkspaceTabsStore } from './stores/useWorkspaceTabsStore.js';
 import { Settings } from './settings/settingsRegistry.js';
+
+// 装配侧栏视图（避免循环依赖）
+registerSidebarViews({
+  hierarchy: HierarchyPanel,
+  scene: ScenePanel,
+  prefabs: PrefabsPanel,
+});
+
+// 装配可停靠面板（底部/侧栏共用）
+registerDockPanels({
+  assets: AssetsPanel,
+  terminal: TerminalPlaceholder,
+});
 
 function AppContent() {
   const dialog = useDialog();
@@ -49,9 +69,6 @@ function AppContent() {
   }, [theme]);
 
   // ===== 绑定 stores =====
-  const scenes = useScenesStore((s) => s.scenes);
-  const currentSceneId = useScenesStore((s) => s.currentSceneId);
-  const clipboard = useScenesStore((s) => s.clipboard);
   const sceneObjects = useScenesStore(
     (s) => s.scenes.find((sc) => sc.id === s.currentSceneId)?.objects || []
   );
@@ -63,38 +80,19 @@ function AppContent() {
   const selectedObjects = useSelectionStore((s) => s.selectedObjects);
 
   const assets = useAssetsStore((s) => s.assets);
-  const selectedAsset = useAssetsStore((s) => s.selectedAsset);
 
   const prefabs = usePrefabsStore((s) => s.prefabs);
-  const selectedPrefab = usePrefabsStore((s) => s.selectedPrefab);
 
   const currentTool = useEditorStore((s) => s.currentTool);
   const isPlaying = useEditorStore((s) => s.isPlaying);
   const lightRenderingEnabled = useEditorStore((s) => s.lightRenderingEnabled);
 
   const ui = useUIStore();
-  const {
-    isAssetsPanelCollapsed,
-    hierarchyCollapsed,
-    scenePanelCollapsed,
-    prefabsCollapsed,
-    scenePanelRatio,
-    prefabsPanelRatio,
-  } = ui;
-
-  const leftSidebarAllCollapsed = hierarchyCollapsed && prefabsCollapsed && scenePanelCollapsed;
+  const { isAssetsPanelCollapsed, sidebarCollapsed } = ui;
 
   const projectFileName = useProjectStore((s) => s.projectFileName);
   const autoSaveEnabled = useProjectStore((s) => s.autoSaveEnabled);
   const maxSnapshots = useProjectStore((s) => s.maxSnapshots);
-
-  // ===== 面板拖拽 =====
-  const sceneDrag = useRatioDrag(scenePanelRatio, ui.setScenePanelRatio, { min: 0.1, max: 0.4 });
-  const prefabsDrag = useRatioDrag(prefabsPanelRatio, ui.setPrefabsPanelRatio, {
-    min: 0.1,
-    max: 0.35,
-    inverted: true,
-  });
 
   // ===== 语言 =====
   const handleToggleLocale = useCallback(() => {
@@ -250,6 +248,8 @@ function AppContent() {
     [projectFile]
   );
 
+  const activeTab = useWorkspaceTabsStore((s) => s.activeTab);
+
   return (
     <div className="app-container">
       <Toolbar
@@ -268,7 +268,9 @@ function AppContent() {
         onUndo={useScenesStore.getState().undo}
         onRedo={useScenesStore.getState().redo}
         recentProjects={isElectron ? recentProjects : []}
-        onOpenRecentProject={isElectron ? projectFile.openRecentProject.bind(projectFile) : undefined}
+        onOpenRecentProject={
+          isElectron ? projectFile.openRecentProject.bind(projectFile) : undefined
+        }
         onExportAsAstra={projectFile.exportAsAstra.bind(projectFile)}
         onImportAstra={projectFile.importAstra.bind(projectFile)}
         onOpenSnapshots={() =>
@@ -295,6 +297,7 @@ function AppContent() {
       />
 
       <div className="main-content-wrapper">
+        <EditorTabBar />
         <div className="main-content">
           <ResizablePanel
             side="left"
@@ -302,93 +305,33 @@ function AppContent() {
             maxWidth={500}
             defaultWidth={280}
             storageKey="astra-left-sidebar"
-            className={`left-sidebar ${leftSidebarAllCollapsed ? 'all-collapsed' : ''}`}
+            className="left-sidebar"
+            collapsed={sidebarCollapsed}
           >
-            <ScenePanel
-              scenes={scenes}
-              currentSceneId={currentSceneId}
-              onSwitchScene={useScenesStore.getState().switchScene}
-              onCreateScene={useScenesStore.getState().createScene}
-              onDeleteScene={useScenesStore.getState().deleteScene}
-              onRenameScene={useScenesStore.getState().renameScene}
-              onSetMainScene={useScenesStore.getState().setMainScene}
-              vertical={leftSidebarAllCollapsed}
-              onCollapseChange={ui.setScenePanelCollapsed}
-              style={{
-                flex: !scenePanelCollapsed && hierarchyCollapsed && prefabsCollapsed ? '1' : 'none',
-                height:
-                  !scenePanelCollapsed && !(hierarchyCollapsed && prefabsCollapsed)
-                    ? `${scenePanelRatio * 100}%`
-                    : undefined,
-                minHeight: !scenePanelCollapsed ? '100px' : undefined,
-              }}
-            />
-
-            {!scenePanelCollapsed && !hierarchyCollapsed && (
-              <div className="panel-resize-handle" onMouseDown={sceneDrag.onDragStart} />
-            )}
-
-            <HierarchyPanel
-              objects={sceneObjects}
-              selectedObject={selectedObject}
-              selectedObjects={selectedObjects}
-              onSelectObject={useSelectionStore.getState().selectObject}
-              onAddObject={useScenesStore.getState().addObject}
-              onDeleteObject={useScenesStore.getState().deleteObject}
-              onDeleteSelectedObjects={useScenesStore.getState().deleteSelectedObjects}
-              onCreatePrefab={usePrefabsStore.getState().createPrefab}
-              prefabs={prefabs}
-              onCopyObject={useScenesStore.getState().copyObject}
-              onPasteObject={useScenesStore.getState().pasteObject}
-              onDuplicateObject={useScenesStore.getState().duplicateObject}
-              onRenameObject={useScenesStore.getState().renameObject}
-              clipboard={clipboard}
-              vertical={leftSidebarAllCollapsed}
-              onCollapseChange={ui.setHierarchyCollapsed}
-              onReorderObjects={useScenesStore.getState().reorderObjects}
-            />
-
-            {!hierarchyCollapsed && !prefabsCollapsed && (
-              <div className="panel-resize-handle" onMouseDown={prefabsDrag.onDragStart} />
-            )}
-
-            <PrefabsPanel
-              prefabs={prefabs}
-              sceneObjects={sceneObjects}
-              selectedPrefab={selectedPrefab}
-              onSelectPrefab={usePrefabsStore.getState().setSelectedPrefab}
-              onInstantiatePrefab={usePrefabsStore.getState().instantiatePrefab}
-              onDeletePrefab={usePrefabsStore.getState().deletePrefab}
-              vertical={leftSidebarAllCollapsed}
-              onCollapseChange={ui.setPrefabsCollapsed}
-              style={{
-                flex: !prefabsCollapsed && hierarchyCollapsed && scenePanelCollapsed ? '1' : 'none',
-                height:
-                  !prefabsCollapsed && !(hierarchyCollapsed && scenePanelCollapsed)
-                    ? `${prefabsPanelRatio * 100}%`
-                    : undefined,
-                minHeight: !prefabsCollapsed ? '100px' : undefined,
-              }}
-            />
+            <Sidebar />
           </ResizablePanel>
 
           <div className="center-area">
-            <MultiViewport
-              objects={sceneObjects}
-              assets={assets}
-              selectedObject={selectedObject}
-              selectedObjects={selectedObjects}
-              onSelectObject={useSelectionStore.getState().selectObject}
-              currentTool={currentTool}
-              onToolChange={useEditorStore.getState().setCurrentTool}
-              isPlaying={isPlaying}
-              onUpdateObject={useScenesStore.getState().updateObject}
-              onRecordHistory={useScenesStore.getState().recordCurrentState}
-              theme={theme}
-              lightRenderingEnabled={lightRenderingEnabled}
-              onLightRenderingChange={useEditorStore.getState().setLightRenderingEnabled}
-              sceneSettings={currentScene?.settings}
-            />
+            {activeTab === 'code' ? (
+              <CodeEditorPlaceholder />
+            ) : (
+              <MultiViewport
+                objects={sceneObjects}
+                assets={assets}
+                selectedObject={selectedObject}
+                selectedObjects={selectedObjects}
+                onSelectObject={useSelectionStore.getState().selectObject}
+                currentTool={currentTool}
+                onToolChange={useEditorStore.getState().setCurrentTool}
+                isPlaying={isPlaying}
+                onUpdateObject={useScenesStore.getState().updateObject}
+                onRecordHistory={useScenesStore.getState().recordCurrentState}
+                theme={theme}
+                lightRenderingEnabled={lightRenderingEnabled}
+                onLightRenderingChange={useEditorStore.getState().setLightRenderingEnabled}
+                sceneSettings={currentScene?.settings}
+              />
+            )}
           </div>
 
           <InspectorPanel
@@ -415,15 +358,17 @@ function AppContent() {
           className="bottom-area"
           collapsed={isAssetsPanelCollapsed}
         >
-          <AssetsPanel
-            assets={assets}
-            onImport={useAssetsStore.getState().importAsset}
-            onSelectAsset={useAssetsStore.getState().selectAsset}
-            selectedAsset={selectedAsset}
-            onDeleteAsset={useAssetsStore.getState().deleteAsset}
-            onRenameAsset={useAssetsStore.getState().renameAsset}
-            onCollapseChange={ui.setAssetsPanelCollapsed}
-          />
+          {isAssetsPanelCollapsed ? (
+            <button
+              className="dock-reopen-bar"
+              onClick={() => ui.setAssetsPanelCollapsed(false)}
+              title="展开底栏"
+            >
+              {msg('dock.open')}
+            </button>
+          ) : (
+            <Dock onCollapse={() => ui.setAssetsPanelCollapsed(true)} />
+          )}
         </ResizablePanel>
       </div>
 

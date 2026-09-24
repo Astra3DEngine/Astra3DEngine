@@ -1,41 +1,28 @@
 import React from 'react';
 import { msg } from '../i18n/index.js';
-import CollapsiblePanel from './CollapsiblePanel.jsx';
-import IconCube from '../icons/cube.svg?react';
-import IconSphere from '../icons/sphere.svg?react';
-import IconPlane from '../icons/plane.svg?react';
-import IconModel from '../icons/model.svg?react';
-import IconPrefab from '../icons/prefab.svg?react';
-import IconPlus from '../icons/plus.svg?react';
-import IconDelete from '../icons/delete.svg?react';
+import IconCube from '../assets/icons/tools/cube.svg?react';
+import IconSphere from '../assets/icons/tools/sphere.svg?react';
+import IconPlane from '../assets/icons/tools/plane.svg?react';
+import IconModel from '../assets/icons/tools/model.svg?react';
+import IconPrefab from '../assets/icons/tools/prefab.svg?react';
+import IconPlus from '../assets/icons/editor/plus.svg?react';
+import IconDelete from '../assets/icons/editor/delete.svg?react';
+import { usePrefabsStore } from '../stores/usePrefabsStore.js';
+import { useScenesStore } from '../stores/useScenesStore.js';
 
 /**
- * 预制件面板组件
- * 很多东西直接抄层级面板就可以了。
- *
- * @param {Object} props - 组件属性
- * @param {Array} props.prefabs - 预制件列表
- * @param {Array} props.sceneObjects - 场景对象列表
- * @param {Object} props.selectedPrefab - 当前选中的预制件
- * @param {Function} props.onSelectPrefab - 选择预制件回调
- * @param {Function} props.onInstantiatePrefab - 实例化预制件回调
- * @param {Function} props.onDeletePrefab - 删除预制件回调
- * @param {boolean} props.vertical - 是否垂直布局
- * @param {Function} props.onCollapseChange - 折叠状态变化回调
- * @param {Object} props.style - 自定义样式
+ * 预制件面板组件：直接读取 store。
  * @returns {JSX.Element} 预制件面板组件
  */
-function PrefabsPanel({
-  prefabs,
-  sceneObjects,
-  selectedPrefab,
-  onSelectPrefab,
-  onInstantiatePrefab,
-  onDeletePrefab,
-  vertical,
-  onCollapseChange,
-  style,
-}) {
+function PrefabsPanel() {
+  const prefabs = usePrefabsStore((s) => s.prefabs);
+  const selectedPrefab = usePrefabsStore((s) => s.selectedPrefab);
+  const sceneObjects = useScenesStore(
+    (s) => s.scenes.find((sc) => sc.id === s.currentSceneId)?.objects || []
+  );
+  const onSelectPrefab = usePrefabsStore.getState().setSelectedPrefab;
+  const onInstantiatePrefab = usePrefabsStore.getState().instantiatePrefab;
+  const onDeletePrefab = usePrefabsStore.getState().deletePrefab;
   const getInstanceCount = (prefabId) => {
     return sceneObjects.filter((obj) => obj.prefabId === prefabId).length;
   };
@@ -50,14 +37,7 @@ function PrefabsPanel({
   };
 
   return (
-    <CollapsiblePanel
-      title={msg('prefabs.title')}
-      className="prefabs-panel"
-      storageKey="astra-panel-prefabs-collapsed"
-      vertical={vertical}
-      onCollapseChange={onCollapseChange}
-      style={style}
-    >
+    <div className="prefabs-panel">
       <div className="panel-content">
         {prefabs.length === 0 ? (
           <div className="prefabs-empty">
@@ -101,7 +81,7 @@ function PrefabsPanel({
           ))
         )}
       </div>
-    </CollapsiblePanel>
+    </div>
   );
 }
 

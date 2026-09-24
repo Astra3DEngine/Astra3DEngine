@@ -10,7 +10,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import IconClose from '../icons/close.svg?react';
+import IconClose from '../assets/icons/editor/close.svg?react';
 
 /**
  * Toast 通知组件

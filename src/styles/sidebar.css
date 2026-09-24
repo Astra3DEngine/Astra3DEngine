@@ -1,0 +1,100 @@
+/* ===== VSCode 式侧栏 ===== */
+.sidebar {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  min-height: 0;
+}
+
+.activity-bar {
+  width: 36px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+  gap: 2px;
+  background-color: var(--bg-toolbar);
+  border-right: 1px solid var(--border);
+}
+
+.activity-bar-item {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-left: 2px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background-color 0.15s,
+    border-color 0.15s;
+}
+
+.activity-bar-item:hover {
+  color: var(--text-primary);
+}
+
+.activity-bar-item.active {
+  color: var(--text-primary);
+  border-left-color: var(--accent-active);
+  background-color: var(--bg-panel);
+}
+
+.activity-bar-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.sidebar-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 24px;
+  padding: 0 8px 0 12px;
+  background-color: var(--bg-toolbar);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.sidebar-collapse-btn {
+  width: 18px;
+  height: 18px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.sidebar-collapse-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}

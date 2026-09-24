@@ -9,30 +9,31 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { msg, languages, getLocale } from '../i18n/index.js';
 import DropdownMenu from './DropdownMenu.jsx';
+import IconLogo from '../assets/icons/logo/logo.svg?react';
 import InfoModal from './InfoModal.jsx';
 import useDropdownMenu from '../hooks/useDropdownMenu.js';
 import { modal as modalService } from '../lib/ModalManager.js';
 
-import IconNewProject from '../icons/new-project.svg?react';
-import IconOpenProject from '../icons/open-project.svg?react';
-import IconSave from '../icons/save.svg?react';
-import IconSaveAs from '../icons/save-as.svg?react';
-import IconUndo from '../icons/undo.svg?react';
-import IconRedo from '../icons/redo.svg?react';
-import IconTheme from '../icons/theme.svg?react';
-import IconLanguage from '../icons/language.svg?react';
-import IconSettings from '../icons/settings.svg?react';
-import IconPlay from '../icons/play.svg?react';
-import IconStop from '../icons/stop.svg?react';
-import IconImport from '../icons/import.svg?react';
-import IconExport from '../icons/export.svg?react';
-import IconSnapshot from '../icons/snapshot.svg?react';
-import IconRecent from '../icons/recent.svg?react';
+import IconNewProject from '../assets/icons/editor/new-project.svg?react';
+import IconOpenProject from '../assets/icons/editor/open-project.svg?react';
+import IconSave from '../assets/icons/editor/save.svg?react';
+import IconSaveAs from '../assets/icons/editor/save-as.svg?react';
+import IconUndo from '../assets/icons/editor/undo.svg?react';
+import IconRedo from '../assets/icons/editor/redo.svg?react';
+import IconTheme from '../assets/icons/misc/theme.svg?react';
+import IconLanguage from '../assets/icons/misc/language.svg?react';
+import IconSettings from '../assets/icons/editor/settings.svg?react';
+import IconPlay from '../assets/icons/viewport/play.svg?react';
+import IconStop from '../assets/icons/viewport/stop.svg?react';
+import IconImport from '../assets/icons/editor/import.svg?react';
+import IconExport from '../assets/icons/editor/export.svg?react';
+import IconSnapshot from '../assets/icons/editor/snapshot.svg?react';
+import IconRecent from '../assets/icons/editor/recent.svg?react';
 
-import IconWindowMinimize from '../icons/window-minimize.svg?react';
-import IconWindowMaximize from '../icons/window-maximize.svg?react';
-import IconWindowRestore from '../icons/window-restore.svg?react';
-import IconWindowClose from '../icons/window-close.svg?react';
+import IconWindowMinimize from '../assets/icons/window/window-minimize.svg?react';
+import IconWindowMaximize from '../assets/icons/window/window-maximize.svg?react';
+import IconWindowRestore from '../assets/icons/window/window-restore.svg?react';
+import IconWindowClose from '../assets/icons/window/window-close.svg?react';
 
 /**
  * 工具栏组件
@@ -294,34 +295,7 @@ function Toolbar({
               onMouseDown={(e) => e.stopPropagation()}
               onClick={handleLogoClick}
             >
-              <svg
-                version="1.1"
-                xmlns="http://www.w3.org/2000/svg"
-                xmlnsXlink="http://www.w3.org/1999/xlink"
-                height="24"
-                viewBox="0,0,69.99346,66.43688"
-              >
-                <g transform="translate(-205.00327,-146.78156)">
-                  <g stroke="#000000" strokeWidth="0" strokeMiterlimit="10">
-                    <path
-                      d="M274.99673,190.93032l-11.95866,22.28812h-44.44009l13.31277,-22.10459z"
-                      fill="#0073bf"
-                    />
-                    <path
-                      d="M216.31868,212.14198l-11.31541,-21.28864l24.21416,-0.00471z"
-                      fill="#66ccff"
-                    />
-                    <path
-                      d="M227.50821,146.78156l23.50249,0.00667l23.98603,44.14209l-11.95866,22.28812z"
-                      fill="#0099ff"
-                    />
-                    <path
-                      d="M205.06042,188.54619l22.44779,-41.76463l23.50249,0.00667l-20.58917,41.73314z"
-                      fill="#66ccff"
-                    />
-                  </g>
-                </g>
-              </svg>
+              <IconLogo className="toolbar-logo" />
             </button>
             <DropdownMenu
               isOpen={logoMenu.isOpen}

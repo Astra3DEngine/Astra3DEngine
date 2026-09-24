@@ -1,4 +1,10 @@
 {
+  "dock.open": "展开底栏",
+  "dock.terminal": "调试终端",
+  "assets.searchPlaceholder": "搜索资源…",
+  "tabs.preview": "预览",
+  "tabs.code": "代码",
+  "tabs.codePlaceholder": "代码编辑器待接入（Blockly 等）。",
   "app.title": "Astra 3D 引擎",
 
   "importModel.title": "导入模型",

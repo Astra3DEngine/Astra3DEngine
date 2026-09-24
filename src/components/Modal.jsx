@@ -7,7 +7,7 @@
 
 import React, { useEffect } from 'react';
 import { Rnd } from 'react-rnd';
-import IconClose from '../icons/close.svg?react';
+import IconClose from '../assets/icons/editor/close.svg?react';
 
 /** 尺寸字符串（px/vw/vh）转像素数 */
 function toPx(value) {

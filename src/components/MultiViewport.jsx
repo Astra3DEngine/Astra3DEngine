@@ -9,8 +9,8 @@
 import React, { useState, useCallback } from 'react';
 import Viewport from './Viewport.jsx';
 import { msg } from '../i18n/index.js';
-import IconLayoutSingle from '../icons/layout-single.svg?react';
-import IconLayoutQuad from '../icons/layout-quad.svg?react';
+import IconLayoutSingle from '../assets/icons/viewport/layout-single.svg?react';
+import IconLayoutQuad from '../assets/icons/viewport/layout-quad.svg?react';
 
 const VIEW_CONFIGS = {
   perspective: {

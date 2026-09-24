@@ -3,25 +3,25 @@ import { msg } from '../i18n/index.js';
 import { useDialog } from '../hooks/useDialog.jsx';
 import Modal from './Modal.jsx';
 
-import ArrowLeftIcon from '../icons/arrow-left.svg';
-import ArrowRightIcon from '../icons/arrow-right.svg';
-import ArrowUpIcon from '../icons/arrow-up.svg';
-import FolderIcon from '../icons/folder.svg';
-import FileIcon from '../icons/file.svg';
-import PlusIcon from '../icons/plus.svg';
-import HomeIcon from '../icons/home.svg';
-import DesktopIcon from '../icons/desktop.svg';
-import DocumentIcon from '../icons/document.svg';
-import DownloadIcon from '../icons/download.svg';
-import ImageFileIcon from '../icons/image-file.svg';
-import AudioIcon from '../icons/audio.svg';
-import VideoIcon from '../icons/video.svg';
-import BookIcon from '../icons/book.svg';
-import ListIcon from '../icons/list.svg';
-import CodeIcon from '../icons/code.svg';
-import BoxIcon from '../icons/box.svg';
-import PlayCircleIcon from '../icons/play-circle.svg';
-import ModelIcon from '../icons/model.svg';
+import ArrowLeftIcon from '../assets/icons/nav/arrow-left.svg?react';
+import ArrowRightIcon from '../assets/icons/nav/arrow-right.svg?react';
+import ArrowUpIcon from '../assets/icons/nav/arrow-up.svg?react';
+import FolderIcon from '../assets/icons/editor/folder.svg?react';
+import FileIcon from '../assets/icons/editor/file.svg?react';
+import PlusIcon from '../assets/icons/editor/plus.svg?react';
+import HomeIcon from '../assets/icons/editor/home.svg?react';
+import DesktopIcon from '../assets/icons/editor/desktop.svg?react';
+import DocumentIcon from '../assets/icons/editor/document.svg?react';
+import DownloadIcon from '../assets/icons/editor/download.svg?react';
+import ImageFileIcon from '../assets/icons/misc/image-file.svg?react';
+import AudioIcon from '../assets/icons/viewport/audio.svg?react';
+import VideoIcon from '../assets/icons/viewport/video.svg?react';
+import BookIcon from '../assets/icons/editor/book.svg?react';
+import ListIcon from '../assets/icons/tools/list.svg?react';
+import CodeIcon from '../assets/icons/misc/code.svg?react';
+import BoxIcon from '../assets/icons/tools/box.svg?react';
+import PlayCircleIcon from '../assets/icons/viewport/play-circle.svg?react';
+import ModelIcon from '../assets/icons/tools/model.svg?react';
 
 const Icon = ({ src, size = 16, className = '' }) => (
   <img

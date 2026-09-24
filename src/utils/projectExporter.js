@@ -6,6 +6,7 @@
 
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import { PROJECT_FORMAT_VERSION, ENGINE_META } from '../meta.js';
 
 /**
  * 生成 GUID
@@ -33,7 +34,7 @@ export function generateGUID() {
  */
 export function createManifest(files) {
   return {
-    version: '1.0.0',
+    version: PROJECT_FORMAT_VERSION,
     createdAt: new Date().toISOString(),
     files: files.map((f) => ({
       path: f.path,
@@ -68,8 +69,8 @@ export async function exportProjectAsAstra(projectData, filename) {
   const zip = new JSZip();
 
   const projectJson = {
-    version: '1.0.0',
-    engineVersion: '0.1.0',
+    version: PROJECT_FORMAT_VERSION,
+    engineVersion: ENGINE_META.version,
     name: projectData.name || 'Untitled Project',
     description: projectData.description || '',
     author: projectData.author || '',
@@ -85,7 +86,7 @@ export async function exportProjectAsAstra(projectData, filename) {
   zip.file('project.json', JSON.stringify(projectJson, null, 2));
 
   const sceneData = {
-    version: '1.0.0',
+    version: PROJECT_FORMAT_VERSION,
     id: `scene-${generateGUID()}`,
     name: 'Main Scene',
     settings: {
@@ -166,7 +167,7 @@ export async function exportProjectAsAstra(projectData, filename) {
   const prefabsData = projectData.prefabs || [];
   prefabsData.forEach((prefab) => {
     const prefabData = {
-      version: '1.0.0',
+      version: PROJECT_FORMAT_VERSION,
       guid: prefab.id,
       name: prefab.name,
       description: '',

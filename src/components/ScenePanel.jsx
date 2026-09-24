@@ -6,45 +6,27 @@
 
 import React, { useState, useMemo } from 'react';
 import { msg } from '../i18n/index.js';
-import CollapsiblePanel from './CollapsiblePanel.jsx';
 import RenameInput from './primitives/RenameInput.jsx';
-import IconScene from '../icons/scene.svg?react';
-import IconStar from '../icons/star.svg?react';
-import IconPlus from '../icons/plus.svg?react';
-import IconDelete from '../icons/delete.svg?react';
-import IconRename from '../icons/rename.svg?react';
+import IconScene from '../assets/icons/tools/scene.svg?react';
+import IconStar from '../assets/icons/tools/star.svg?react';
+import IconPlus from '../assets/icons/editor/plus.svg?react';
+import IconDelete from '../assets/icons/editor/delete.svg?react';
+import IconRename from '../assets/icons/editor/rename.svg?react';
+import { useScenesStore } from '../stores/useScenesStore.js';
 
 /**
- * 场景面板组件
- *
- * 专门用于管理所有场景的面板喵！
- * 支持场景切换、新建、删除、重命名、设置主场景等功能。
- *
- * @param {Object} props - 组件属性
- * @param {Array} props.scenes - 所有场景列表
- * @param {string} props.currentSceneId - 当前激活场景ID
- * @param {Function} props.onSwitchScene - 切换场景回调
- * @param {Function} props.onCreateScene - 创建新场景回调
- * @param {Function} props.onDeleteScene - 删除场景回调
- * @param {Function} props.onRenameScene - 重命名场景回调
- * @param {Function} props.onSetMainScene - 设置主场景回调
- * @param {boolean} props.vertical - 是否垂直布局
- * @param {Function} props.onCollapseChange - 折叠状态变化回调
- * @param {Object} props.style - 自定义样式（用于动态高度喵！）
+ * 场景面板组件：直接读取 store 管理所有场景（切换/新建/删除/重命名/设主场景）。
  * @returns {JSX.Element} 场景面板组件
  */
-function ScenePanel({
-  scenes = [],
-  currentSceneId,
-  onSwitchScene,
-  onCreateScene,
-  onDeleteScene,
-  onRenameScene,
-  onSetMainScene,
-  vertical,
-  onCollapseChange,
-  style,
-}) {
+function ScenePanel() {
+  // ===== store 驱动 =====
+  const scenes = useScenesStore((s) => s.scenes);
+  const currentSceneId = useScenesStore((s) => s.currentSceneId);
+  const onSwitchScene = useScenesStore.getState().switchScene;
+  const onCreateScene = useScenesStore.getState().createScene;
+  const onDeleteScene = useScenesStore.getState().deleteScene;
+  const onRenameScene = useScenesStore.getState().renameScene;
+  const onSetMainScene = useScenesStore.getState().setMainScene;
   // 场景重命名状态喵！
   const [isRenaming, setIsRenaming] = useState(null);
 
@@ -192,22 +174,17 @@ function ScenePanel({
   /**
    * 头部右侧按钮：新建场景（与层级面板样式一致喵！）
    */
-  const headerRight = (
-    <button className="add-menu-trigger" onClick={handleCreateScene} title={msg('scene.createNew')}>
-      <IconPlus className="add-menu-icon" />
-    </button>
-  );
-
   return (
-    <CollapsiblePanel
-      title={msg('scene.panelTitle')}
-      className="scene-panel"
-      storageKey="astra-panel-scene-collapsed"
-      vertical={vertical}
-      onCollapseChange={onCollapseChange}
-      headerRight={headerRight}
-      style={style}
-    >
+    <div className="scene-panel">
+      <div className="scene-toolbar">
+        <button
+          className="add-menu-trigger"
+          onClick={handleCreateScene}
+          title={msg('scene.createNew')}
+        >
+          <IconPlus className="add-menu-icon" />
+        </button>
+      </div>
       <div className="scene-list">
         {scenes.length === 0 ? (
           <div className="scene-empty">
@@ -233,7 +210,7 @@ function ScenePanel({
           </div>
         </div>
       )}
-    </CollapsiblePanel>
+    </div>
   );
 }
 
