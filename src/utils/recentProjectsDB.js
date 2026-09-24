@@ -96,8 +96,8 @@ async function clearAllHandles() {
  */
 export async function addRecentProject(name, fileHandle) {
   const handles = await getAllHandles();
-  const existingIndex = handles.findIndex(h => h.name === name);
-  
+  const existingIndex = handles.findIndex((h) => h.name === name);
+
   if (existingIndex !== -1) {
     await deleteHandle(handles[existingIndex].id);
   }
@@ -106,18 +106,20 @@ export async function addRecentProject(name, fileHandle) {
     id: Date.now(),
     name: name,
     handle: fileHandle,
-    lastOpened: Date.now()
+    lastOpened: Date.now(),
   };
 
-  const updated = [newHandle, ...handles.filter(h => h.name !== name)]
-    .slice(0, MAX_RECENT_PROJECTS);
+  const updated = [newHandle, ...handles.filter((h) => h.name !== name)].slice(
+    0,
+    MAX_RECENT_PROJECTS
+  );
 
   await clearAllHandles();
   for (const h of updated) {
     await saveHandle(h);
   }
 
-  return updated.map(h => ({ id: h.id, name: h.name, lastOpened: h.lastOpened }));
+  return updated.map((h) => ({ id: h.id, name: h.name, lastOpened: h.lastOpened }));
 }
 
 /**
@@ -126,7 +128,7 @@ export async function addRecentProject(name, fileHandle) {
  */
 export async function getRecentProjects() {
   const handles = await getAllHandles();
-  return handles.map(h => ({ id: h.id, name: h.name, lastOpened: h.lastOpened }));
+  return handles.map((h) => ({ id: h.id, name: h.name, lastOpened: h.lastOpened }));
 }
 
 /**
@@ -136,7 +138,7 @@ export async function getRecentProjects() {
  */
 export async function getProjectHandle(id) {
   const handles = await getAllHandles();
-  const found = handles.find(h => h.id === id);
+  const found = handles.find((h) => h.id === id);
   return found?.handle;
 }
 

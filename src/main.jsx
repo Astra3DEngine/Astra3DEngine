@@ -1,14 +1,16 @@
 /**
  * @file main.jsx
- * @description 应用入口文件，负责初始化 React 应用并挂载到 DOM
+ * @description 应用入口：先初始化设置注册表，再挂载 React 应用。
  * @module main
  */
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App.jsx';
+import { initBuiltInSettings } from './settings/settingsRegistry.js';
 import './styles/main.css';
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <App />
-);
+initBuiltInSettings();
+
+import('./App.jsx').then(({ default: App }) => {
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+});

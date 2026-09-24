@@ -2,14 +2,14 @@
  * @file components/Toast.jsx
  * @description Toast 通知组件，显示临时提示消息
  * @module components/Toast
- * 
+ *
  * - 显示成功、错误、警告、信息类型的通知
  * - 自动倒计时进度条
  * - 支持手动关闭
  * - 以及多个 Toast
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import IconClose from '../icons/close.svg?react';
 
 /**
@@ -26,13 +26,18 @@ function Toast({ id, message, type = 'info', duration = 3000, onClose }) {
   const [progress, setProgress] = useState(100);
   const [isLeaving, setIsLeaving] = useState(false);
 
+  const handleClose = useCallback(() => {
+    setIsLeaving(true);
+    setTimeout(() => onClose(id), 200);
+  }, [id, onClose]);
+
   useEffect(() => {
     const startTime = Date.now();
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime;
       const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
       setProgress(remaining);
-      
+
       if (remaining === 0) {
         clearInterval(interval);
         handleClose();
@@ -40,18 +45,13 @@ function Toast({ id, message, type = 'info', duration = 3000, onClose }) {
     }, 50);
 
     return () => clearInterval(interval);
-  }, [duration, id]);
-
-  const handleClose = () => {
-    setIsLeaving(true);
-    setTimeout(() => onClose(id), 200);
-  };
+  }, [duration, id, handleClose]);
 
   const typeClass = {
     success: 'toast-success',
     error: 'toast-error',
     warning: 'toast-warning',
-    info: 'toast-info'
+    info: 'toast-info',
   }[type];
 
   return (
@@ -75,12 +75,8 @@ function Toast({ id, message, type = 'info', duration = 3000, onClose }) {
 export function ToastContainer({ toasts, onClose }) {
   return (
     <div className="toast-container">
-      {toasts.map(toast => (
-        <Toast
-          key={toast.id}
-          {...toast}
-          onClose={onClose}
-        />
+      {toasts.map((toast) => (
+        <Toast key={toast.id} {...toast} onClose={onClose} />
       ))}
     </div>
   );

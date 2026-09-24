@@ -6,10 +6,10 @@
 
 /**
  * Astra 3D Engine 版本号
- * 
+ *
  * 这个版本号是引擎本身的版本号，不是项目文件的格式版本
  * 格式遵循语义化版本规范：主版本号.次版本号.修订号
- * 
+ *
  * - 主版本号：重大架构改动、不兼容的 API 修改
  * - 次版本号：向下兼容的功能性新增
  * - 修订号：向下兼容的问题修正
@@ -18,12 +18,12 @@ export const ENGINE_VERSION = '0.1.0';
 
 /**
  * 项目文件格式版本
- * 
+ *
  * 这个版本号用于识别项目文件的格式
- * 
+ *
  * - 0.1.0：单场景格式（scene.objects 数组）
  * - 1.0.0：多场景格式（scenes 数组）
- * 
+ *
  * 加载项目时会根据这个版本号选择正确的解析方式
  */
 export const PROJECT_FORMAT_VERSION = '1.0.0';
@@ -50,7 +50,7 @@ export const LICENSE = 'GPL v3';
 
 /**
  * 引擎元数据对象
- * 
+ *
  * 包含所有引擎相关的元数据信息
  */
 export const ENGINE_META = {
@@ -59,7 +59,7 @@ export const ENGINE_META = {
   description: ENGINE_DESCRIPTION,
   developer: DEVELOPER,
   license: LICENSE,
-  projectFormatVersion: PROJECT_FORMAT_VERSION
+  projectFormatVersion: PROJECT_FORMAT_VERSION,
 };
 
 /**

@@ -1,9 +1,0 @@
-{
-  "name": "Modern Dark Theme",
-  "description": "A modern dark theme with softer colors and better contrast",
-  "activated": "Modern Dark theme plugin activated",
-  "deactivated": "Modern Dark theme plugin deactivated",
-  "registered": "Theme registered: {0}",
-  "registerFailed": "Theme registration failed",
-  "unregistered": "Theme unregistered: {0}"
-}

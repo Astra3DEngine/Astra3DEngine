@@ -1,9 +1,0 @@
-{
-  "name": "现代深色主题",
-  "description": "一个现代化的深色主题，使用更柔和的颜色和更好的对比度",
-  "version": "1.0.0",
-  "author": "Astra3D Team",
-  "enabledByDefault": false,
-  "userscript": "index.js",
-  "tags": ["new", "theme"]
-}

@@ -33,7 +33,7 @@ const messages = {
   zh: mergeMessages(zh, pluginSettingsZh),
   ja: mergeMessages(ja, pluginSettingsEn),
   ru: mergeMessages(ru, pluginSettingsEn),
-  la: mergeMessages(la, pluginSettingsEn)
+  la: mergeMessages(la, pluginSettingsEn),
 };
 
 export const languages = [
@@ -41,7 +41,7 @@ export const languages = [
   { code: 'en', name: 'English', nativeName: 'English' },
   { code: 'ja', name: 'Japanese', nativeName: '日本語' },
   { code: 'ru', name: 'Russian', nativeName: 'Русский' },
-  { code: 'la', name: 'Latin', nativeName: 'Latina' }
+  { code: 'la', name: 'Latin', nativeName: 'Latina' },
 ];
 
 const STORAGE_KEY = 'astra-locale';
@@ -84,7 +84,7 @@ export function setLocale(locale) {
   if (messages[locale] && locale !== currentLocale) {
     currentLocale = locale;
     localStorage.setItem(STORAGE_KEY, locale);
-    localeListeners.forEach(callback => callback(locale));
+    localeListeners.forEach((callback) => callback(locale));
   }
 }
 
@@ -106,7 +106,7 @@ export function msg(key, params = {}) {
   const locale = currentLocale;
   let text = messages[locale]?.[key] || messages['en']?.[key] || key;
 
-  Object.keys(params).forEach(param => {
+  Object.keys(params).forEach((param) => {
     text = text.replace(new RegExp(`\\{${param}\\}`), params[param]);
   });
 
@@ -123,5 +123,5 @@ export function toggleLocale() {
   const newLocale = langCodes[nextIndex];
   currentLocale = newLocale;
   localStorage.setItem(STORAGE_KEY, newLocale);
-  localeListeners.forEach(callback => callback(newLocale));
+  localeListeners.forEach((callback) => callback(newLocale));
 }

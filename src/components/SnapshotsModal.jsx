@@ -2,11 +2,11 @@
  * @file components/SnapshotsModal.jsx
  * @description 快照管理模态框组件，显示和管理自动保存的快照
  * @module components/SnapshotsModal
- * 
+ *
  * 快照功能模仿 TurboWarp ，我觉得很有必要的东西。
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { msg } from '../i18n/index.js';
 import { useDialog } from '../hooks/useDialog.jsx';
 import Modal from './Modal.jsx';
@@ -24,31 +24,30 @@ import IconDelete from '../icons/delete.svg?react';
  * @param {Function} props.onRestoreSnapshot - 恢复快照回调
  * @returns {JSX.Element} 快照管理模态框组件
  */
-function SnapshotsModal({ 
-  isOpen, 
-  onClose, 
+function SnapshotsModal({
+  isOpen,
+  onClose,
   onLoadSnapshots,
-  onLoadSnapshot,
   onDeleteSnapshot,
   onClearAll,
-  onRestoreSnapshot
+  onRestoreSnapshot,
 }) {
   const [snapshots, setSnapshots] = useState([]);
   const [loading, setLoading] = useState(true);
   const dialog = useDialog();
 
-  useEffect(() => {
-    if (isOpen) {
-      loadSnapshots();
-    }
-  }, [isOpen]);
-
-  const loadSnapshots = async () => {
+  const loadSnapshots = useCallback(async () => {
     setLoading(true);
     const snaps = await onLoadSnapshots();
     setSnapshots(snaps);
     setLoading(false);
-  };
+  }, [onLoadSnapshots]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadSnapshots();
+    }
+  }, [isOpen, loadSnapshots]);
 
   const handleRestore = async (snapshot) => {
     const confirmRestore = await dialog.confirm(
@@ -77,16 +76,17 @@ function SnapshotsModal({
     }
   };
 
-  const footer = snapshots.length > 0 ? (
-    <>
-      <span className="snapshots-count">
-        {msg('snapshots.count').replace('{count}', snapshots.length)}
-      </span>
-      <button className="btn btn-small btn-danger" onClick={handleClearAll}>
-        {msg('snapshots.clearAll')}
-      </button>
-    </>
-  ) : null;
+  const footer =
+    snapshots.length > 0 ? (
+      <>
+        <span className="snapshots-count">
+          {msg('snapshots.count').replace('{count}', snapshots.length)}
+        </span>
+        <button className="btn btn-small btn-danger" onClick={handleClearAll}>
+          {msg('snapshots.clearAll')}
+        </button>
+      </>
+    ) : null;
 
   return (
     <Modal
@@ -117,13 +117,13 @@ function SnapshotsModal({
                   </span>
                 </div>
                 <div className="snapshot-actions">
-                  <button 
+                  <button
                     className="btn btn-small btn-primary"
                     onClick={() => handleRestore(snapshot)}
                   >
                     {msg('snapshots.restore')}
                   </button>
-                  <button 
+                  <button
                     className="icon-btn icon-btn-danger"
                     onClick={() => handleDelete(snapshot.id)}
                     title={msg('snapshots.delete')}

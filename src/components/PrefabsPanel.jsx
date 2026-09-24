@@ -12,7 +12,7 @@ import IconDelete from '../icons/delete.svg?react';
 /**
  * 预制件面板组件
  * 很多东西直接抄层级面板就可以了。
- * 
+ *
  * @param {Object} props - 组件属性
  * @param {Array} props.prefabs - 预制件列表
  * @param {Array} props.sceneObjects - 场景对象列表
@@ -25,19 +25,19 @@ import IconDelete from '../icons/delete.svg?react';
  * @param {Object} props.style - 自定义样式
  * @returns {JSX.Element} 预制件面板组件
  */
-function PrefabsPanel({ 
-  prefabs, 
+function PrefabsPanel({
+  prefabs,
   sceneObjects,
-  selectedPrefab, 
-  onSelectPrefab, 
-  onInstantiatePrefab, 
+  selectedPrefab,
+  onSelectPrefab,
+  onInstantiatePrefab,
   onDeletePrefab,
   vertical,
   onCollapseChange,
-  style
+  style,
 }) {
   const getInstanceCount = (prefabId) => {
-    return sceneObjects.filter(obj => obj.prefabId === prefabId).length;
+    return sceneObjects.filter((obj) => obj.prefabId === prefabId).length;
   };
 
   const getPrefabIcon = (prefab) => {
@@ -50,8 +50,8 @@ function PrefabsPanel({
   };
 
   return (
-    <CollapsiblePanel 
-      title={msg('prefabs.title')} 
+    <CollapsiblePanel
+      title={msg('prefabs.title')}
       className="prefabs-panel"
       storageKey="astra-panel-prefabs-collapsed"
       vertical={vertical}
@@ -62,21 +62,17 @@ function PrefabsPanel({
         {prefabs.length === 0 ? (
           <div className="prefabs-empty">
             <div>{msg('prefabs.empty')}</div>
-            <div className="prefabs-empty-hint">
-              {msg('prefabs.emptyHint')}
-            </div>
+            <div className="prefabs-empty-hint">{msg('prefabs.emptyHint')}</div>
           </div>
         ) : (
-          prefabs.map(prefab => (
+          prefabs.map((prefab) => (
             <div
               key={prefab.id}
               className={`prefab-item ${selectedPrefab && selectedPrefab.id === prefab.id ? 'selected' : ''}`}
               onClick={() => onSelectPrefab(prefab)}
               onDoubleClick={() => onInstantiatePrefab(prefab.id)}
             >
-              <span className="prefab-item-icon">
-                {getPrefabIcon(prefab)}
-              </span>
+              <span className="prefab-item-icon">{getPrefabIcon(prefab)}</span>
               <span className="prefab-item-name">{prefab.name}</span>
               <span className="prefab-instance-count">
                 {msg('prefabs.instances', { count: getInstanceCount(prefab.id) })}

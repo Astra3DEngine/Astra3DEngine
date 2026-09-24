@@ -9,7 +9,7 @@
  *    由外部 useDropdownMenu 控制开关和位置（右键菜单、Add 菜单、Logo 菜单）
  *
  * 统一的紧凑样式，保留 roundedCorners 角设置 API。
- * 
+ *
  * 现在我更喜欢这个了！
  */
 
@@ -29,17 +29,20 @@ import React, { useState, useRef, useEffect, useImperativeHandle, forwardRef } f
  * @param {React.RefObject} [props.menuRef] - 受控模式：外部 ref
  * @param {Object} ref - 组件引用（Trigger 模式提供 open/close/toggle 方法）
  */
-const DropdownMenu = forwardRef(function DropdownMenu({
-  label,
-  items,
-  children,
-  className = '',
-  roundedCorners = 'all',
-  position = 'bottom',
-  isOpen: isOpenProp,
-  onClose,
-  menuRef: externalMenuRef
-}, ref) {
+const DropdownMenu = forwardRef(function DropdownMenu(
+  {
+    label,
+    items,
+    children,
+    className = '',
+    roundedCorners = 'all',
+    position = 'bottom',
+    isOpen: isOpenProp,
+    onClose,
+    menuRef: externalMenuRef,
+  },
+  ref
+) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState(null);
   const isControlled = isOpenProp !== undefined;
@@ -53,7 +56,7 @@ const DropdownMenu = forwardRef(function DropdownMenu({
   useImperativeHandle(ref, () => ({
     open: () => setInternalIsOpen(true),
     close: () => setInternalIsOpen(false),
-    toggle: () => setInternalIsOpen(prev => !prev)
+    toggle: () => setInternalIsOpen((prev) => !prev),
   }));
 
   useEffect(() => {
@@ -124,7 +127,8 @@ const DropdownMenu = forwardRef(function DropdownMenu({
     return classes.join(' ');
   };
 
-  const positionClass = (typeof position === 'string' && position === 'top') ? 'dropdown-position-top' : '';
+  const positionClass =
+    typeof position === 'string' && position === 'top' ? 'dropdown-position-top' : '';
 
   let positionStyle;
   if (typeof position === 'object' && position !== null && 'x' in position) {
@@ -132,12 +136,12 @@ const DropdownMenu = forwardRef(function DropdownMenu({
       position: 'fixed',
       left: position.x,
       top: position.y,
-      zIndex: 1000
+      zIndex: 1000,
     };
   }
 
   const handleTriggerClick = () => {
-    if (!isControlled) setInternalIsOpen(prev => !prev);
+    if (!isControlled) setInternalIsOpen((prev) => !prev);
   };
 
   const renderContent = () => {
@@ -214,15 +218,14 @@ const DropdownMenu = forwardRef(function DropdownMenu({
 
   return (
     <div className={`dropdown-menu ${className}`} ref={resolvedMenuRef}>
-      <button
-        className="menu-btn dropdown-trigger"
-        ref={triggerRef}
-        onClick={handleTriggerClick}
-      >
+      <button className="menu-btn dropdown-trigger" ref={triggerRef} onClick={handleTriggerClick}>
         {label}
       </button>
       {isOpen && (
-        <div className={`dropdown-content ${getRoundedClass()} ${positionClass}`} onClick={(e) => e.stopPropagation()}>
+        <div
+          className={`dropdown-content ${getRoundedClass()} ${positionClass}`}
+          onClick={(e) => e.stopPropagation()}
+        >
           {renderContent()}
         </div>
       )}

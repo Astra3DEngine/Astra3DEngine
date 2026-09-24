@@ -9,10 +9,10 @@ import { msg } from '../i18n/index.js';
 
 /**
  * 场景设置面板组件
- * 
+ *
  * 当没有选中对象时显示，用于配置当前场景的环境设置喵！
  * 包含环境光、背景色、雾效等设置项。
- * 
+ *
  * @param {Object} props - 组件属性
  * @param {Object} props.sceneSettings - 当前场景的设置对象
  * @param {Function} props.onUpdateSettings - 更新场景设置回调
@@ -24,7 +24,7 @@ function SceneSettingsPanel({ sceneSettings = {}, onUpdateSettings }) {
     ambientLight: { color: '#ffffff', intensity: 0.5 },
     backgroundColor: '#1a1a2e',
     fog: { enabled: false, color: '#ffffff', near: 1, far: 1000 },
-    ...sceneSettings
+    ...sceneSettings,
   };
 
   /**
@@ -33,7 +33,7 @@ function SceneSettingsPanel({ sceneSettings = {}, onUpdateSettings }) {
   const handleAmbientColorChange = (color) => {
     onUpdateSettings({
       ...settings,
-      ambientLight: { ...settings.ambientLight, color }
+      ambientLight: { ...settings.ambientLight, color },
     });
   };
 
@@ -43,7 +43,7 @@ function SceneSettingsPanel({ sceneSettings = {}, onUpdateSettings }) {
   const handleAmbientIntensityChange = (intensity) => {
     onUpdateSettings({
       ...settings,
-      ambientLight: { ...settings.ambientLight, intensity: parseFloat(intensity) || 0 }
+      ambientLight: { ...settings.ambientLight, intensity: parseFloat(intensity) || 0 },
     });
   };
 
@@ -53,7 +53,7 @@ function SceneSettingsPanel({ sceneSettings = {}, onUpdateSettings }) {
   const handleBackgroundColorChange = (color) => {
     onUpdateSettings({
       ...settings,
-      backgroundColor: color
+      backgroundColor: color,
     });
   };
 
@@ -63,7 +63,7 @@ function SceneSettingsPanel({ sceneSettings = {}, onUpdateSettings }) {
   const handleFogEnabledChange = (enabled) => {
     onUpdateSettings({
       ...settings,
-      fog: { ...settings.fog, enabled }
+      fog: { ...settings.fog, enabled },
     });
   };
 
@@ -73,7 +73,7 @@ function SceneSettingsPanel({ sceneSettings = {}, onUpdateSettings }) {
   const handleFogColorChange = (color) => {
     onUpdateSettings({
       ...settings,
-      fog: { ...settings.fog, color }
+      fog: { ...settings.fog, color },
     });
   };
 
@@ -83,7 +83,7 @@ function SceneSettingsPanel({ sceneSettings = {}, onUpdateSettings }) {
   const handleFogNearChange = (near) => {
     onUpdateSettings({
       ...settings,
-      fog: { ...settings.fog, near: parseFloat(near) || 0 }
+      fog: { ...settings.fog, near: parseFloat(near) || 0 },
     });
   };
 
@@ -93,7 +93,7 @@ function SceneSettingsPanel({ sceneSettings = {}, onUpdateSettings }) {
   const handleFogFarChange = (far) => {
     onUpdateSettings({
       ...settings,
-      fog: { ...settings.fog, far: parseFloat(far) || 0 }
+      fog: { ...settings.fog, far: parseFloat(far) || 0 },
     });
   };
 
@@ -154,7 +154,7 @@ function SceneSettingsPanel({ sceneSettings = {}, onUpdateSettings }) {
             onChange={(e) => handleFogEnabledChange(e.target.checked)}
           />
         </div>
-        
+
         {/* 只有启用雾效时才显示详细设置喵！ */}
         {settings.fog.enabled && (
           <>

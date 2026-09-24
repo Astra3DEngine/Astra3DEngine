@@ -1,13 +1,13 @@
-import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useMemo, useCallback } from 'react';
 import { msg } from '../i18n/index.js';
 import CollapsiblePanel from './CollapsiblePanel.jsx';
 import FileBrowserDialog from './FileBrowserDialog.jsx';
 import useDropdownMenu from '../hooks/useDropdownMenu.js';
 import DropdownMenu from './DropdownMenu.jsx';
+import RenameInput from './primitives/RenameInput.jsx';
 import IconModel from '../icons/cube.svg?react';
 import IconImage from '../icons/image.svg?react';
 import IconFile from '../icons/file.svg?react';
-import IconFolder from '../icons/folder.svg?react';
 import IconDelete from '../icons/delete.svg?react';
 import IconRename from '../icons/rename.svg?react';
 import IconPlus from '../icons/plus.svg?react';
@@ -15,15 +15,15 @@ import IconPlus from '../icons/plus.svg?react';
 const getMimeType = (filename) => {
   const ext = filename.split('.').pop()?.toLowerCase();
   const mimeTypes = {
-    'gltf': 'model/gltf+json',
-    'glb': 'model/gltf-binary',
-    'obj': 'model/obj',
-    'png': 'image/png',
-    'jpg': 'image/jpeg',
-    'jpeg': 'image/jpeg',
-    'webp': 'image/webp',
-    'gif': 'image/gif',
-    'bmp': 'image/bmp'
+    gltf: 'model/gltf+json',
+    glb: 'model/gltf-binary',
+    obj: 'model/obj',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    webp: 'image/webp',
+    gif: 'image/gif',
+    bmp: 'image/bmp',
   };
   return mimeTypes[ext] || 'application/octet-stream';
 };
@@ -34,19 +34,111 @@ const getBasename = (filePath) => {
   return parts[parts.length - 1] || '';
 };
 
-function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteAsset, onRenameAsset, onCollapseChange }) {
+/**
+ * 递归收集 FileSystem 目录条目到 fileMap（相对路径 -> File）。
+ * @param {FileSystemDirectoryEntry} entry
+ * @param {Map<string, File>} fileMap
+ * @param {string} [basePath='']
+ */
+async function collectDirectoryInto(entry, fileMap, basePath = '') {
+  const reader = entry.createReader();
+
+  const readEntriesBatch = async () => {
+    const entries = await new Promise((resolve, reject) => {
+      reader.readEntries(resolve, reject);
+    });
+
+    for (const subEntry of entries) {
+      const relPath = basePath ? `${basePath}/${subEntry.name}` : subEntry.name;
+      if (subEntry.isDirectory) {
+        await collectDirectoryInto(subEntry, fileMap, relPath);
+      } else {
+        const file = await new Promise((resolve, reject) => {
+          subEntry.file(resolve, reject);
+        });
+        if (file) fileMap.set(relPath, file);
+      }
+    }
+
+    // readEntries 可能一次只返回部分条目，需要循环读取直到空
+    if (entries.length > 0) {
+      await readEntriesBatch();
+    }
+  };
+
+  await readEntriesBatch();
+}
+
+/**
+ * 批量导入文件集合。
+ *
+ * - 若存在 .gltf：为每个 gltf 收集同目录资源（.bin/贴图）成 resourceMap 一起导入，
+ *   .glb 自包含直接导入。
+ * - 否则逐个导入所有文件。
+ *
+ * @param {Map<string, File>} fileMap - 相对路径 -> File
+ * @param {(fileOrObject: File|Object) => void} onImport
+ */
+export function importFileCollection(fileMap, onImport) {
+  const gltfFiles = [];
+  for (const [relativePath, file] of fileMap) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'gltf' || ext === 'glb') {
+      gltfFiles.push({ relativePath, file, ext });
+    }
+  }
+
+  if (gltfFiles.length === 0) {
+    for (const file of fileMap.values()) {
+      onImport(file);
+    }
+    return;
+  }
+
+  for (const { relativePath, file, ext } of gltfFiles) {
+    if (ext === 'glb') {
+      onImport(file);
+      continue;
+    }
+
+    // 收集同目录或子目录下的资源文件
+    const resourceMap = new Map();
+    const gltfDir = relativePath.substring(0, relativePath.lastIndexOf('/')) || '';
+
+    for (const [resourcePath, resourceFile] of fileMap) {
+      if (resourcePath === relativePath) continue;
+      const resourceDir = resourcePath.substring(0, resourcePath.lastIndexOf('/')) || '';
+      if (resourceDir === gltfDir || resourceDir.startsWith(gltfDir + '/')) {
+        const relativeToGltf =
+          gltfDir === '' ? resourcePath : resourcePath.substring(gltfDir.length + 1);
+        resourceMap.set(relativeToGltf, resourceFile);
+      }
+    }
+
+    onImport({ file, resourceMap, relativePath });
+  }
+}
+
+function AssetsPanel({
+  assets,
+  onImport,
+  onSelectAsset,
+  selectedAsset,
+  onDeleteAsset,
+  onRenameAsset,
+  onCollapseChange,
+}) {
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [contextMenuAsset, setContextMenuAsset] = useState(null);
   const [editingAsset, setEditingAsset] = useState(null);
-  const [editName, setEditName] = useState('');
   const [filter, setFilter] = useState('all');
   const [isFileBrowserOpen, setIsFileBrowserOpen] = useState(false);
-  
+
   const ctxMenu = useDropdownMenu({
-    onClose: () => setContextMenuAsset(null)
+    onClose: () => setContextMenuAsset(null),
   });
-  
+
   const isElectron = typeof window !== 'undefined' && window.electronAPI?.fs;
 
   const handleImportClick = useCallback(() => {
@@ -58,74 +150,82 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
   }, [isElectron]);
 
   /**
+   * 导入单个文件
+   *
+   * 从文件路径读取内容并创建 File 对象，然后调用 onImport。
+   */
+  const importFile = useCallback(
+    async (filePath) => {
+      const result = await window.electronAPI.readFile(filePath);
+      if (result.success) {
+        const fileName = getBasename(filePath);
+        let file;
+
+        if (result.isBinary) {
+          const binaryString = atob(result.content);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          file = new File([bytes], fileName, {
+            type: getMimeType(filePath),
+          });
+        } else {
+          file = new File([result.content], fileName, {
+            type: getMimeType(filePath),
+          });
+        }
+
+        onImport(file);
+      }
+    },
+    [onImport]
+  );
+
+  /**
    * 处理文件浏览器选择
-   * 
+   *
    * 支持选择文件和文件夹。文件夹会递归遍历所有文件并导入。
    * 这样用户可以一次性导入整个资源文件夹，爽飞了。
    */
-  const handleFileBrowserSelect = useCallback(async (paths) => {
-    if (!paths) return;
-    
-    const filePaths = Array.isArray(paths) ? paths : [paths];
-    
-    for (const filePath of filePaths) {
-      try {
-        // 检查是否是文件夹
-        const pathInfo = await window.electronAPI.fs.getPathInfo(filePath);
-        
-        if (pathInfo.success && pathInfo.isDirectory) {
-          // 递归读取文件夹中的所有文件
-          const dirResult = await window.electronAPI.readDirectory(filePath, true);
-          if (dirResult.success && dirResult.files) {
-            for (const subFilePath of dirResult.files) {
-              await importFile(subFilePath);
-            }
-          }
-        } else {
-          // 直接导入文件
-          await importFile(filePath);
-        }
-      } catch (error) {
-        console.error('Failed to import:', error);
-      }
-    }
-    setIsFileBrowserOpen(false);
-  }, [onImport]);
+  const handleFileBrowserSelect = useCallback(
+    async (paths) => {
+      if (!paths) return;
 
-  /**
-   * 导入单个文件
-   * 
-   * 从文件路径读取内容并创建 File 对象，然后调用 onImport。
-   */
-  const importFile = async (filePath) => {
-    const result = await window.electronAPI.readFile(filePath);
-    if (result.success) {
-      const fileName = getBasename(filePath);
-      let file;
-      
-      if (result.isBinary) {
-        const binaryString = atob(result.content);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+      const filePaths = Array.isArray(paths) ? paths : [paths];
+
+      for (const filePath of filePaths) {
+        try {
+          // 检查是否是文件夹
+          const pathInfo = await window.electronAPI.fs.getPathInfo(filePath);
+
+          if (pathInfo.success && pathInfo.isDirectory) {
+            // 递归读取文件夹中的所有文件
+            const dirResult = await window.electronAPI.readDirectory(filePath, true);
+            if (dirResult.success && dirResult.files) {
+              for (const subFilePath of dirResult.files) {
+                await importFile(subFilePath);
+              }
+            }
+          } else {
+            // 直接导入文件
+            await importFile(filePath);
+          }
+        } catch (error) {
+          console.error('Failed to import:', error);
         }
-        file = new File([bytes], fileName, {
-          type: getMimeType(filePath)
-        });
-      } else {
-        file = new File([result.content], fileName, {
-          type: getMimeType(filePath)
-        });
       }
-      
-      onImport(file);
-    }
-  };
+      setIsFileBrowserOpen(false);
+    },
+    [importFile]
+  );
 
   const handleFileChange = (e) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      Array.from(files).forEach(file => onImport(file));
+      const fileMap = new Map();
+      Array.from(files).forEach((file) => fileMap.set(file.name, file));
+      importFileCollection(fileMap, onImport);
       e.target.value = '';
     }
   };
@@ -144,158 +244,40 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
 
   /**
    * 处理拖拽放置
-   * 
-   * 支持拖拽文件和文件夹。文件夹会递归遍历所有文件并导入。
-   * 使用 FileSystem API 来处理文件夹，这玩意儿比传统的 File API 强多了。
-   * 对于 GLTF 文件，会收集同目录下的所有资源文件（如 .bin、贴图）
-   * 
+   *
+   * 支持拖拽文件和文件夹（可混拖）。全部文件收集进一个 Map 后统一导入：
+   * - 文件夹递归遍历（保持相对路径）
+   * - 散文件按文件名归入
+   * - 存在 GLTF 时自动组装 resourceMap（.bin/贴图），否则逐个导入
    */
   const handleDrop = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
 
+    const fileMap = new Map();
     const items = e.dataTransfer.items;
-    
+
     if (items && items.length > 0) {
       for (const item of items) {
-        if (item.kind === 'file') {
-          const entry = item.webkitGetAsEntry?.() || item.getAsFileSystemEntry?.();
-          
-          if (entry) {
-            if (entry.isDirectory) {
-              // 递归读取文件夹，收集所有文件
-              await readDirectoryEntryWithResources(entry);
-            } else {
-              // 直接读取文件
-              const file = item.getAsFile();
-              if (file) onImport(file);
-            }
-          } else {
-            // 兜底：直接获取文件
-            const file = item.getAsFile();
-            if (file) onImport(file);
-          }
-        }
-      }
-    } else {
-      // 兜底：使用传统的 files 属性
-      const files = e.dataTransfer.files;
-      if (files && files.length > 0) {
-        Array.from(files).forEach(file => onImport(file));
-      }
-    }
-  };
+        if (item.kind !== 'file') continue;
 
-  /**
-   * 递归读取 FileSystem 目录条目（带资源映射版本）
-   * 
-   * 先收集文件夹中的所有文件到一个 Map 中，然后对于 GLTF 文件，
-   * 创建一个包含 resourceMap 的对象喵！
-   * 
-   * resourceMap 中包含同目录下的所有资源文件（如 .bin、贴图）
-   * 这样就可以加载模型文件夹了
-   */
-  const readDirectoryEntryWithResources = async (directoryEntry) => {
-    // 先收集所有文件喵！
-    const fileMap = new Map();
-    
-    const collectFiles = async (entry, basePath = '') => {
-      const reader = entry.createReader();
-      
-      const readEntriesBatch = async () => {
-        const entries = await new Promise((resolve, reject) => {
-          reader.readEntries(resolve, reject);
-        });
-        
-        for (const subEntry of entries) {
-          if (subEntry.isDirectory) {
-            // 递归处理子目录喵！
-            await collectFiles(subEntry, basePath ? `${basePath}/${subEntry.name}` : subEntry.name);
-          } else {
-            // 收集文件喵！
-            const file = await new Promise((resolve, reject) => {
-              subEntry.file(resolve, reject);
-            });
-            if (file) {
-              const relativePath = basePath ? `${basePath}/${subEntry.name}` : subEntry.name;
-              fileMap.set(relativePath, file);
-            }
-          }
+        const entry = item.webkitGetAsEntry?.() || item.getAsFileSystemEntry?.();
+        if (entry && entry.isDirectory) {
+          await collectDirectoryInto(entry, fileMap);
+        } else {
+          const file = item.getAsFile();
+          if (file) fileMap.set(file.name, file);
         }
-        
-        // readEntries 可能一次只返回部分条目，需要循环读取直到空喵！
-        if (entries.length > 0) {
-          await readEntriesBatch();
-        }
-      };
-      
-      await readEntriesBatch();
-    };
-    
-    await collectFiles(directoryEntry);
-    
-    console.log('Collected files:', Array.from(fileMap.keys()));
-    
-    // 先找出所有 GLTF/GLB 文件喵！
-    const gltfFiles = [];
-    for (const [relativePath, file] of fileMap) {
-      const ext = file.name.split('.').pop().toLowerCase();
-      if (ext === 'gltf' || ext === 'glb') {
-        gltfFiles.push({ relativePath, file, ext });
       }
     }
-    
-    console.log('Found GLTF files:', gltfFiles);
-    
-    // 如果有 GLTF/GLB 文件，只导入这些文件，其他文件作为资源喵！
-    if (gltfFiles.length > 0) {
-      for (const { relativePath, file, ext } of gltfFiles) {
-        if (ext === 'gltf') {
-          // GLTF 文件需要特殊处理，传递资源映射喵！
-          const gltfFileWithResources = {
-            file: file,
-            resourceMap: new Map(),
-            relativePath: relativePath
-          };
-          
-          // 找到同目录下的所有资源文件喵！
-          const gltfDir = relativePath.substring(0, relativePath.lastIndexOf('/')) || '';
-          console.log('GLTF directory:', gltfDir);
-          
-          for (const [resourcePath, resourceFile] of fileMap) {
-            if (resourcePath !== relativePath) {
-              // 检查是否在同目录或子目录下喵！
-              const resourceDir = resourcePath.substring(0, resourcePath.lastIndexOf('/')) || '';
-              if (resourceDir === gltfDir || resourceDir.startsWith(gltfDir + '/')) {
-                // 计算相对于 GLTF 文件的路径喵！
-                let relativeToGltf;
-                if (gltfDir === '') {
-                  relativeToGltf = resourcePath;
-                } else {
-                  relativeToGltf = resourcePath.substring(gltfDir.length + 1);
-                }
-                console.log('Adding resource:', relativeToGltf, 'for GLTF:', relativePath);
-                gltfFileWithResources.resourceMap.set(relativeToGltf, resourceFile);
-              }
-            }
-          }
-          
-          console.log('GLTF file with resources:', gltfFileWithResources);
-          console.log('resourceMap keys:', Array.from(gltfFileWithResources.resourceMap.keys()));
-          
-          // 导入 GLTF 文件喵！
-          onImport(gltfFileWithResources);
-        } else {
-          // GLB 文件是自包含的，直接导入喵！
-          onImport(file);
-        }
-      }
-    } else {
-      // 没有 GLTF/GLB 文件，导入所有其他文件喵！
-      for (const [relativePath, file] of fileMap) {
-        onImport(file);
-      }
+
+    if (fileMap.size === 0 && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      Array.from(e.dataTransfer.files).forEach((file) => fileMap.set(file.name, file));
+    }
+
+    if (fileMap.size > 0) {
+      importFileCollection(fileMap, onImport);
     }
   };
 
@@ -319,30 +301,12 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
 
   const handleStartRename = (asset) => {
     setEditingAsset(asset);
-    setEditName(asset.name);
     ctxMenu.close();
-  };
-
-  const handleFinishRename = (asset) => {
-    if (editName.trim() && editName !== asset.name && onRenameAsset) {
-      onRenameAsset(asset, editName.trim());
-    }
-    setEditingAsset(null);
-    setEditName('');
-  };
-
-  const handleKeyDown = (e, asset) => {
-    if (e.key === 'Enter') {
-      handleFinishRename(asset);
-    } else if (e.key === 'Escape') {
-      setEditingAsset(null);
-      setEditName('');
-    }
   };
 
   /**
    * 资源拖拽开始处理
-   * 
+   *
    * 设置拖拽数据，让 Viewport 可以识别拖拽的是什么类型的资源。
    * 只有贴图资源可以被拖拽到场景中应用到模型。
    */
@@ -351,25 +315,28 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
       e.preventDefault();
       return;
     }
-    
-    e.dataTransfer.setData('application/astra-texture', JSON.stringify({
-      assetId: asset.id,
-      assetName: asset.name,
-      assetType: asset.assetType
-    }));
+
+    e.dataTransfer.setData(
+      'application/astra-texture',
+      JSON.stringify({
+        assetId: asset.id,
+        assetName: asset.name,
+        assetType: asset.assetType,
+      })
+    );
     e.dataTransfer.effectAllowed = 'copy';
   };
 
   const filteredAssets = useMemo(() => {
     if (filter === 'all') return assets;
-    return assets.filter(asset => asset.assetType === filter);
+    return assets.filter((asset) => asset.assetType === filter);
   }, [assets, filter]);
 
   const assetCounts = useMemo(() => {
     return {
       all: assets.length,
-      model: assets.filter(a => a.assetType === 'model').length,
-      texture: assets.filter(a => a.assetType === 'texture').length
+      model: assets.filter((a) => a.assetType === 'model').length,
+      texture: assets.filter((a) => a.assetType === 'texture').length,
     };
   }, [assets]);
 
@@ -386,29 +353,38 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
   const ctxMenuItems = useMemo(() => {
     if (!contextMenuAsset) return [];
     return [
-      { label: msg('assets.rename'), icon: <IconRename className="dropdown-icon" />, onClick: () => handleStartRename(contextMenuAsset) },
-      { label: msg('assets.delete'), icon: <IconDelete className="dropdown-icon" />, danger: true, onClick: () => handleDelete(contextMenuAsset) }
+      {
+        label: msg('assets.rename'),
+        icon: <IconRename className="dropdown-icon" />,
+        onClick: () => handleStartRename(contextMenuAsset),
+      },
+      {
+        label: msg('assets.delete'),
+        icon: <IconDelete className="dropdown-icon" />,
+        danger: true,
+        onClick: () => handleDelete(contextMenuAsset),
+      },
     ];
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contextMenuAsset, msg]);
 
   return (
-    <CollapsiblePanel 
-      title={msg('assets.title')} 
+    <CollapsiblePanel
+      title={msg('assets.title')}
       className="assets-panel"
       storageKey="astra-panel-assets-collapsed"
       onCollapseChange={onCollapseChange}
       headerRight={
         <>
           <div className="assets-filter">
-            <button 
+            <button
               className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
               onClick={() => setFilter('all')}
               title={msg('assets.filterAll')}
             >
               {assetCounts.all}
             </button>
-            <button 
+            <button
               className={`filter-btn ${filter === 'model' ? 'active' : ''}`}
               onClick={() => setFilter('model')}
               title={msg('assets.filterModels')}
@@ -416,7 +392,7 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
               <IconModel className="filter-icon" />
               {assetCounts.model}
             </button>
-            <button 
+            <button
               className={`filter-btn ${filter === 'texture' ? 'active' : ''}`}
               onClick={() => setFilter('texture')}
               title={msg('assets.filterTextures')}
@@ -464,28 +440,27 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
               >
                 <div className="asset-preview">
                   {asset.assetType === 'texture' && asset.url ? (
-                    <img 
-                      src={asset.url} 
+                    <img
+                      src={asset.url}
                       alt={asset.name}
                       className="asset-thumbnail"
                       draggable={false}
                     />
                   ) : (
-                    <div className="asset-icon-wrapper">
-                      {getAssetIcon(asset)}
-                    </div>
+                    <div className="asset-icon-wrapper">{getAssetIcon(asset)}</div>
                   )}
                 </div>
                 {editingAsset?.id === asset.id ? (
-                  <input
-                    type="text"
+                  <RenameInput
+                    value={asset.name}
                     className="asset-name-input"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    onBlur={() => handleFinishRename(asset)}
-                    onKeyDown={(e) => handleKeyDown(e, asset)}
-                    autoFocus
-                    onClick={(e) => e.stopPropagation()}
+                    onSubmit={(value) => {
+                      if (value !== asset.name && onRenameAsset) {
+                        onRenameAsset(asset, value);
+                      }
+                      setEditingAsset(null);
+                    }}
+                    onCancel={() => setEditingAsset(null)}
                   />
                 ) : (
                   <div className="asset-name">{asset.name}</div>
@@ -514,7 +489,10 @@ function AssetsPanel({ assets, onImport, onSelectAsset, selectedAsset, onDeleteA
         filters={[
           { name: msg('assets.filterAll'), extensions: ['*'] },
           { name: msg('assets.filterModels'), extensions: ['gltf', 'glb', 'obj'] },
-          { name: msg('assets.filterTextures'), extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }
+          {
+            name: msg('assets.filterTextures'),
+            extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'],
+          },
         ]}
         allowMultiple={true}
         allowSelectFolder={true}

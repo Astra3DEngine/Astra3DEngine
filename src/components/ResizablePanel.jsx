@@ -8,34 +8,34 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 
 /**
  * 可拖拽调整宽度/高度的面板组件
- * 
+ *
  * 这个组件包装一个面板，在面板边缘添加一个可拖拽的调整条。
  * 用户可以通过拖拽调整条来改变面板的宽度或高度。
- * 
+ *
  * 使用方法：
  * 水平调整宽度：
- * <ResizablePanel 
+ * <ResizablePanel
  *   direction="horizontal"
- *   side="left" 
- *   minWidth={200} 
- *   maxWidth={500} 
+ *   side="left"
+ *   minWidth={200}
+ *   maxWidth={500}
  *   defaultWidth={280}
  *   storageKey="astra-left-sidebar-width"
  * >
  *   <HierarchyPanel ... />
  * </ResizablePanel>
- * 
+ *
  * 垂直调整高度：
- * <ResizablePanel 
+ * <ResizablePanel
  *   direction="vertical"
- *   minHeight={100} 
- *   maxHeight={400} 
+ *   minHeight={100}
+ *   maxHeight={400}
  *   defaultHeight={150}
  *   storageKey="astra-bottom-panel-height"
  * >
  *   <AssetsPanel ... />
  * </ResizablePanel>
- * 
+ *
  * @param {Object} props - 组件属性
  * @param {string} props.direction - 调整方向：'horizontal' 或 'vertical'
  * @param {string} props.side - 调整条位置：'left' 或 'right'（水平方向）
@@ -67,7 +67,7 @@ function ResizablePanel({
   collapsed = false,
   onWidthChange,
   onHeightChange,
-  children
+  children,
 }) {
   // 从 localStorage 读取持久化的尺寸喵
   const getInitialWidth = () => {
@@ -116,49 +116,65 @@ function ResizablePanel({
   /**
    * 开始拖拽
    */
-  const handleMouseDown = useCallback((e) => {
-    e.preventDefault();
-    setIsDragging(true);
-    startXRef.current = e.clientX;
-    startYRef.current = e.clientY;
-    startWidthRef.current = width;
-    startHeightRef.current = height;
-  }, [width, height]);
+  const handleMouseDown = useCallback(
+    (e) => {
+      e.preventDefault();
+      setIsDragging(true);
+      startXRef.current = e.clientX;
+      startYRef.current = e.clientY;
+      startWidthRef.current = width;
+      startHeightRef.current = height;
+    },
+    [width, height]
+  );
 
   /**
    * 拖拽过程中更新尺寸
    */
-  const handleMouseMove = useCallback((e) => {
-    if (!isDragging) return;
-    
-    if (direction === 'horizontal') {
-      const delta = e.clientX - startXRef.current;
-      let newWidth;
-      
-      if (side === 'left') {
-        newWidth = startWidthRef.current + delta;
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (!isDragging) return;
+
+      if (direction === 'horizontal') {
+        const delta = e.clientX - startXRef.current;
+        let newWidth;
+
+        if (side === 'left') {
+          newWidth = startWidthRef.current + delta;
+        } else {
+          newWidth = startWidthRef.current - delta;
+        }
+
+        newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+        setWidth(newWidth);
+
+        if (onWidthChange) {
+          onWidthChange(newWidth);
+        }
       } else {
-        newWidth = startWidthRef.current - delta;
+        const delta = e.clientY - startYRef.current;
+        let newHeight = startHeightRef.current - delta;
+
+        newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+        setHeight(newHeight);
+
+        if (onHeightChange) {
+          onHeightChange(newHeight);
+        }
       }
-      
-      newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
-      setWidth(newWidth);
-      
-      if (onWidthChange) {
-        onWidthChange(newWidth);
-      }
-    } else {
-      const delta = e.clientY - startYRef.current;
-      let newHeight = startHeightRef.current - delta;
-      
-      newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
-      setHeight(newHeight);
-      
-      if (onHeightChange) {
-        onHeightChange(newHeight);
-      }
-    }
-  }, [isDragging, direction, side, minWidth, maxWidth, minHeight, maxHeight, onWidthChange, onHeightChange]);
+    },
+    [
+      isDragging,
+      direction,
+      side,
+      minWidth,
+      maxWidth,
+      minHeight,
+      maxHeight,
+      onWidthChange,
+      onHeightChange,
+    ]
+  );
 
   /**
    * 结束拖拽，保存尺寸到 localStorage 喵
@@ -187,7 +203,7 @@ function ResizablePanel({
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     }
-    
+
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
@@ -198,27 +214,19 @@ function ResizablePanel({
 
   const isCollapsed = className.includes('all-collapsed') || collapsed;
 
-  const style = direction === 'horizontal' 
-    ? { width: `${width}px` }
-    : { height: `${height}px` };
+  const style = direction === 'horizontal' ? { width: `${width}px` } : { height: `${height}px` };
 
-  const resizeHandleClass = direction === 'horizontal'
-    ? (side === 'left' ? 'resize-handle resize-handle-right' : 'resize-handle resize-handle-left')
-    : 'resize-handle resize-handle-top';
+  const resizeHandleClass =
+    direction === 'horizontal'
+      ? side === 'left'
+        ? 'resize-handle resize-handle-right'
+        : 'resize-handle resize-handle-left'
+      : 'resize-handle resize-handle-top';
 
   return (
-    <div 
-      ref={panelRef}
-      className={`resizable-panel ${className}`}
-      style={isCollapsed ? {} : style}
-    >
+    <div ref={panelRef} className={`resizable-panel ${className}`} style={isCollapsed ? {} : style}>
       {children}
-      {!isCollapsed && (
-        <div 
-          className={resizeHandleClass}
-          onMouseDown={handleMouseDown}
-        />
-      )}
+      {!isCollapsed && <div className={resizeHandleClass} onMouseDown={handleMouseDown} />}
     </div>
   );
 }

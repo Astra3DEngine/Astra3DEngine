@@ -1,54 +1,39 @@
 /**
  * @file plugins/index.js
- * @description 插件系统入口，导出插件管理器的初始化和操作方法
+ * @description 插件系统临时入口。
+ *
+ * ⚠️ TODO: 插件系统重构（原实现已删除）
+ * -----------------------------------------------------------------
+ * 原 PluginManager / api.js / plugins/* 存在严重问题，已临时移除：
+ *   1. import.meta.glob 加载与打包（Vite/Electron 构建下路径解析不可靠）
+ *   2. 钩子系统未接入 store，插件无法真正读取/修改场景状态
+ *   3. 插件设置与 SettingsRegistry 未打通，持久化互相冲突
+ *   4. 生命周期（activate/deactivate）在 HMR/刷新下重复执行、状态泄漏
+ *
+ * 重构计划（下次实现时对照）：
+ *   - 插件声明改为显式注册表（plugins/registry.js），放弃 import.meta.glob
+ *   - 插件 API 改为面向 zustand store 的只读快照 + action 注入
+ *   - 插件设置并入 settings/settingsRegistry.js（category: 'plugin:<id>'）
+ *   - 钩子改为 store subscribe 中间件，而非独立事件总线
+ *   - 移除对 React 组件的直接注入，改由 Provider/Host 组合
+ * -----------------------------------------------------------------
+ * 当前为占位实现：所有导出均为 no-op，保证既有 import 不报错。
  * @module plugins
  */
 
-import PluginManager from './PluginManager';
+/** @returns {Promise<null>} 占位：插件系统待重构 */
+export const initPlugins = async () => null;
 
-const pluginManager = new PluginManager();
+/** @returns {null} 占位 */
+export const getPluginManager = () => null;
 
-/**
- * 初始化插件系统
- * @returns {Promise<PluginManager>} 插件管理器实例
- */
-export const initPlugins = async () => {
-  await pluginManager.loadPlugins();
-  return pluginManager;
-};
+/** 占位：语言同步待插件系统恢复 */
+export const setPluginLocale = () => {};
 
-/**
- * 获取插件管理器实例
- * @returns {PluginManager} 插件管理器实例
- */
-export const getPluginManager = () => pluginManager;
+/** @returns {() => void} 占位：返回空取消订阅函数 */
+export const subscribePluginLocale = () => () => {};
 
-/**
- * 设置插件系统语言
- * @param {string} locale - 语言代码
- */
-export const setPluginLocale = (locale) => {
-  pluginManager.setLocale(locale);
-};
+/** 占位 */
+export const pluginMsg = () => '';
 
-/**
- * 订阅插件系统语言变化
- * @param {Function} callback - 回调函数
- * @returns {Function} 取消订阅的函数
- */
-export const subscribePluginLocale = (callback) => {
-  return pluginManager.subscribeLocale(callback);
-};
-
-/**
- * 获取插件翻译文本
- * @param {string} pluginId - 插件 ID
- * @param {string} key - 翻译键
- * @param {...*} args - 替换参数
- * @returns {string} 翻译后的文本
- */
-export const pluginMsg = (pluginId, key, ...args) => {
-  return pluginManager.msg(pluginId, key, ...args);
-};
-
-export default pluginManager;
+export default null;

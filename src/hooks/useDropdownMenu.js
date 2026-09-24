@@ -34,7 +34,7 @@ export function useDropdownMenu(options = {}) {
   }, [onClose]);
 
   const toggle = useCallback(() => {
-    setIsOpen(prev => {
+    setIsOpen((prev) => {
       const next = !prev;
       if (next) onOpen?.();
       else onClose?.();
@@ -47,11 +47,14 @@ export function useDropdownMenu(options = {}) {
    * @param {number} x - 屏幕 X 坐标
    * @param {number} y - 屏幕 Y 坐标
    */
-  const openAt = useCallback((x, y) => {
-    setPosition({ x, y });
-    setIsOpen(true);
-    onOpen?.();
-  }, [onOpen]);
+  const openAt = useCallback(
+    (x, y) => {
+      setPosition({ x, y });
+      setIsOpen(true);
+      onOpen?.();
+    },
+    [onOpen]
+  );
 
   return {
     isOpen,
@@ -60,7 +63,7 @@ export function useDropdownMenu(options = {}) {
     open,
     close,
     toggle,
-    openAt
+    openAt,
   };
 }
 

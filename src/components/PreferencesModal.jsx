@@ -24,17 +24,16 @@ import { getAllThemes, subscribe } from '../utils/themeManager.js';
  * @param {Function} props.onSetMaxSnapshots - 设置最大快照数量回调
  * @returns {JSX.Element} 设置模态框组件
  */
-function PreferencesModal({ 
-  isOpen, 
-  onClose, 
-  theme, 
+function PreferencesModal({
+  isOpen,
+  onClose,
+  theme,
   onSetTheme,
-  onToggleLocale, 
   onSetLocale,
   autoSaveEnabled,
   onToggleAutoSave,
   maxSnapshots,
-  onSetMaxSnapshots
+  onSetMaxSnapshots,
 }) {
   const [activeCategory, setActiveCategory] = useState('appearance');
   const [localMaxSnapshots, setLocalMaxSnapshots] = useState(maxSnapshots);
@@ -51,7 +50,7 @@ function PreferencesModal({
   const categories = [
     { id: 'appearance', label: msg('preferences.category.appearance') },
     { id: 'language', label: msg('preferences.category.language') },
-    { id: 'autosave', label: msg('preferences.category.autosave') }
+    { id: 'autosave', label: msg('preferences.category.autosave') },
   ];
 
   const handleMaxSnapshotsChange = (e) => {
@@ -74,8 +73,8 @@ function PreferencesModal({
           <h3 className="preferences-section-title">{msg('preferences.theme.title')}</h3>
           <p className="preferences-section-description">{msg('preferences.theme.description')}</p>
           <div className="preferences-options">
-            {availableThemes.map(t => (
-              <button 
+            {availableThemes.map((t) => (
+              <button
                 key={t.id}
                 className={`preference-option-btn ${theme === t.id ? 'active' : ''}`}
                 onClick={() => theme !== t.id && onSetTheme(t.id)}
@@ -93,10 +92,12 @@ function PreferencesModal({
       return (
         <div className="preferences-section">
           <h3 className="preferences-section-title">{msg('preferences.language.title')}</h3>
-          <p className="preferences-section-description">{msg('preferences.language.description')}</p>
+          <p className="preferences-section-description">
+            {msg('preferences.language.description')}
+          </p>
           <div className="preferences-options">
-            {languages.map(lang => (
-              <button 
+            {languages.map((lang) => (
+              <button
                 key={lang.code}
                 className={`preference-option-btn ${currentLocale === lang.code ? 'active' : ''}`}
                 onClick={() => {
@@ -118,10 +119,12 @@ function PreferencesModal({
       return (
         <div className="preferences-section">
           <h3 className="preferences-section-title">{msg('preferences.autosave.title')}</h3>
-          <p className="preferences-section-description">{msg('preferences.autosave.description')}</p>
-          
+          <p className="preferences-section-description">
+            {msg('preferences.autosave.description')}
+          </p>
+
           <div className="preferences-options">
-            <button 
+            <button
               className={`preference-option-btn ${autoSaveEnabled ? 'active' : ''}`}
               onClick={onToggleAutoSave}
             >
@@ -129,13 +132,17 @@ function PreferencesModal({
               {autoSaveEnabled && <span className="preference-option-check">✓</span>}
             </button>
           </div>
-          
+
           <div className="preferences-section" style={{ marginTop: '20px' }}>
             <h3 className="preferences-section-title">{msg('preferences.snapshots.title')}</h3>
-            <p className="preferences-section-description">{msg('preferences.snapshots.description')}</p>
+            <p className="preferences-section-description">
+              {msg('preferences.snapshots.description')}
+            </p>
             <div className="preferences-input-row">
-              <label className="preferences-input-label">{msg('preferences.snapshots.maxCount')}</label>
-              <input 
+              <label className="preferences-input-label">
+                {msg('preferences.snapshots.maxCount')}
+              </label>
+              <input
                 type="number"
                 className="preferences-input"
                 value={localMaxSnapshots}
@@ -164,7 +171,7 @@ function PreferencesModal({
     >
       <div className="preferences-body">
         <div className="preferences-sidebar">
-          {categories.map(cat => (
+          {categories.map((cat) => (
             <button
               key={cat.id}
               className={`preferences-category-btn ${activeCategory === cat.id ? 'active' : ''}`}
@@ -174,10 +181,8 @@ function PreferencesModal({
             </button>
           ))}
         </div>
-        
-        <div className="preferences-content">
-          {renderContent()}
-        </div>
+
+        <div className="preferences-content">{renderContent()}</div>
       </div>
     </Modal>
   );

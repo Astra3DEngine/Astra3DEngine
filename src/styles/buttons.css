@@ -24,7 +24,7 @@
 }
 
 .btn-danger:hover {
-  background-color: #e53935;
+  background-color: var(--danger-dark);
 }
 
 .icon-btn {

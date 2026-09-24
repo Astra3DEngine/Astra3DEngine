@@ -39,8 +39,6 @@ export default function Modal({
   modalRef,
   ...props
 }) {
-  if (!isOpen) return null;
-
   useEffect(() => {
     if (!closeOnEscape || !isOpen) return;
     const handleKeyDown = (e) => {
@@ -50,11 +48,16 @@ export default function Modal({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, closeOnEscape, onClose]);
 
+  if (!isOpen) return null;
+
   const contentStyle = {};
   if (width !== undefined) contentStyle.width = typeof width === 'number' ? `${width}px` : width;
-  if (height !== undefined) contentStyle.height = typeof height === 'number' ? `${height}px` : height;
-  if (maxWidth !== undefined) contentStyle.maxWidth = typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth;
-  if (maxHeight !== undefined) contentStyle.maxHeight = typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight;
+  if (height !== undefined)
+    contentStyle.height = typeof height === 'number' ? `${height}px` : height;
+  if (maxWidth !== undefined)
+    contentStyle.maxWidth = typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth;
+  if (maxHeight !== undefined)
+    contentStyle.maxHeight = typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight;
 
   return (
     <div
@@ -78,14 +81,8 @@ export default function Modal({
             )}
           </div>
         )}
-        <div className={`modal-body ${bodyClassName}`}>
-          {children}
-        </div>
-        {footer && (
-          <div className="modal-footer">
-            {footer}
-          </div>
-        )}
+        <div className={`modal-body ${bodyClassName}`}>{children}</div>
+        {footer && <div className="modal-footer">{footer}</div>}
       </div>
     </div>
   );

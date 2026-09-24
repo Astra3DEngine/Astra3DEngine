@@ -2,7 +2,7 @@
  * @file components/CollapsiblePanel.jsx
  * @description 可折叠面板组件，用于创建可展开/折叠的面板容器
  * @module components/CollapsiblePanel
- * 
+ *
  * 你不觉得折叠的面板很几把酷炫吗？
  * 反正扣式咯这辈子都学不会这个面板设计😋
  */
@@ -25,16 +25,16 @@ import IconChevronRight from '../icons/chevron-right.svg?react';
  * @param {Object} props.style - 自定义样式
  * @returns {JSX.Element} 可折叠面板组件
  */
-function CollapsiblePanel({ 
-  title, 
-  children, 
-  className = '', 
+function CollapsiblePanel({
+  title,
+  children,
+  className = '',
   defaultCollapsed = false,
   headerRight,
   storageKey,
   vertical = false,
   onCollapseChange,
-  style
+  style,
 }) {
   const getInitialState = () => {
     if (storageKey) {
@@ -61,7 +61,7 @@ function CollapsiblePanel({
 
   if (vertical && collapsed) {
     return (
-      <div 
+      <div
         className={`panel collapsible-panel vertical-collapsed ${className} collapsed`}
         onClick={handleToggle}
         title={title}
@@ -83,11 +83,18 @@ function CollapsiblePanel({
   }
 
   return (
-    <div className={`panel collapsible-panel ${className} ${collapsed ? 'collapsed' : ''}`} style={style}>
+    <div
+      className={`panel collapsible-panel ${className} ${collapsed ? 'collapsed' : ''}`}
+      style={style}
+    >
       <div className="panel-header" onClick={handleToggle}>
         <span className="panel-header-left">
           <span className="panel-collapse-icon">
-            {collapsed ? <IconChevronRight className="collapse-icon" /> : <IconChevronDown className="collapse-icon" />}
+            {collapsed ? (
+              <IconChevronRight className="collapse-icon" />
+            ) : (
+              <IconChevronDown className="collapse-icon" />
+            )}
           </span>
           <span className="panel-title">{title}</span>
         </span>
