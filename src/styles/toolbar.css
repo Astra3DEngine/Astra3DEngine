@@ -80,7 +80,7 @@
 .toolbar-menus {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0;
   -webkit-app-region: no-drag;
 }
 
@@ -88,7 +88,7 @@
   background: transparent;
   border: none;
   color: var(--text-primary);
-  padding: 4px 12px;
+  padding: 4px 8px;
   border-radius: 2px;
   cursor: pointer;
   font-size: 13px;

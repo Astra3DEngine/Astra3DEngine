@@ -3,7 +3,8 @@
  * @description 工具栏组件，提供菜单栏、文件操作和窗口控制
  * @module components/Toolbar
  *
- * 工具栏可以拖的，Electron 场景下�? */
+ * 工具栏可以拖的，Electron 场景下也可拖动。
+ */
 
 import React, { useRef, useEffect, useState } from 'react';
 import { msg, languages, getLocale } from '../i18n/index.js';
@@ -34,23 +35,31 @@ import IconWindowRestore from '../icons/window-restore.svg?react';
 import IconWindowClose from '../icons/window-close.svg?react';
 
 /**
- * 工具栏组�? * @param {Object} props - 组件属�? * @param {boolean} props.isPlaying - 是否处于播放模式
+ * 工具栏组件
+ * @param {Object} props - 组件属性
+ * @param {boolean} props.isPlaying - 是否处于播放模式
  * @param {Function} props.setIsPlaying - 设置播放模式回调
  * @param {Function} props.onToggleLocale - 切换语言回调
  * @param {Function} props.onSetLocale - 设置语言回调
  * @param {Function} props.onSaveProject - 保存项目回调
- * @param {Function} props.onSaveAsProject - 另存为回�? * @param {Function} props.onLoadProject - 加载项目回调
+ * @param {Function} props.onSaveAsProject - 另存为回调
+ * @param {Function} props.onLoadProject - 加载项目回调
  * @param {Function} props.onNewProject - 新建项目回调
- * @param {string} props.projectFileName - 项目文件�? * @param {Function} props.onToggleTheme - 切换主题回调
+ * @param {string} props.projectFileName - 项目文件名
+ * @param {Function} props.onToggleTheme - 切换主题回调
  * @param {string} props.theme - 当前主题
  * @param {boolean} props.canUndo - 是否可撤销
- * @param {boolean} props.canRedo - 是否可重�? * @param {Function} props.onUndo - 撤销回调
+ * @param {boolean} props.canRedo - 是否可重做
+ * @param {Function} props.onUndo - 撤销回调
  * @param {Function} props.onRedo - 重做回调
  * @param {Function} props.onOpenPreferences - 打开设置回调
- * @param {Array} props.recentProjects - 最近项目列�? * @param {Function} props.onOpenRecentProject - 打开最近项目回�? * @param {Function} props.onExportAsAstra - 导出�?.astra 回调
+ * @param {Array} props.recentProjects - 最近项目列表
+ * @param {Function} props.onOpenRecentProject - 打开最近项目回调
+ * @param {Function} props.onExportAsAstra - 导出 ..astra 回调
  * @param {Function} props.onImportAstra - 导入 .astra 回调
  * @param {Function} props.onOpenSnapshots - 打开快照管理回调
- * @returns {JSX.Element} 工具栏组�? */
+ * @returns {JSX.Element} 工具栏组件
+ */
 function Toolbar({
   isPlaying,
   setIsPlaying,

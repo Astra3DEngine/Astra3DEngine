@@ -1,12 +1,12 @@
-.dropdown-menu {
-  position: relative;
-  display: inline-block;
-}
+/* ===== 下拉菜单（@szhsin/react-menu，VSCode 式紧凑风格） ===== */
 
+/* 触发按钮 */
 .dropdown-trigger {
   display: flex;
   align-items: center;
   gap: 2px;
+  flex: none;
+  white-space: nowrap;
 }
 
 .dropdown-trigger::after {
@@ -15,100 +15,150 @@
   border-width: 3px 3px 0 3px;
   border-color: var(--text-secondary) transparent transparent transparent;
   margin-left: 2px;
-  transition: transform 0.15s;
+  transition: transform 0.15s, border-color 0.15s;
 }
 
-.dropdown-menu:hover .dropdown-trigger::after {
+.dropdown-trigger:hover::after {
   border-color: var(--text-primary) transparent transparent transparent;
 }
 
-.dropdown-content {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  min-width: 160px;
-  background-color: var(--bg-panel);
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-  z-index: 1000;
-  padding: 2px 0;
-  margin-top: 1px;
-}
-
-.dropdown-position-top {
-  top: auto;
-  bottom: 100%;
-  margin-top: 0;
-  margin-bottom: 1px;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.25);
-}
-
-.dropdown-rounded-all {
-  border-radius: 4px;
-}
-
-.dropdown-rounded-none {
-  border-radius: 0;
-}
-
-.dropdown-rounded-top {
-  border-radius: 4px 4px 0 0;
-}
-
-.dropdown-rounded-bottom {
-  border-radius: 0 0 4px 4px;
-}
-
-.dropdown-rounded-tl {
-  border-top-left-radius: 4px;
-}
-
-.dropdown-rounded-tr {
-  border-top-right-radius: 4px;
-}
-
-.dropdown-rounded-bl {
-  border-bottom-left-radius: 4px;
-}
-
-.dropdown-rounded-br {
-  border-bottom-right-radius: 4px;
-}
-
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: 5px 8px;
+.szh-menu-button {
   background: transparent;
   border: none;
-  color: var(--text-primary);
   cursor: pointer;
+  width: auto;
+}
+
+/* 菜单面板 */
+.szh-menu {
+  z-index: 1000;
+  min-width: 180px;
+  max-width: 340px;
+  padding: 1px !important;
   font-size: 12px;
-  text-align: left;
-  transition: background-color 0.15s;
+  line-height: 1.35;
+  color: var(--text-primary) !important;
+  background-color: var(--bg-toolbar) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
-.dropdown-item:hover:not(.disabled) {
-  background-color: var(--accent);
-  color: white;
+/* 菜单项：紧凑、VSCode 式浅灰高亮 */
+.szh-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 8px !important;
+  margin: 0;
+  border-radius: 3px;
+  color: var(--text-primary) !important;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.1s;
 }
 
-.dropdown-item.disabled {
-  color: var(--text-muted);
+.szh-menu__item--hover,
+.szh-menu__item--active {
+  background-color: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.szh-menu__item--focusable {
+  background-color: transparent !important;
+}
+
+.szh-menu__item--disabled {
+  color: var(--text-muted) !important;
+  opacity: 0.6;
   cursor: not-allowed;
-  opacity: 0.5;
+}
+
+.szh-menu__item--disabled .dropdown-icon {
+  color: var(--text-muted);
+}
+
+/* 危险项 */
+.szh-menu__item.danger,
+.szh-menu__item.danger .dropdown-icon {
+  color: var(--danger) !important;
+}
+
+.szh-menu__item--hover.danger {
+  background-color: rgba(244, 67, 54, 0.12) !important;
+}
+
+/* 选中/勾选 */
+.szh-menu__item.active,
+.szh-menu__item--checked {
+  background-color: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 分隔线 */
+.szh-menu__divider {
+  margin: 2px 4px !important;
+  background-color: var(--border) !important;
+  height: 1px;
+}
+
+/* 指向触发按钮的箭头 */
+.szh-menu__arrow {
+  background-color: var(--bg-toolbar) !important;
+  border-left-color: var(--border) !important;
+  border-top-color: var(--border) !important;
+}
+
+/* 圆角修饰类（menuClassName） */
+.dropdown-rounded-all { border-radius: 4px; }
+.dropdown-rounded-none { border-radius: 0; }
+.dropdown-rounded-top { border-radius: 4px 4px 0 0; }
+.dropdown-rounded-bottom { border-radius: 0 0 4px 4px; }
+.dropdown-rounded-tl { border-top-left-radius: 4px; }
+.dropdown-rounded-tr { border-top-right-radius: 4px; }
+.dropdown-rounded-bl { border-bottom-left-radius: 4px; }
+.dropdown-rounded-br { border-bottom-right-radius: 4px; }
+
+/* 菜单项内容 */
+.dropdown-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dropdown-icon {
-  width: auto;
+  width: 14px;
   height: 14px;
-  margin-right: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
 }
 
+.dropdown-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 快捷键：右对齐、小号、弱化 */
+.dropdown-shortcut {
+  margin-left: auto;
+  padding-left: 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.dropdown-check {
+  color: var(--accent-active);
+  font-size: 12px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+/* 工具栏菜单主图标 */
 .menu-icon {
   width: 14px;
   height: 14px;
@@ -117,66 +167,4 @@
 
 .menu-icon path {
   fill: currentColor;
-}
-
-.dropdown-label {
-  flex: 1;
-}
-
-.dropdown-shortcut {
-  color: var(--text-muted);
-  font-size: 10px;
-  margin-left: 8px;
-}
-
-.dropdown-item:hover:not(.disabled) .dropdown-shortcut {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.dropdown-divider {
-  height: 1px;
-  background-color: var(--border);
-  margin: 2px 4px;
-}
-
-.dropdown-item-wrapper {
-  position: relative;
-}
-
-.dropdown-item.has-submenu {
-  padding-right: 20px;
-}
-
-.dropdown-submenu-arrow {
-  position: absolute;
-  right: 6px;
-  font-size: 8px;
-  color: var(--text-secondary);
-}
-
-.dropdown-item:hover:not(.disabled) .dropdown-submenu-arrow {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.dropdown-submenu {
-  position: absolute;
-  left: 100%;
-  top: -2px;
-  min-width: 140px;
-  background-color: var(--bg-panel);
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-  z-index: 1001;
-  padding: 2px 0;
-  border-radius: 4px;
-}
-
-.dropdown-check {
-  color: var(--accent-active);
-  font-size: 12px;
-  margin-left: 8px;
-}
-
-.dropdown-item.active {
-  background-color: var(--accent);
 }

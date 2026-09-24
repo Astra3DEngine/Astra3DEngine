@@ -1,9 +1,13 @@
 /**
  * @file i18n/index.js
- * @description 国际化（i18n）系统核心模块，提供多语言支持和语言切换功能
+ * @description 国际化入口：基于 i18next。
+ * 对外保持原有 msg/getLocale/setLocale/toggleLocale/subscribeLocale/languages API，
+ * 内部由 i18next 负责语言资源、检测与切换。
  * @module i18n
- * 兄弟兄弟~
  */
+
+import i18next from 'i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
 
 import en from './en.json';
 import zh from './zh.json';
@@ -14,27 +18,7 @@ import la from './la.json';
 import pluginSettingsEn from './plugin-settings/en.json';
 import pluginSettingsZh from './plugin-settings/zh.json';
 
-/**
- * 合并基础翻译和插件设置翻译
- * @param {Object} base - 基础翻译对象
- * @param {Object} pluginSettings - 插件设置翻译对象
- * @returns {Object} 合合后的翻译对象
- */
-function mergeMessages(base, pluginSettings) {
-  const merged = { ...base };
-  Object.entries(pluginSettings).forEach(([key, value]) => {
-    merged[`pluginSettings.${key}`] = value;
-  });
-  return merged;
-}
-
-const messages = {
-  en: mergeMessages(en, pluginSettingsEn),
-  zh: mergeMessages(zh, pluginSettingsZh),
-  ja: mergeMessages(ja, pluginSettingsEn),
-  ru: mergeMessages(ru, pluginSettingsEn),
-  la: mergeMessages(la, pluginSettingsEn),
-};
+const STORAGE_KEY = 'astra-locale';
 
 export const languages = [
   { code: 'zh', name: '中文', nativeName: '中文' },
@@ -44,84 +28,103 @@ export const languages = [
   { code: 'la', name: 'Latin', nativeName: 'Latina' },
 ];
 
-const STORAGE_KEY = 'astra-locale';
+const supportedLngs = languages.map((l) => l.code);
+const normalizeLanguage = (lng) => {
+  const base = (lng || '').split('-')[0].toLowerCase();
+  return supportedLngs.includes(base) ? base : 'en';
+};
 
 /**
- * 从 localStorage 加载保存的语言设置，若未保存则根据浏览器语言自动选择
- * @returns {string} 语言代码（如 'zh', 'en'）
+ * 合并基础翻译和插件设置翻译。
+ * 注：插件设置翻译随插件系统重构一并保留为只读资源。
+ * @param {Object} base
+ * @param {Object} pluginSettings
+ * @returns {Object}
  */
-function loadLocaleFromStorage() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved && messages[saved]) {
-    return saved;
-  }
-  const browserLang = navigator.language.toLowerCase();
-  if (browserLang.startsWith('zh')) return 'zh';
-  if (browserLang.startsWith('ja')) return 'ja';
-  if (browserLang.startsWith('ru')) return 'ru';
-  if (browserLang.startsWith('la')) return 'la';
-  return 'en';
+function mergeMessages(base, pluginSettings) {
+  const merged = { ...base };
+  Object.entries(pluginSettings).forEach(([key, value]) => {
+    merged[`pluginSettings.${key}`] = value;
+  });
+  return merged;
 }
 
-let currentLocale = loadLocaleFromStorage();
-const localeListeners = new Set();
+i18next.use(LanguageDetector).init({
+  resources: {
+    zh: { translation: mergeMessages(zh, pluginSettingsZh) },
+    en: { translation: mergeMessages(en, pluginSettingsEn) },
+    ja: { translation: mergeMessages(ja, pluginSettingsEn) },
+    ru: { translation: mergeMessages(ru, pluginSettingsEn) },
+    la: { translation: mergeMessages(la, pluginSettingsEn) },
+  },
+  supportedLngs,
+  fallbackLng: 'en',
+  nonExplicitSupportedLngs: false,
+  load: 'languageOnly',
+  detection: {
+    order: ['localStorage', 'navigator'],
+    caches: ['localStorage'],
+    lookupLocalStorage: STORAGE_KEY,
+    convertDetectedLanguage: (lng) => normalizeLanguage(lng),
+  },
+  // 翻译键为扁平的带点键（如 "menu.openProject"），不按点号嵌套
+  keySeparator: false,
+  // 插值参数由 msg() 手动替换，兼容旧 {param} 占位格式
+  interpolation: { enabled: false },
+});
 
 /**
- * 订阅语言变化事件
- * @param {Function} callback - 语言变化时的回调函数
- * @returns {Function} 取消订阅的函数
- */
-export function subscribeLocale(callback) {
-  localeListeners.add(callback);
-  return () => localeListeners.delete(callback);
-}
-
-/**
- * 设置当前语言
- * @param {string} locale - 语言代码（如 'zh', 'en'）
- */
-export function setLocale(locale) {
-  if (messages[locale] && locale !== currentLocale) {
-    currentLocale = locale;
-    localStorage.setItem(STORAGE_KEY, locale);
-    localeListeners.forEach((callback) => callback(locale));
-  }
-}
-
-/**
- * 获取当前语言代码
- * @returns {string} 当前语言代码
- */
-export function getLocale() {
-  return currentLocale;
-}
-
-/**
- * 获取翻译文本，支持参数替换
- * @param {string} key - 翻译键
- * @param {Object} params - 替换参数对象（如 { count: 5 }）
- * @returns {string} 翻译后的文本
+ * 获取翻译文本，兼容旧的 {param} 占位替换。
+ * @param {string} key - 扁平翻译键
+ * @param {Object} [params={}] - 替换参数
+ * @returns {string}
  */
 export function msg(key, params = {}) {
-  const locale = currentLocale;
-  let text = messages[locale]?.[key] || messages['en']?.[key] || key;
-
+  let text = i18next.t(key);
   Object.keys(params).forEach((param) => {
-    text = text.replace(new RegExp(`\\{${param}\\}`), params[param]);
+    text = text.replace(new RegExp(`\\{${param}\\}`), String(params[param]));
   });
-
   return text;
 }
 
 /**
- * 循环切换到下一个语言
+ * 获取当前语言代码。
+ * @returns {string}
+ */
+export function getLocale() {
+  return normalizeLanguage(i18next.language);
+}
+
+/**
+ * 设置当前语言。
+ * @param {string} locale - 语言代码（zh/en/ja/ru/la）
+ */
+export function setLocale(locale) {
+  const normalized = normalizeLanguage(locale);
+  if (normalized === getLocale()) return;
+  i18next.changeLanguage(normalized);
+  localStorage.setItem(STORAGE_KEY, normalized);
+}
+
+/**
+ * 循环切换到下一个语言。
  */
 export function toggleLocale() {
-  const langCodes = Object.keys(messages);
-  const currentIndex = langCodes.indexOf(currentLocale);
-  const nextIndex = (currentIndex + 1) % langCodes.length;
-  const newLocale = langCodes[nextIndex];
-  currentLocale = newLocale;
-  localStorage.setItem(STORAGE_KEY, newLocale);
-  localeListeners.forEach((callback) => callback(newLocale));
+  const current = supportedLngs.indexOf(getLocale());
+  const next = supportedLngs[(current + 1) % supportedLngs.length];
+  i18next.changeLanguage(next);
+  localStorage.setItem(STORAGE_KEY, next);
 }
+
+/**
+ * 订阅语言变化事件。
+ * @param {Function} callback - (locale: string) => void
+ * @returns {Function} 取消订阅
+ */
+export function subscribeLocale(callback) {
+  const handler = () => callback(getLocale());
+  i18next.on('languageChanged', handler);
+  return () => i18next.off('languageChanged', handler);
+}
+
+export default { i18next, msg, getLocale, setLocale, toggleLocale, languages };

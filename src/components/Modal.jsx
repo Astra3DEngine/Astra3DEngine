@@ -1,24 +1,23 @@
 /**
  * @file components/Modal.jsx
- * @description 统一模态框渲染组件，提供一致的 overlay、header、body、footer 外壳。
- * 所有模态框内容组件都应使用此组件包裹，以确保样式一致。
+ * @description 统一模态框外壳（基于 react-rnd）：支持拖拽移动与缩放。
+ * 所有模态框/对话框通过 lib/ModalManager.open() 统一调度，可复用一个外壳。
  * @module components/Modal
- *
- * 提供 API：
- * - isOpen / onClose：开关控制
- * - title：标题（可选，不传则不渲染 header）
- * - children：body 内容
- * - footer：footer 内容（可选）
- * - width / height / maxWidth / maxHeight：尺寸控制
- * - className / bodyClassName / overlayClassName：额外类名
- * - closeButton：是否显示关闭按钮（默认 true）
- * - closeOnOverlayClick：点击 overlay 是否关闭（默认 true）
- * - closeOnEscape：按 Escape 是否关闭（默认 true）
- * - modalRef：ref 绑定
  */
 
 import React, { useEffect } from 'react';
+import { Rnd } from 'react-rnd';
 import IconClose from '../icons/close.svg?react';
+
+/** 尺寸字符串（px/vw/vh）转像素数 */
+function toPx(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value === 'number') return value;
+  const n = parseFloat(value);
+  if (/vh$/.test(value)) return Math.round((window.innerHeight * n) / 100);
+  if (/vw$/.test(value)) return Math.round((window.innerWidth * n) / 100);
+  return Number.isNaN(n) ? null : n;
+}
 
 export default function Modal({
   isOpen,
@@ -50,14 +49,17 @@ export default function Modal({
 
   if (!isOpen) return null;
 
-  const contentStyle = {};
-  if (width !== undefined) contentStyle.width = typeof width === 'number' ? `${width}px` : width;
-  if (height !== undefined)
-    contentStyle.height = typeof height === 'number' ? `${height}px` : height;
-  if (maxWidth !== undefined)
-    contentStyle.maxWidth = typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth;
-  if (maxHeight !== undefined)
-    contentStyle.maxHeight = typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight;
+  const contentWidth = toPx(width) ?? 480;
+  const contentHeight = toPx(height) ?? 360;
+  const minWidth = 260;
+  const minHeight = 140;
+  const maxWidthPx = toPx(maxWidth) ?? window.innerWidth;
+  const maxHeightPx = toPx(maxHeight) ?? window.innerHeight;
+
+  const w = Math.min(contentWidth, maxWidthPx);
+  const h = Math.min(contentHeight, maxHeightPx);
+  const x = Math.max(0, Math.round((window.innerWidth - w) / 2));
+  const y = Math.max(0, Math.round((window.innerHeight - h) / 3));
 
   return (
     <div
@@ -65,9 +67,17 @@ export default function Modal({
       onClick={closeOnOverlayClick ? onClose : undefined}
       ref={modalRef}
     >
-      <div
+      <Rnd
         className={`modal-content ${className}`}
-        style={contentStyle}
+        default={{ x, y, width: w, height: h }}
+        minWidth={minWidth}
+        minHeight={minHeight}
+        maxWidth={maxWidthPx}
+        maxHeight={maxHeightPx}
+        bounds="parent"
+        dragHandleClassName="modal-header"
+        cancel=".modal-close-btn"
+        enableResizing
         onClick={(e) => e.stopPropagation()}
         {...props}
       >
@@ -83,7 +93,7 @@ export default function Modal({
         )}
         <div className={`modal-body ${bodyClassName}`}>{children}</div>
         {footer && <div className="modal-footer">{footer}</div>}
-      </div>
+      </Rnd>
     </div>
   );
 }

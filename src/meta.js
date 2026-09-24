@@ -14,7 +14,7 @@
  * - 次版本号：向下兼容的功能性新增
  * - 修订号：向下兼容的问题修正
  */
-export const ENGINE_VERSION = '0.1.0';
+export const ENGINE_VERSION = '0.2.0';
 
 /**
  * 项目文件格式版本
@@ -31,7 +31,7 @@ export const PROJECT_FORMAT_VERSION = '1.0.0';
 /**
  * 引擎名称
  */
-export const ENGINE_NAME = 'Astra 3D Engine';
+export const ENGINE_NAME = 'Astra3DEngine';
 
 /**
  * 引擎描述

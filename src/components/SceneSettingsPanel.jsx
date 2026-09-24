@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { msg } from '../i18n/index.js';
+import ColorPicker from './primitives/ColorPicker.jsx';
 
 /**
  * 场景设置面板组件
@@ -105,12 +106,7 @@ function SceneSettingsPanel({ sceneSettings = {}, onUpdateSettings }) {
         <div className="inspector-row">
           <label className="inspector-label">{msg('sceneSettings.color')}</label>
           <div className="inspector-color-row">
-            <input
-              type="color"
-              className="inspector-input inspector-color"
-              value={settings.ambientLight.color}
-              onChange={(e) => handleAmbientColorChange(e.target.value)}
-            />
+            <ColorPicker value={settings.ambientLight.color} onChange={handleAmbientColorChange} />
           </div>
         </div>
         <div className="inspector-row">
@@ -133,12 +129,7 @@ function SceneSettingsPanel({ sceneSettings = {}, onUpdateSettings }) {
         <div className="inspector-row">
           <label className="inspector-label">{msg('sceneSettings.backgroundColor')}</label>
           <div className="inspector-color-row">
-            <input
-              type="color"
-              className="inspector-input inspector-color"
-              value={settings.backgroundColor}
-              onChange={(e) => handleBackgroundColorChange(e.target.value)}
-            />
+            <ColorPicker value={settings.backgroundColor} onChange={handleBackgroundColorChange} />
           </div>
         </div>
       </div>
@@ -161,12 +152,7 @@ function SceneSettingsPanel({ sceneSettings = {}, onUpdateSettings }) {
             <div className="inspector-row">
               <label className="inspector-label">{msg('sceneSettings.color')}</label>
               <div className="inspector-color-row">
-                <input
-                  type="color"
-                  className="inspector-input inspector-color"
-                  value={settings.fog.color}
-                  onChange={(e) => handleFogColorChange(e.target.value)}
-                />
+                <ColorPicker value={settings.fog.color} onChange={handleFogColorChange} />
               </div>
             </div>
             <div className="inspector-row">

@@ -10,6 +10,7 @@ import { msg } from '../i18n/index.js';
 import IconPrefabInstance from '../icons/prefab-instance.svg?react';
 import IconDelete from '../icons/delete.svg?react';
 import SceneSettingsPanel from './SceneSettingsPanel.jsx';
+import ColorPicker from './primitives/ColorPicker.jsx';
 import IconClose from '../icons/close.svg?react';
 import IconScene from '../icons/scene.svg?react';
 import IconCube from '../icons/cube.svg?react';
@@ -488,12 +489,7 @@ function InspectorPanel({
           <div className="inspector-row">
             <label className="inspector-label">{msg('inspector.color')}</label>
             <div className="inspector-color-row">
-              <input
-                type="color"
-                className="inspector-input inspector-color"
-                value={selectedObject.color || '#ffffff'}
-                onChange={(e) => handleColorChange(e.target.value)}
-              />
+              <ColorPicker value={selectedObject.color || '#ffffff'} onChange={handleColorChange} />
               {isPrefabInstance && (
                 <label className="inspector-override-label">
                   <input

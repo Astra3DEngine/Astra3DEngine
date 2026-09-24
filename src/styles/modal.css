@@ -20,6 +20,7 @@
   border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .modal-header {
@@ -28,6 +29,13 @@
   justify-content: space-between;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  cursor: grab;
+  user-select: none;
+}
+
+.modal-header:active {
+  cursor: grabbing;
 }
 
 .modal-header h2 {
@@ -66,11 +74,12 @@
 
 .modal-body {
   padding: 0;
-  flex: 1;
-  overflow-y: auto;
+  flex: 1 1 auto;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  max-height: 100%;
 }
 
 .modal-footer {
@@ -79,6 +88,7 @@
   gap: 8px;
   padding: 16px 20px;
   border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .modal-btn {
