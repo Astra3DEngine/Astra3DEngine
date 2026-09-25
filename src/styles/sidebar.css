@@ -11,43 +11,67 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding-top: 4px;
-  gap: 2px;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
   background-color: var(--bg-toolbar);
   border-right: 1px solid var(--border);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .activity-bar-item {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
+  padding: 0 0 0 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  border-left: 2px solid transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition:
-    color 0.15s,
-    background-color 0.15s,
-    border-color 0.15s;
+  justify-content: flex-start;
+  border-radius: 0;
+  position: relative;
+  overflow: hidden;
+  transition: background-color 0.2s ease;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/* 左侧激活指示器（VSCode 风格，贴屏幕左边缘） */
+.activity-bar-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background-color: var(--theme-color);
+  transition: width 0.15s ease;
+}
+
+.activity-bar-item.active::before {
+  width: 2px;
 }
 
 .activity-bar-item:hover {
-  color: var(--text-primary);
+  background-color: var(--hover-bg);
 }
 
 .activity-bar-item.active {
-  color: var(--text-primary);
-  border-left-color: var(--accent-active);
-  background-color: var(--bg-panel);
+  background-color: var(--hover-bg);
 }
 
 .activity-bar-icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.activity-bar-item:hover .activity-bar-icon,
+.activity-bar-item.active .activity-bar-icon {
+  color: var(--text-primary);
 }
 
 .sidebar-title {
@@ -92,7 +116,9 @@
   border-radius: 3px;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 
 .sidebar-action-btn:hover {

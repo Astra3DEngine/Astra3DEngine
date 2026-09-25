@@ -49,6 +49,7 @@ import IconKeyQ from '../assets/icons/viewport/key-q.svg?react';
 import IconKeyE from '../assets/icons/viewport/key-e.svg?react';
 import IconSun from '../assets/icons/viewport/sun.svg?react';
 import IconSunOff from '../assets/icons/viewport/sun-off.svg?react';
+import { tip } from '../lib/tooltip.js';
 
 /** cube 的六个面，顺序与 BoxGeometry 材质数组一致 */
 const CUBE_FACE_NAMES = ['right', 'left', 'top', 'bottom', 'front', 'back'];
@@ -1808,7 +1809,7 @@ function Viewport({
               key={tool.id}
               className={`viewport-tool-btn ${currentTool === tool.id ? 'active' : ''}`}
               onClick={() => onToolChange(tool.id)}
-              title={msg(tool.labelKey)}
+              {...tip(msg(tool.labelKey))}
             >
               {tool.icon}
             </button>
@@ -1817,7 +1818,7 @@ function Viewport({
             <button
               className={`viewport-tool-btn ${uniformScale ? 'active' : ''}`}
               onClick={() => setUniformScale(!uniformScale)}
-              title={uniformScale ? msg('tool.uniformScaleOn') : msg('tool.uniformScaleOff')}
+              {...tip(uniformScale ? msg('tool.uniformScaleOn') : msg('tool.uniformScaleOff'))}
             >
               <IconUniformScale className="tool-icon" />
             </button>
@@ -1854,7 +1855,9 @@ function Viewport({
               <button
                 className={`viewport-dock-btn ${lightRenderingEnabled ? 'active' : ''}`}
                 onClick={() => onLightRenderingChange(!lightRenderingEnabled)}
-                title={`${lightRenderingEnabled ? msg('viewport.lightRenderingOn') : msg('viewport.lightRenderingOff')} (F1)`}
+                {...tip(
+                  `${lightRenderingEnabled ? msg('viewport.lightRenderingOn') : msg('viewport.lightRenderingOff')} (F1)`
+                )}
               >
                 {lightRenderingEnabled ? (
                   <IconSun className="dock-icon" />

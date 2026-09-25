@@ -14,6 +14,7 @@ import InfoModal from './InfoModal.jsx';
 import useDropdownMenu from '../hooks/useDropdownMenu.js';
 import { modal as modalService } from '../lib/ModalManager.js';
 import { shortcuts, formatShortcutDisplay } from '../lib/ShortcutManager.js';
+import { tip } from '../lib/tooltip.js';
 
 import IconNewProject from '../assets/icons/editor/new-project.svg?react';
 import IconOpenProject from '../assets/icons/editor/open-project.svg?react';
@@ -276,6 +277,15 @@ function Toolbar({
     }
   };
 
+  // 若任一菜单已打开，鼠标移到其他菜单项时自动切换展开
+  const menuRefs = [fileMenuRef, editMenuRef, viewMenuRef, runMenuRef];
+  const handleMenuHover = (targetRef) => {
+    const anyOpen = menuRefs.some((ref) => ref.current?.isOpen());
+    if (!anyOpen) return;
+    menuRefs.forEach((ref) => ref.current?.close());
+    targetRef.current?.open();
+  };
+
   const handleLogoMenuItemClick = (action) => {
     logoMenu.close();
     if (action === 'source') {
@@ -319,24 +329,28 @@ function Toolbar({
               label={msg('menu.file')}
               items={fileMenuItems}
               roundedCorners="bottom"
+              onMouseEnter={() => handleMenuHover(fileMenuRef)}
             />
             <DropdownMenu
               ref={editMenuRef}
               label={msg('menu.edit')}
               items={editMenuItems}
               roundedCorners="bottom"
+              onMouseEnter={() => handleMenuHover(editMenuRef)}
             />
             <DropdownMenu
               ref={viewMenuRef}
               label={msg('menu.view')}
               items={viewMenuItems}
               roundedCorners="bottom"
+              onMouseEnter={() => handleMenuHover(viewMenuRef)}
             />
             <DropdownMenu
               ref={runMenuRef}
               label={msg('menu.run')}
               items={runMenuItems}
               roundedCorners="bottom"
+              onMouseEnter={() => handleMenuHover(runMenuRef)}
             />
           </div>
           {projectFileName && (
@@ -353,18 +367,18 @@ function Toolbar({
               <button
                 className="window-control-btn minimize"
                 onClick={handleMinimize}
-                title="最小化"
+                {...tip('最小化')}
               >
                 <IconWindowMinimize />
               </button>
               <button
                 className="window-control-btn maximize"
                 onClick={handleMaximize}
-                title={isMaximized ? '还原' : '最大化'}
+                {...tip(isMaximized ? '还原' : '最大化')}
               >
                 {isMaximized ? <IconWindowRestore /> : <IconWindowMaximize />}
               </button>
-              <button className="window-control-btn close" onClick={handleClose} title="关闭">
+              <button className="window-control-btn close" onClick={handleClose} {...tip('关闭')}>
                 <IconWindowClose />
               </button>
             </div>

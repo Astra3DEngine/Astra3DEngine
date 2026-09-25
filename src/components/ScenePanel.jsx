@@ -13,6 +13,7 @@ import IconPlus from '../assets/icons/editor/plus.svg?react';
 import IconDelete from '../assets/icons/editor/delete.svg?react';
 import IconRename from '../assets/icons/editor/rename.svg?react';
 import { useScenesStore } from '../stores/useScenesStore.js';
+import { tip } from '../lib/tooltip.js';
 
 /**
  * 场景面板组件：直接读取 store 管理所有场景（切换/新建/删除/重命名/设主场景）。
@@ -122,7 +123,7 @@ function ScenePanel() {
         ) : (
           <>
             <span className="scene-item-name">{scene.name}</span>
-            {isMain && <IconStar className="scene-main-star" title={msg('scene.isMain')} />}
+            {isMain && <IconStar className="scene-main-star" {...tip(msg('scene.isMain'))} />}
           </>
         )}
 
@@ -137,7 +138,7 @@ function ScenePanel() {
                 e.stopPropagation();
                 handleSetMainScene(scene.id);
               }}
-              title={msg('scene.setMain')}
+              {...tip(msg('scene.setMain'))}
             >
               <IconStar className="scene-action-icon" />
             </button>
@@ -149,7 +150,7 @@ function ScenePanel() {
               e.stopPropagation();
               handleStartRename(scene.id);
             }}
-            title={msg('scene.rename')}
+            {...tip(msg('scene.rename'))}
           >
             <IconRename className="scene-action-icon" />
           </button>
@@ -161,7 +162,7 @@ function ScenePanel() {
                 e.stopPropagation();
                 handleDeleteScene(scene.id);
               }}
-              title={msg('scene.delete')}
+              {...tip(msg('scene.delete'))}
             >
               <IconDelete className="scene-action-icon" />
             </button>

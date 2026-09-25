@@ -7,6 +7,7 @@
 import React from 'react';
 import { useWorkspaceTabsStore, WORKSPACE_TABS } from '../../stores/useWorkspaceTabsStore.js';
 import { msg } from '../../i18n/index.js';
+import { tip } from '../../lib/tooltip.js';
 import IconPlay from '../../assets/icons/viewport/play.svg?react';
 import IconCode from '../../assets/icons/misc/code.svg?react';
 
@@ -28,9 +29,9 @@ export default function EditorTabBar() {
             key={tab.id}
             className={`editor-tab ${activeTab === tab.id ? 'active' : ''}`}
             onClick={() => setActiveTab(tab.id)}
+            {...tip(msg(tab.titleKey))}
           >
             {Icon && <Icon className="editor-tab-icon" />}
-            <span className="editor-tab-title">{msg(tab.titleKey)}</span>
           </button>
         );
       })}

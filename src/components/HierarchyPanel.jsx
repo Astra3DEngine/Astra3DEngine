@@ -31,6 +31,7 @@ import IconChevronCollapsed from '../assets/icons/nav/chevron-collapsed.svg?reac
 import IconPointLight from '../assets/icons/tools/light-point.svg?react';
 import IconDirectionalLight from '../assets/icons/tools/light-directional.svg?react';
 import IconSpotLight from '../assets/icons/tools/light-spot.svg?react';
+import { tip } from '../lib/tooltip.js';
 
 /**
  * 层级面板组件
@@ -412,7 +413,7 @@ function HierarchyPanel() {
             <span className="hierarchy-item-name">{obj.name}</span>
           )}
           {obj.prefabId && (
-            <span className="hierarchy-prefab-badge" title={getPrefabName(obj.prefabId)}>
+            <span className="hierarchy-prefab-badge" {...tip(getPrefabName(obj.prefabId))}>
               P
             </span>
           )}
@@ -422,7 +423,7 @@ function HierarchyPanel() {
               e.stopPropagation();
               onDeleteObject(obj.id);
             }}
-            title={msg('hierarchy.delete')}
+            {...tip(msg('hierarchy.delete'))}
           >
             <IconDelete className="btn-icon" />
           </button>

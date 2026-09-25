@@ -1,17 +1,17 @@
 /**
  * @file components/sidebar/ActivityBar.jsx
- * @description VSCode 式活动栏：垂直图标列，点击切换侧栏面板，再点当前项折叠侧栏。
- * 图标来源：固定视图（层级/场景/预制件）+ 停靠在侧栏的 dock 面板（资源/终端）。
- * 同时作为 dock 面板「拖出」到侧栏的 drop 目标。
+ * @description VSCode 式活动栏：显示所有停靠在左侧(zone=left)的面板，点击切换、再点折叠。
+ * - 图标可拖拽到底部 Dock（左→底）
+ * - 同时作为任意 dock 面板「拖到左侧」的 drop 目标（底→左）
  * @module components/sidebar/ActivityBar
  */
 
 import React, { useCallback } from 'react';
 import { useUIStore } from '../../stores/useUIStore.js';
 import { useDockStore } from '../../stores/useDockStore.js';
-import { SIDEBAR_VIEWS } from './sidebarViews.js';
-import { DOCK_PANELS } from '../dock/dockPanels.js';
+import { PANEL_META } from '../panels/panelMeta.js';
 import { msg } from '../../i18n/index.js';
+import { tip } from '../../lib/tooltip.js';
 
 const DRAG_MIME = 'application/astra-dock-tab';
 
@@ -23,13 +23,10 @@ export default function ActivityBar() {
   const dockPanels = useDockStore((s) => s.panels);
   const movePanel = useDockStore((s) => s.movePanel);
 
-  // 固定视图 + 侧栏区 dock 面板
-  const entries = [
-    ...Object.values(SIDEBAR_VIEWS),
-    ...Object.entries(dockPanels)
-      .filter(([, p]) => p.zone === 'sidebar')
-      .map(([id]) => ({ id, icon: DOCK_PANELS[id]?.icon, titleKey: DOCK_PANELS[id]?.titleKey })),
-  ].filter((v) => v.icon);
+  // 左侧当前停靠的面板
+  const entries = Object.keys(dockPanels)
+    .filter((id) => dockPanels[id].zone === 'left' && PANEL_META[id]?.icon)
+    .map((id) => ({ id, ...PANEL_META[id] }));
 
   const handleClick = useCallback(
     (id) => {
@@ -43,6 +40,13 @@ export default function ActivityBar() {
     [activeSidebarView, sidebarCollapsed, setActiveSidebarView, setSidebarCollapsed]
   );
 
+  // 图标可拖到底部（左→底）
+  const handleDragStart = useCallback((e, id) => {
+    e.dataTransfer.setData(DRAG_MIME, id);
+    e.dataTransfer.effectAllowed = 'move';
+  }, []);
+
+  // 接收从底部拖来的 tab（底→左）
   const handleDragOver = useCallback((e) => {
     if (e.dataTransfer.types.includes(DRAG_MIME)) {
       e.preventDefault();
@@ -53,9 +57,9 @@ export default function ActivityBar() {
   const handleDrop = useCallback(
     (e) => {
       const id = e.dataTransfer.getData(DRAG_MIME);
-      if (!id || !DOCK_PANELS[id]) return;
+      if (!id || !PANEL_META[id]) return;
       e.preventDefault();
-      movePanel(id, 'sidebar');
+      movePanel(id, 'left');
       setSidebarCollapsed(false);
       setActiveSidebarView(id);
     },
@@ -70,9 +74,11 @@ export default function ActivityBar() {
         return (
           <button
             key={view.id}
+            draggable
             className={`activity-bar-item ${active ? 'active' : ''}`}
             onClick={() => handleClick(view.id)}
-            title={view.titleKey ? msg(view.titleKey) : view.id}
+            onDragStart={(e) => handleDragStart(e, view.id)}
+            {...tip(view.titleKey ? msg(view.titleKey) : view.id)}
           >
             <Icon className="activity-bar-icon" />
           </button>

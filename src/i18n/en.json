@@ -31,6 +31,7 @@
   "keybinds.object.delete": "Delete Object",
   "keybinds.preferences.open": "Open Settings",
   "keybinds.object.add": "Add Object",
+  "dock.moveBottom": "Move to Bottom",
   "app.title": "Astra 3D Engine",
 
   "importModel.title": "Import Model",

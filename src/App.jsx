@@ -19,6 +19,7 @@ import EditorTabBar from './components/tabs/EditorTabBar.jsx';
 import CodeEditorPlaceholder from './components/tabs/CodeEditorPlaceholder.jsx';
 import { registerSidebarViews } from './components/sidebar/sidebarViews.js';
 import Dock from './components/dock/Dock.jsx';
+import BottomPanel from './components/dock/BottomPanel.jsx';
 import TerminalPlaceholder from './components/dock/TerminalPlaceholder.jsx';
 import { registerDockPanels } from './components/dock/dockPanels.js';
 import PreferencesModal from './components/PreferencesModal.jsx';
@@ -34,6 +35,7 @@ import { modal } from './lib/ModalManager.js';
 import { shortcuts } from './lib/ShortcutManager.js';
 import ModalHost from './components/modal/ModalHost.jsx';
 import ToastHost from './components/toast/ToastHost.jsx';
+import TooltipHost from './components/primitives/TooltipHost.jsx';
 import { applyTheme } from './utils/themeManager.js';
 import { useScenesStore } from './stores/useScenesStore.js';
 import { useSelectionStore } from './stores/useSelectionStore.js';
@@ -43,6 +45,7 @@ import { useEditorStore } from './stores/useEditorStore.js';
 import { useUIStore } from './stores/useUIStore.js';
 import { useProjectStore } from './stores/useProjectStore.js';
 import { useWorkspaceTabsStore } from './stores/useWorkspaceTabsStore.js';
+import { useBottomPanelStore } from './stores/useBottomPanelStore.js';
 import { Settings } from './settings/settingsRegistry.js';
 
 // 装配侧栏视图（避免循环依赖）
@@ -99,7 +102,7 @@ function AppContent() {
   const lightRenderingEnabled = useEditorStore((s) => s.lightRenderingEnabled);
 
   const ui = useUIStore();
-  const { isAssetsPanelCollapsed, sidebarCollapsed } = ui;
+  const { sidebarCollapsed } = ui;
 
   const projectFileName = useProjectStore((s) => s.projectFileName);
   const autoSaveEnabled = useProjectStore((s) => s.autoSaveEnabled);
@@ -293,8 +296,7 @@ function AppContent() {
       label: 'keybinds.object.add',
       category: 'keybinds.cat.object',
       keys: 'alt+q',
-      handler: () =>
-        openCreateObjectMenu(mousePosRef.current.x, mousePosRef.current.y),
+      handler: () => openCreateObjectMenu(mousePosRef.current.x, mousePosRef.current.y),
     });
   }, [projectFile, openPreferences]);
 
@@ -302,6 +304,29 @@ function AppContent() {
     (snapshotData) => projectFile.restoreSnapshot(snapshotData),
     [projectFile]
   );
+
+  // 状态栏上端手柄：向上拖动拉出底栏（VSCode 式）
+  const statusGripDrag = useCallback((e) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const store = useBottomPanelStore.getState();
+    const startHeight = store.collapsed ? 0 : store.height;
+
+    const onMove = (ev) => {
+      const delta = startY - ev.clientY; // 向上为正
+      useBottomPanelStore.getState().setHeight(startHeight + delta);
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
 
   const activeTab = useWorkspaceTabsStore((s) => s.activeTab);
 
@@ -341,6 +366,7 @@ function AppContent() {
       />
 
       <div className="main-content-wrapper">
+        <EditorTabBar />
         <div className="main-content">
           <ResizablePanel
             side="left"
@@ -355,7 +381,6 @@ function AppContent() {
           </ResizablePanel>
 
           <div className="center-area">
-            <EditorTabBar />
             <div className="center-area-body">
               {activeTab === 'code' ? (
                 <CodeEditorPlaceholder />
@@ -395,29 +420,12 @@ function AppContent() {
           />
         </div>
 
-        <ResizablePanel
-          direction="vertical"
-          minHeight={80}
-          maxHeight={400}
-          defaultHeight={150}
-          storageKey="astra-bottom-panel"
-          className="bottom-area"
-          collapsed={isAssetsPanelCollapsed}
-        >
-          {isAssetsPanelCollapsed ? (
-            <button
-              className="dock-reopen-bar"
-              onClick={() => ui.setAssetsPanelCollapsed(false)}
-              title="展开底栏"
-            >
-              {msg('dock.open')}
-            </button>
-          ) : (
-            <Dock onCollapse={() => ui.setAssetsPanelCollapsed(true)} />
-          )}
-        </ResizablePanel>
+        <BottomPanel>
+          <Dock />
+        </BottomPanel>
       </div>
 
+      <div className="status-grip" onMouseDown={statusGripDrag} />
       <div className="status-bar">
         <span>
           {msg('app.title')} v{ENGINE_VERSION}
@@ -432,6 +440,7 @@ function AppContent() {
 
       <ToastHost />
       <ModalHost />
+      <TooltipHost />
     </div>
   );
 }

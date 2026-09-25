@@ -8,23 +8,28 @@
 
 import React, { useCallback } from 'react';
 import { useDockStore } from '../../stores/useDockStore.js';
-import { DOCK_PANELS } from './dockPanels.js';
+import { PANEL_META } from '../panels/panelMeta.js';
 import { msg } from '../../i18n/index.js';
+import { tip } from '../../lib/tooltip.js';
+import { useBottomPanelStore } from '../../stores/useBottomPanelStore.js';
 
 const DRAG_MIME = 'application/astra-dock-tab';
 
-export default function Dock({ onCollapse }) {
+export default function Dock() {
   const panels = useDockStore((s) => s.panels);
   const activeBottomTab = useDockStore((s) => s.activeBottomTab);
   const setActiveBottomTab = useDockStore((s) => s.setActiveBottomTab);
   const movePanel = useDockStore((s) => s.movePanel);
+  const collapseBottom = useBottomPanelStore((s) => s.collapse);
+
+  const handleCollapseClick = useCallback(() => collapseBottom(), [collapseBottom]);
 
   const bottomPanels = Object.entries(panels)
     .filter(([, p]) => p.zone === 'bottom')
     .map(([id]) => id);
 
   const activeId = bottomPanels.includes(activeBottomTab) ? activeBottomTab : bottomPanels[0];
-  const Active = activeId ? DOCK_PANELS[activeId]?.Component : null;
+  const Active = activeId ? PANEL_META[activeId]?.Component : null;
 
   // 接收从侧栏拖回的 tab
   const handleDragOver = useCallback((e) => {
@@ -37,7 +42,7 @@ export default function Dock({ onCollapse }) {
   const handleDrop = useCallback(
     (e) => {
       const id = e.dataTransfer.getData(DRAG_MIME);
-      if (!id || !DOCK_PANELS[id]) return;
+      if (!id || !PANEL_META[id]) return;
       e.preventDefault();
       movePanel(id, 'bottom');
       setActiveBottomTab(id);
@@ -54,7 +59,8 @@ export default function Dock({ onCollapse }) {
     <div className="dock" onDragOver={handleDragOver} onDrop={handleDrop}>
       <div className="dock-tabs">
         {bottomPanels.map((id) => {
-          const def = DOCK_PANELS[id];
+          const def = PANEL_META[id];
+          if (!def) return null;
           const Icon = def.icon;
           return (
             <button
@@ -63,15 +69,15 @@ export default function Dock({ onCollapse }) {
               className={`dock-tab ${activeId === id ? 'active' : ''}`}
               onClick={() => setActiveBottomTab(id)}
               onDragStart={(e) => handleTabDragStart(e, id)}
-              title={msg(def.titleKey)}
+              {...tip(msg(def.titleKey))}
             >
               <Icon className="dock-tab-icon" />
               <span>{msg(def.titleKey)}</span>
             </button>
           );
         })}
-        {onCollapse && (
-          <button className="dock-collapse-btn" onClick={onCollapse} title="收起底栏">
+        {collapseBottom && (
+          <button className="dock-collapse-btn" onClick={handleCollapseClick} {...tip('收起底栏')}>
             ×
           </button>
         )}

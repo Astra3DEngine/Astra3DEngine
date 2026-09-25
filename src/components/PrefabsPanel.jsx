@@ -9,6 +9,7 @@ import IconPlus from '../assets/icons/editor/plus.svg?react';
 import IconDelete from '../assets/icons/editor/delete.svg?react';
 import { usePrefabsStore } from '../stores/usePrefabsStore.js';
 import { useScenesStore } from '../stores/useScenesStore.js';
+import { tip } from '../lib/tooltip.js';
 
 /**
  * 预制件面板组件：直接读取 store。
@@ -63,7 +64,7 @@ function PrefabsPanel() {
                   e.stopPropagation();
                   onInstantiatePrefab(prefab.id);
                 }}
-                title={msg('prefabs.instantiate')}
+                {...tip(msg('prefabs.instantiate'))}
               >
                 <IconPlus className="btn-icon" />
               </button>
@@ -73,7 +74,7 @@ function PrefabsPanel() {
                   e.stopPropagation();
                   onDeletePrefab(prefab.id);
                 }}
-                title={msg('prefabs.delete')}
+                {...tip(msg('prefabs.delete'))}
               >
                 <IconDelete className="btn-icon" />
               </button>

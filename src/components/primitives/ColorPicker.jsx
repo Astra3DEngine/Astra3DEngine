@@ -9,6 +9,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { HexColorPicker } from 'react-colorful';
+import { tip } from '../../lib/tooltip.js';
 
 const normalizeHex = (value) => {
   if (!value) return '#ffffff';
@@ -68,7 +69,7 @@ function ColorPicker({ value = '#ffffff', onChange, className = '', title }) {
           className="color-picker-swatch"
           style={{ background: color }}
           onClick={openPopover}
-          title={title}
+          {...tip(title)}
           aria-label="打开取色器"
         />
       </div>

@@ -12,6 +12,7 @@ import IconFile from '../assets/icons/editor/file.svg?react';
 import IconDelete from '../assets/icons/editor/delete.svg?react';
 import IconRename from '../assets/icons/editor/rename.svg?react';
 import IconPlus from '../assets/icons/editor/plus.svg?react';
+import { tip } from '../lib/tooltip.js';
 
 const getMimeType = (filename) => {
   const ext = filename.split('.').pop()?.toLowerCase();
@@ -400,14 +401,14 @@ function AssetsPanel() {
           <button
             className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
             onClick={() => setFilter('all')}
-            title={msg('assets.filterAll')}
+            {...tip(msg('assets.filterAll'))}
           >
             {assetCounts.all}
           </button>
           <button
             className={`filter-btn ${filter === 'model' ? 'active' : ''}`}
             onClick={() => setFilter('model')}
-            title={msg('assets.filterModels')}
+            {...tip(msg('assets.filterModels'))}
           >
             <IconModel className="filter-icon" />
             {assetCounts.model}
@@ -415,13 +416,13 @@ function AssetsPanel() {
           <button
             className={`filter-btn ${filter === 'texture' ? 'active' : ''}`}
             onClick={() => setFilter('texture')}
-            title={msg('assets.filterTextures')}
+            {...tip(msg('assets.filterTextures'))}
           >
             <IconImage className="filter-icon" />
             {assetCounts.texture}
           </button>
         </div>
-        <button className="import-btn" onClick={handleImportClick} title={msg('assets.import')}>
+        <button className="import-btn" onClick={handleImportClick} {...tip(msg('assets.import'))}>
           <IconPlus className="import-btn-icon" />
         </button>
         <input
@@ -454,7 +455,7 @@ function AssetsPanel() {
                 onContextMenu={(e) => handleContextMenu(e, asset)}
                 onDragStart={(e) => handleAssetDragStart(e, asset)}
                 draggable={asset.assetType === 'texture'}
-                title={asset.name}
+                {...tip(asset.name)}
               >
                 <div className="asset-preview">
                   {asset.assetType === 'texture' && asset.url ? (
@@ -502,7 +503,7 @@ function AssetsPanel() {
         onClose={() => setIsFileBrowserOpen(false)}
         onSelect={handleFileBrowserSelect}
         mode="open"
-        title={msg('assets.import')}
+        {...tip(msg('assets.import'))}
         filters={[
           { name: msg('assets.filterAll'), extensions: ['*'] },
           { name: msg('assets.filterModels'), extensions: ['gltf', 'glb', 'obj'] },

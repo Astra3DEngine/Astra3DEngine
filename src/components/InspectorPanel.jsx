@@ -15,6 +15,7 @@ import IconClose from '../assets/icons/editor/close.svg?react';
 import IconScene from '../assets/icons/tools/scene.svg?react';
 import IconCube from '../assets/icons/tools/cube.svg?react';
 import { getAllDescendantIds } from '../engine/TreeMath.js';
+import { tip } from '../lib/tooltip.js';
 
 /**
  * 面板类型定义
@@ -429,14 +430,14 @@ function InspectorPanel({
               <button
                 className="btn btn-small"
                 onClick={() => onApplyToPrefab(selectedObject.id)}
-                title={msg('inspector.applyToPrefab')}
+                {...tip(msg('inspector.applyToPrefab'))}
               >
                 {msg('inspector.applyToPrefab')}
               </button>
               <button
                 className="btn btn-small btn-secondary"
                 onClick={() => onDisconnectPrefab(selectedObject.id)}
-                title={msg('inspector.disconnectPrefab')}
+                {...tip(msg('inspector.disconnectPrefab'))}
               >
                 {msg('inspector.disconnectPrefab')}
               </button>
@@ -850,7 +851,7 @@ function InspectorPanel({
             key={panel.key}
             className={`inspector-sidebar-btn ${isExpanded && activePanel === panel.key ? 'active' : ''}`}
             onClick={() => handlePanelClick(panel.key)}
-            title={panel.title}
+            {...tip(panel.title)}
           >
             <panel.icon className="inspector-sidebar-icon" />
           </button>
@@ -878,7 +879,7 @@ function InspectorPanel({
               <button
                 className="inspector-clear-btn"
                 onClick={onClearSelection}
-                title={msg('inspector.clearSelection')}
+                {...tip(msg('inspector.clearSelection'))}
               >
                 <IconClose className="inspector-clear-icon" />
               </button>

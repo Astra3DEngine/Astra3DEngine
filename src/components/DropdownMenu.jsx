@@ -9,7 +9,7 @@
  * @module components/DropdownMenu
  */
 
-import React, { useState, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useImperativeHandle, forwardRef, useRef } from 'react';
 import { Menu, MenuItem, MenuDivider, SubMenu, ControlledMenu } from '@szhsin/react-menu';
 import '@szhsin/react-menu/dist/index.css';
 
@@ -40,18 +40,26 @@ const DropdownMenu = forwardRef(function DropdownMenu(
     position = 'bottom',
     isOpen: isOpenProp,
     onClose,
+    onMouseEnter,
   },
   ref
 ) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isControlled = isOpenProp !== undefined;
   const isOpen = isControlled ? isOpenProp : internalIsOpen;
+  const menuInstanceRef = useRef(null);
 
-  useImperativeHandle(ref, () => ({
-    open: () => setInternalIsOpen(true),
-    close: () => setInternalIsOpen(false),
-    toggle: () => setInternalIsOpen((prev) => !prev),
-  }));
+  useImperativeHandle(
+    ref,
+    () => ({
+      open: () => menuInstanceRef.current?.openMenu?.(),
+      close: () => menuInstanceRef.current?.closeMenu?.(),
+      toggle: () =>
+        isOpen ? menuInstanceRef.current?.closeMenu?.() : menuInstanceRef.current?.openMenu?.(),
+      isOpen: () => isOpen,
+    }),
+    [isOpen]
+  );
 
   const getRoundedClass = () => {
     if (typeof roundedCorners === 'string') {
@@ -129,14 +137,14 @@ const DropdownMenu = forwardRef(function DropdownMenu(
   // Trigger 模式
   return (
     <Menu
-      open={isOpen}
-      onMenuChange={(open) => {
-        if (!isControlled) setInternalIsOpen(open);
-        else if (!open) onClose?.();
+      instanceRef={menuInstanceRef}
+      onMenuChange={({ open: next }) => {
+        if (!isControlled) setInternalIsOpen(next);
+        else if (!next) onClose?.();
       }}
       onItemClick={closeMenu}
       menuButton={
-        <button type="button" className="menu-btn dropdown-trigger">
+        <button type="button" className="menu-btn dropdown-trigger" onMouseEnter={onMouseEnter}>
           {label}
         </button>
       }

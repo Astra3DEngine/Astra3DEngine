@@ -31,6 +31,7 @@
   "keybinds.object.delete": "删除对象",
   "keybinds.preferences.open": "打开设置",
   "keybinds.object.add": "新建对象",
+  "dock.moveBottom": "移到底部",
   "app.title": "Astra 3D 引擎",
 
   "importModel.title": "导入模型",

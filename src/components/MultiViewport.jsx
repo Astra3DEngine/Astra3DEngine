@@ -11,6 +11,7 @@ import Viewport from './Viewport.jsx';
 import { msg } from '../i18n/index.js';
 import IconLayoutSingle from '../assets/icons/viewport/layout-single.svg?react';
 import IconLayoutQuad from '../assets/icons/viewport/layout-quad.svg?react';
+import { tip } from '../lib/tooltip.js';
 
 const VIEW_CONFIGS = {
   perspective: {
@@ -145,14 +146,14 @@ function MultiViewport({
         <button
           className={`layout-toggle-btn ${layoutMode === 'single' ? 'active' : ''}`}
           onClick={() => setLayoutMode('single')}
-          title={msg('viewport.singleView')}
+          {...tip(msg('viewport.singleView'))}
         >
           <IconLayoutSingle className="layout-icon" />
         </button>
         <button
           className={`layout-toggle-btn ${layoutMode === 'quad' ? 'active' : ''}`}
           onClick={() => setLayoutMode('quad')}
-          title={msg('viewport.quadView')}
+          {...tip(msg('viewport.quadView'))}
         >
           <IconLayoutQuad className="layout-icon" />
         </button>
