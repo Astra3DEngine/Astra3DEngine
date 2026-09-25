@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { msg, getLocale, languages } from '../i18n/index.js';
 import Modal from './Modal.jsx';
 import { getAllThemes, subscribe } from '../utils/themeManager.js';
+import { shortcuts, formatShortcut } from '../lib/ShortcutManager.js';
 
 /**
  * 设置模态框组件
@@ -38,6 +39,9 @@ function PreferencesModal({
   const [activeCategory, setActiveCategory] = useState('appearance');
   const [localMaxSnapshots, setLocalMaxSnapshots] = useState(maxSnapshots);
   const [availableThemes, setAvailableThemes] = useState(getAllThemes());
+  const [recordingId, setRecordingId] = useState(null);
+  const [conflictKey, setConflictKey] = useState(null);
+  const [, setVersion] = useState(0);
   const currentLocale = getLocale();
 
   useEffect(() => {
@@ -47,9 +51,51 @@ function PreferencesModal({
     return unsubscribe;
   }, []);
 
+  // 订阅快捷键绑定变化以刷新显示
+  useEffect(() => {
+    const off = shortcuts.subscribe(() => setVersion((v) => v + 1));
+    return off;
+  }, []);
+
+  // 录制新快捷键：capture 阶段拦截，避免触发其它快捷键
+  useEffect(() => {
+    if (!recordingId || !isOpen) return;
+    const onKey = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === 'Escape') {
+        setRecordingId(null);
+        setConflictKey(null);
+        return;
+      }
+      const combo = formatShortcut(e);
+      if (!combo) return;
+      const conflict = shortcuts
+        .getCommands()
+        .find(
+          (c) =>
+            c.id !== recordingId &&
+            shortcuts
+              .getBinding(c.id)
+              .split('|')
+              .includes(combo)
+        );
+      if (conflict) {
+        setConflictKey(combo);
+        return;
+      }
+      shortcuts.setBinding(recordingId, combo);
+      setRecordingId(null);
+      setConflictKey(null);
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [recordingId, isOpen]);
+
   const categories = [
     { id: 'appearance', label: msg('preferences.category.appearance') },
     { id: 'language', label: msg('preferences.category.language') },
+    { id: 'keybinds', label: msg('preferences.category.keybinds') },
     { id: 'autosave', label: msg('preferences.category.autosave') },
   ];
 
@@ -111,6 +157,63 @@ function PreferencesModal({
               </button>
             ))}
           </div>
+        </div>
+      );
+    }
+
+    if (activeCategory === 'keybinds') {
+      // 按分类分组
+      const groups = [];
+      const map = new Map();
+      for (const cmd of shortcuts.getCommands()) {
+        if (!map.has(cmd.category)) map.set(cmd.category, []);
+        map.get(cmd.category).push(cmd);
+      }
+      for (const [cat, commands] of map) {
+        groups.push({ category: cat, commands });
+      }
+
+      return (
+        <div className="preferences-section keybinds-section">
+          <h3 className="preferences-section-title">{msg('preferences.keybinds.title')}</h3>
+          <p className="preferences-section-description">
+            {msg('preferences.keybinds.description')}
+          </p>
+
+          {groups.map((group) => (
+            <div key={group.category || '_'} className="keybind-group">
+              {group.category && (
+                <div className="keybind-group-title">{msg(group.category)}</div>
+              )}
+              {group.commands.map((cmd) => {
+                const recording = recordingId === cmd.id;
+                return (
+                  <div key={cmd.id} className="keybind-row">
+                    <span className="keybind-label">{msg(cmd.label)}</span>
+                    <button
+                      className={`keybind-keys ${recording ? 'recording' : ''} ${
+                        conflictKey && recording ? 'conflict' : ''
+                      }`}
+                      onClick={() => {
+                        setConflictKey(null);
+                        setRecordingId(recording ? null : cmd.id);
+                      }}
+                    >
+                      {recording
+                        ? conflictKey
+                          ? `${conflictKey} ✗`
+                          : msg('keybinds.press')
+                        : shortcuts.getBinding(cmd.id)}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+
+          <button className="btn keybinds-reset" onClick={() => shortcuts.resetAll()}>
+            {msg('keybinds.resetAll')}
+          </button>
         </div>
       );
     }

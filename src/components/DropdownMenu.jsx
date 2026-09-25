@@ -76,7 +76,7 @@ const DropdownMenu = forwardRef(function DropdownMenu(
         return (
           <SubMenu
             key={index}
-            label={<span className="dropdown-label">{item.label}</span>}
+            label={renderItemContent(item)}
             className={item.danger ? 'danger' : ''}
           >
             {item.submenu.map((subItem, subIndex) => (

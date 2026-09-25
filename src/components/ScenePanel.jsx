@@ -172,19 +172,10 @@ function ScenePanel() {
   };
 
   /**
-   * 头部右侧按钮：新建场景（与层级面板样式一致喵！）
+   * 渲染场景列表（新建场景入口在侧栏标题栏）
    */
   return (
     <div className="scene-panel">
-      <div className="scene-toolbar">
-        <button
-          className="add-menu-trigger"
-          onClick={handleCreateScene}
-          title={msg('scene.createNew')}
-        >
-          <IconPlus className="add-menu-icon" />
-        </button>
-      </div>
       <div className="scene-list">
         {scenes.length === 0 ? (
           <div className="scene-empty">

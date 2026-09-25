@@ -26,7 +26,6 @@ import IconCopy from '../assets/icons/editor/copy.svg?react';
 import IconPaste from '../assets/icons/editor/paste.svg?react';
 import IconDuplicate from '../assets/icons/editor/duplicate.svg?react';
 import IconRename from '../assets/icons/editor/rename.svg?react';
-import IconPlus from '../assets/icons/editor/plus.svg?react';
 import IconSearch from '../assets/icons/editor/search.svg?react';
 import IconChevronCollapsed from '../assets/icons/nav/chevron-collapsed.svg?react';
 import IconPointLight from '../assets/icons/tools/light-point.svg?react';
@@ -40,7 +39,6 @@ import IconSpotLight from '../assets/icons/tools/light-spot.svg?react';
  * @param {Object} props.selectedObject - 当前选中的对象
  * @param {Array} props.selectedObjects - 多选对象列表
  * @param {Function} props.onSelectObject - 选择对象回调
- * @param {Function} props.onAddObject - 添加对象回调
  * @param {Function} props.onDeleteObject - 删除对象回调
  * @param {Function} props.onDeleteSelectedObjects - 删除选中对象回调
  * @param {Function} props.onCreatePrefab - 创建预制件回调
@@ -62,7 +60,6 @@ function HierarchyPanel() {
   const prefabs = usePrefabsStore((s) => s.prefabs);
   const clipboard = useScenesStore((s) => s.clipboard);
   const onSelectObject = useSelectionStore.getState().selectObject;
-  const onAddObject = useScenesStore.getState().addObject;
   const onDeleteObject = useScenesStore.getState().deleteObject;
   const onDeleteSelectedObjects = useScenesStore.getState().deleteSelectedObjects;
   const onCreatePrefab = usePrefabsStore.getState().createPrefab;
@@ -78,9 +75,7 @@ function HierarchyPanel() {
   const [dropTarget, setDropTarget] = useState(null);
   const [dropPosition, setDropPosition] = useState(null);
   const [expandedIds, setExpandedIds] = useState(() => new Set());
-  const [position, setPosition] = useState({ x: 0, y: 0 });
 
-  const addMenu = useDropdownMenu();
   const ctxMenu = useDropdownMenu({
     onClose: () => setContextMenuObject(null),
   });
@@ -113,37 +108,6 @@ function HierarchyPanel() {
       return next;
     });
   };
-
-  useEffect(() => {
-    /**
-     * 关于快捷键的方法
-     * 通过检测alt+q，打开创建object的右键菜单
-     */
-    const handleShortcutKey = (e) => {
-      if (e.altKey && e.key === 'q') {
-        addMenu.close();
-        addMenu.openAt(position.x, position.y);
-      }
-    };
-
-    document.addEventListener('keydown', handleShortcutKey);
-    return () => {
-      document.removeEventListener('keydown', handleShortcutKey);
-    };
-  }, [position, addMenu]);
-
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      setPosition({
-        x: e.clientX, // 相对于视口
-        y: e.clientY,
-      });
-    };
-    document.addEventListener('mousemove', handleMouseMove);
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-    };
-  }, []); // 只绑定一次，不依赖任何状态
 
   const handleContextMenu = (e, obj) => {
     e.preventDefault();
@@ -484,70 +448,6 @@ function HierarchyPanel() {
 
   const isSearching = searchText.trim().length > 0;
 
-  const addMenuItems = useMemo(
-    () => [
-      {
-        label: msg('hierarchy.folder'),
-        icon: <IconFolder className="dropdown-icon" />,
-        onClick: () => {
-          onAddObject('folder');
-          addMenu.close();
-        },
-      },
-      { divider: true },
-      {
-        label: msg('hierarchy.cube'),
-        icon: <IconCube className="dropdown-icon" />,
-        onClick: () => {
-          onAddObject('cube');
-          addMenu.close();
-        },
-      },
-      {
-        label: msg('hierarchy.sphere'),
-        icon: <IconSphere className="dropdown-icon" />,
-        onClick: () => {
-          onAddObject('sphere');
-          addMenu.close();
-        },
-      },
-      {
-        label: msg('hierarchy.plane'),
-        icon: <IconPlane className="dropdown-icon" />,
-        onClick: () => {
-          onAddObject('plane');
-          addMenu.close();
-        },
-      },
-      { divider: true },
-      {
-        label: msg('hierarchy.pointLight'),
-        icon: <IconPointLight className="dropdown-icon" />,
-        onClick: () => {
-          onAddObject('pointLight');
-          addMenu.close();
-        },
-      },
-      {
-        label: msg('hierarchy.directionalLight'),
-        icon: <IconDirectionalLight className="dropdown-icon" />,
-        onClick: () => {
-          onAddObject('directionalLight');
-          addMenu.close();
-        },
-      },
-      {
-        label: msg('hierarchy.spotLight'),
-        icon: <IconSpotLight className="dropdown-icon" />,
-        onClick: () => {
-          onAddObject('spotLight');
-          addMenu.close();
-        },
-      },
-    ],
-    [onAddObject, addMenu]
-  );
-
   const ctxMenuItems = useMemo(() => {
     if (!contextMenuObject) return [];
     return [
@@ -617,29 +517,6 @@ function HierarchyPanel() {
               ×
             </button>
           )}
-          <div className="add-menu-container">
-            <button
-              className="add-menu-trigger"
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={() => {
-                if (addMenu.isOpen) {
-                  addMenu.close();
-                } else {
-                  addMenu.openAt(position.x, position.y);
-                }
-              }}
-              title={msg('hierarchy.addObject')}
-            >
-              <IconPlus className="add-menu-icon" />
-            </button>
-            <DropdownMenu
-              isOpen={addMenu.isOpen}
-              onClose={addMenu.close}
-              position={addMenu.position}
-              roundedCorners="all"
-              items={addMenuItems}
-            />
-          </div>
         </div>
       )}
       <div

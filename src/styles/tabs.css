@@ -1,47 +1,67 @@
-/* ===== 顶部编辑器 Tab 条 ===== */
+/* ===== 顶部编辑器 Tab 条（参照 Astratch/VSCode） ===== */
 .editor-tab-bar {
   display: flex;
-  align-items: center;
-  height: 28px;
+  align-items: stretch;
+  height: 32px;
   flex-shrink: 0;
   background-color: var(--bg-toolbar);
   border-bottom: 1px solid var(--border);
-  padding: 0 6px;
-  gap: 2px;
+  padding: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 }
 
 .editor-tab {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 5px;
-  height: 22px;
-  padding: 0 12px;
+  gap: 6px;
+  padding: 0 10px;
+  min-width: 100px;
+  max-width: 200px;
+  height: 100%;
   background: transparent;
   border: none;
-  border-radius: 3px 3px 0 0;
+  border-right: 1px solid var(--border);
   color: var(--text-secondary);
   font-size: 12px;
   cursor: pointer;
-  transition:
-    color 0.15s,
-    background-color 0.15s;
+  user-select: none;
   white-space: nowrap;
+  transition: background-color 0.12s, color 0.12s;
 }
 
 .editor-tab:hover {
+  background-color: var(--bg-hover);
   color: var(--text-primary);
-  background-color: var(--bg-panel);
 }
 
 .editor-tab.active {
   color: var(--text-primary);
   background-color: var(--bg-panel);
-  box-shadow: inset 0 -2px 0 var(--accent-active);
+  box-shadow: inset 0 2px 0 var(--accent-active);
 }
 
 .editor-tab-icon {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--text-primary);
+}
+
+.editor-tab-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 编辑器内容区（tab 栏下方） */
+.center-area-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
 }
 
 /* 代码编辑器占位 */

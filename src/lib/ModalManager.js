@@ -19,11 +19,15 @@ class ModalManager {
 
   /**
    * 打开一个模态框组件。
+   * 若该组件已在栈中打开，则忽略重复打开（返回已 resolve 的 Promise）。
    * @param {Function} Component - 模态框组件
    * @param {Object} [props={}] - 传给组件的 props（不含 isOpen/onClose）
    * @returns {Promise<any>} 关闭时 resolve 结果
    */
   open(Component, props = {}) {
+    if (this.stack.some((m) => m.Component === Component)) {
+      return Promise.resolve(null);
+    }
     const id = Date.now() + Math.random();
     return new Promise((resolve) => {
       const close = (result) => {

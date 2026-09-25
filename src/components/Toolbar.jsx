@@ -13,6 +13,7 @@ import IconLogo from '../assets/icons/logo/logo.svg?react';
 import InfoModal from './InfoModal.jsx';
 import useDropdownMenu from '../hooks/useDropdownMenu.js';
 import { modal as modalService } from '../lib/ModalManager.js';
+import { shortcuts, formatShortcutDisplay } from '../lib/ShortcutManager.js';
 
 import IconNewProject from '../assets/icons/editor/new-project.svg?react';
 import IconOpenProject from '../assets/icons/editor/open-project.svg?react';
@@ -94,6 +95,11 @@ function Toolbar({
 
   const logoMenu = useDropdownMenu();
 
+  // 订阅快捷键绑定变化，让菜单项快捷键提示跟随热设置
+  const [, setShortcutTick] = useState(0);
+  useEffect(() => shortcuts.subscribe(() => setShortcutTick((t) => t + 1)), []);
+  const shortcutOf = (id) => formatShortcutDisplay(shortcuts.getBinding(id));
+
   useEffect(() => {
     const electronDetected = typeof window !== 'undefined' && !!window.electronAPI;
     setIsElectron(electronDetected);
@@ -135,13 +141,13 @@ function Toolbar({
     {
       label: msg('menu.newProject'),
       icon: <IconNewProject className="menu-icon" />,
-      shortcut: 'Ctrl+Alt+N',
+      shortcut: shortcutOf('file.new'),
       onClick: onNewProject,
     },
     {
       label: msg('menu.openProject'),
       icon: <IconOpenProject className="menu-icon" />,
-      shortcut: 'Ctrl+O',
+      shortcut: shortcutOf('file.open'),
       onClick: onLoadProject,
     },
     {
@@ -153,13 +159,13 @@ function Toolbar({
     {
       label: msg('menu.saveProject'),
       icon: <IconSave className="menu-icon" />,
-      shortcut: 'Ctrl+S',
+      shortcut: shortcutOf('file.save'),
       onClick: onSaveProject,
     },
     {
       label: msg('menu.saveAs'),
       icon: <IconSaveAs className="menu-icon" />,
-      shortcut: 'Ctrl+Shift+S',
+      shortcut: shortcutOf('file.saveAs'),
       onClick: onSaveAsProject,
     },
     {
@@ -193,14 +199,14 @@ function Toolbar({
     {
       label: msg('menu.undo'),
       icon: <IconUndo className="menu-icon" />,
-      shortcut: 'Ctrl+Z',
+      shortcut: shortcutOf('edit.undo'),
       disabled: !canUndo,
       onClick: onUndo,
     },
     {
       label: msg('menu.redo'),
       icon: <IconRedo className="menu-icon" />,
-      shortcut: 'Ctrl+Y',
+      shortcut: shortcutOf('edit.redo'),
       disabled: !canRedo,
       onClick: onRedo,
     },
@@ -225,6 +231,7 @@ function Toolbar({
     {
       label: msg('menu.preferences'),
       icon: <IconSettings className="menu-icon" />,
+      shortcut: shortcutOf('preferences.open'),
       onClick: onOpenPreferences,
     },
   ];
@@ -233,7 +240,7 @@ function Toolbar({
     {
       label: isPlaying ? msg('toolbar.stop') : msg('toolbar.play'),
       icon: isPlaying ? <IconStop className="menu-icon" /> : <IconPlay className="menu-icon" />,
-      shortcut: 'F5',
+      shortcut: shortcutOf('view.togglePlay'),
       onClick: () => setIsPlaying(!isPlaying),
     },
   ];

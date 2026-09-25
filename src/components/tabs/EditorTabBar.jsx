@@ -30,7 +30,7 @@ export default function EditorTabBar() {
             onClick={() => setActiveTab(tab.id)}
           >
             {Icon && <Icon className="editor-tab-icon" />}
-            <span>{msg(tab.titleKey)}</span>
+            <span className="editor-tab-title">{msg(tab.titleKey)}</span>
           </button>
         );
       })}

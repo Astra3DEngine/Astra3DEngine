@@ -5,7 +5,7 @@
  * @module App
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import MultiViewport from './components/MultiViewport.jsx';
 import HierarchyPanel from './components/HierarchyPanel.jsx';
 import InspectorPanel from './components/InspectorPanel.jsx';
@@ -14,6 +14,7 @@ import PrefabsPanel from './components/PrefabsPanel.jsx';
 import ScenePanel from './components/ScenePanel.jsx';
 import Toolbar from './components/Toolbar.jsx';
 import Sidebar from './components/sidebar/Sidebar.jsx';
+import { openCreateObjectMenu } from './components/sidebar/CreateObjectMenu.jsx';
 import EditorTabBar from './components/tabs/EditorTabBar.jsx';
 import CodeEditorPlaceholder from './components/tabs/CodeEditorPlaceholder.jsx';
 import { registerSidebarViews } from './components/sidebar/sidebarViews.js';
@@ -59,6 +60,16 @@ registerDockPanels({
 
 function AppContent() {
   const dialog = useDialog();
+
+  // 全局鼠标位置（Alt+Q 弹出新建对象菜单用）
+  const mousePosRef = useRef({ x: 0, y: 0 });
+  useEffect(() => {
+    const onMove = (e) => {
+      mousePosRef.current = { x: e.clientX, y: e.clientY };
+    };
+    window.addEventListener('mousemove', onMove);
+    return () => window.removeEventListener('mousemove', onMove);
+  }, []);
 
   // ===== 主题 / 语言 =====
   const [theme, setTheme] = useState(() => Settings.get('theme') || 'dark');
@@ -159,89 +170,133 @@ function AppContent() {
     }
   }, [sceneObjects, prefabs, assets, autoSaveEnabled, scheduleSave]);
 
-  // ===== 快捷键 =====
+  // ===== 首选项 =====
+  const openPreferences = useCallback(() => {
+    modal.open(PreferencesModal, {
+      theme,
+      onSetTheme: handleSetTheme,
+      onToggleLocale: handleToggleLocale,
+      onSetLocale: handleSetLocale,
+      autoSaveEnabled,
+      onToggleAutoSave: useProjectStore.getState().toggleAutoSave,
+      maxSnapshots,
+      onSetMaxSnapshots: useProjectStore.getState().setMaxSnapshots,
+    });
+  }, [theme, handleSetTheme, handleToggleLocale, handleSetLocale, autoSaveEnabled, maxSnapshots]);
+
+  // ===== 快捷键（命令式，可在首选项配置） =====
   useEffect(() => {
-    const handleToolKeys = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-
-      const selection = useSelectionStore.getState();
-      const scenesStore = useScenesStore.getState();
-      const editor = useEditorStore.getState();
-
-      switch (e.key.toLowerCase()) {
-        case 'q':
-          editor.setCurrentTool('select');
-          break;
-        case 'w':
-          editor.setCurrentTool('move');
-          break;
-        case 'e':
-          editor.setCurrentTool('rotate');
-          break;
-        case 'r':
-          editor.setCurrentTool('scale');
-          break;
-        case 'delete':
-        case 'backspace':
-          if (selection.selectedObjects.length > 1) {
-            scenesStore.deleteSelectedObjects();
-          } else if (selection.selectedObject) {
-            scenesStore.deleteObject(selection.selectedObject.id);
-          }
-          break;
-        default:
-          break;
-      }
-    };
-
-    const handleFileShortcuts = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-      if (e.key === 'F5') {
-        e.preventDefault();
+    shortcuts.define({
+      id: 'file.save',
+      label: 'keybinds.file.save',
+      category: 'keybinds.cat.file',
+      keys: 'ctrl+s',
+      handler: () => projectFile.saveProject(),
+    });
+    shortcuts.define({
+      id: 'file.saveAs',
+      label: 'keybinds.file.saveAs',
+      category: 'keybinds.cat.file',
+      keys: 'ctrl+shift+s',
+      handler: () => projectFile.saveAsProject(),
+    });
+    shortcuts.define({
+      id: 'file.open',
+      label: 'keybinds.file.open',
+      category: 'keybinds.cat.file',
+      keys: 'ctrl+o',
+      handler: () => projectFile.loadProject(),
+    });
+    shortcuts.define({
+      id: 'file.new',
+      label: 'keybinds.file.new',
+      category: 'keybinds.cat.file',
+      keys: 'ctrl+alt+n',
+      handler: () => projectFile.newProject(),
+    });
+    shortcuts.define({
+      id: 'edit.undo',
+      label: 'keybinds.edit.undo',
+      category: 'keybinds.cat.edit',
+      keys: 'ctrl+z',
+      handler: () => useScenesStore.getState().undo(),
+    });
+    shortcuts.define({
+      id: 'edit.redo',
+      label: 'keybinds.edit.redo',
+      category: 'keybinds.cat.edit',
+      keys: 'ctrl+y|ctrl+shift+z',
+      handler: () => useScenesStore.getState().redo(),
+    });
+    shortcuts.define({
+      id: 'view.togglePlay',
+      label: 'keybinds.view.togglePlay',
+      category: 'keybinds.cat.view',
+      keys: 'f5',
+      handler: () => {
         const editor = useEditorStore.getState();
         editor.setIsPlaying(!editor.isPlaying);
-        return;
-      }
-
-      const modifier = e.ctrlKey || e.metaKey;
-      if (!modifier) return;
-
-      const key = e.key.toLowerCase();
-      if (key === 's') {
-        e.preventDefault();
-        if (e.shiftKey) {
-          projectFile.saveAsProject();
-        } else {
-          projectFile.saveProject();
-        }
-      } else if (key === 'o') {
-        e.preventDefault();
-        projectFile.loadProject();
-      } else if (key === 'z') {
-        e.preventDefault();
+      },
+    });
+    shortcuts.define({
+      id: 'tool.select',
+      label: 'keybinds.tool.select',
+      category: 'keybinds.cat.tool',
+      keys: 'q',
+      handler: () => useEditorStore.getState().setCurrentTool('select'),
+    });
+    shortcuts.define({
+      id: 'tool.move',
+      label: 'keybinds.tool.move',
+      category: 'keybinds.cat.tool',
+      keys: 'w',
+      handler: () => useEditorStore.getState().setCurrentTool('move'),
+    });
+    shortcuts.define({
+      id: 'tool.rotate',
+      label: 'keybinds.tool.rotate',
+      category: 'keybinds.cat.tool',
+      keys: 'e',
+      handler: () => useEditorStore.getState().setCurrentTool('rotate'),
+    });
+    shortcuts.define({
+      id: 'tool.scale',
+      label: 'keybinds.tool.scale',
+      category: 'keybinds.cat.tool',
+      keys: 'r',
+      handler: () => useEditorStore.getState().setCurrentTool('scale'),
+    });
+    shortcuts.define({
+      id: 'object.delete',
+      label: 'keybinds.object.delete',
+      category: 'keybinds.cat.object',
+      keys: 'delete|backspace',
+      handler: () => {
+        const selection = useSelectionStore.getState();
         const scenesStore = useScenesStore.getState();
-        if (e.shiftKey) scenesStore.redo();
-        else scenesStore.undo();
-      } else if (key === 'y') {
-        e.preventDefault();
-        useScenesStore.getState().redo();
-      }
-
-      if (e.altKey && key === 'n') {
-        e.preventDefault();
-        projectFile.newProject();
-      }
-    };
-
-    shortcuts.register('tool', handleToolKeys);
-    shortcuts.register('file', handleFileShortcuts);
-    return () => {
-      shortcuts.unregister('tool');
-      shortcuts.unregister('file');
-    };
-  }, [projectFile]);
+        if (selection.selectedObjects.length > 1) {
+          scenesStore.deleteSelectedObjects();
+        } else if (selection.selectedObject) {
+          scenesStore.deleteObject(selection.selectedObject.id);
+        }
+      },
+    });
+    shortcuts.define({
+      id: 'preferences.open',
+      label: 'keybinds.preferences.open',
+      category: 'keybinds.cat.settings',
+      keys: 'ctrl+,',
+      handler: openPreferences,
+    });
+    shortcuts.define({
+      id: 'object.add',
+      label: 'keybinds.object.add',
+      category: 'keybinds.cat.object',
+      keys: 'alt+q',
+      handler: () =>
+        openCreateObjectMenu(mousePosRef.current.x, mousePosRef.current.y),
+    });
+  }, [projectFile, openPreferences]);
 
   const handleRestoreSnapshot = useCallback(
     (snapshotData) => projectFile.restoreSnapshot(snapshotData),
@@ -282,22 +337,10 @@ function AppContent() {
             onRestoreSnapshot: handleRestoreSnapshot,
           })
         }
-        onOpenPreferences={() =>
-          modal.open(PreferencesModal, {
-            theme,
-            onSetTheme: handleSetTheme,
-            onToggleLocale: handleToggleLocale,
-            onSetLocale: handleSetLocale,
-            autoSaveEnabled,
-            onToggleAutoSave: useProjectStore.getState().toggleAutoSave,
-            maxSnapshots,
-            onSetMaxSnapshots: useProjectStore.getState().setMaxSnapshots,
-          })
-        }
+        onOpenPreferences={openPreferences}
       />
 
       <div className="main-content-wrapper">
-        <EditorTabBar />
         <div className="main-content">
           <ResizablePanel
             side="left"
@@ -312,26 +355,29 @@ function AppContent() {
           </ResizablePanel>
 
           <div className="center-area">
-            {activeTab === 'code' ? (
-              <CodeEditorPlaceholder />
-            ) : (
-              <MultiViewport
-                objects={sceneObjects}
-                assets={assets}
-                selectedObject={selectedObject}
-                selectedObjects={selectedObjects}
-                onSelectObject={useSelectionStore.getState().selectObject}
-                currentTool={currentTool}
-                onToolChange={useEditorStore.getState().setCurrentTool}
-                isPlaying={isPlaying}
-                onUpdateObject={useScenesStore.getState().updateObject}
-                onRecordHistory={useScenesStore.getState().recordCurrentState}
-                theme={theme}
-                lightRenderingEnabled={lightRenderingEnabled}
-                onLightRenderingChange={useEditorStore.getState().setLightRenderingEnabled}
-                sceneSettings={currentScene?.settings}
-              />
-            )}
+            <EditorTabBar />
+            <div className="center-area-body">
+              {activeTab === 'code' ? (
+                <CodeEditorPlaceholder />
+              ) : (
+                <MultiViewport
+                  objects={sceneObjects}
+                  assets={assets}
+                  selectedObject={selectedObject}
+                  selectedObjects={selectedObjects}
+                  onSelectObject={useSelectionStore.getState().selectObject}
+                  currentTool={currentTool}
+                  onToolChange={useEditorStore.getState().setCurrentTool}
+                  isPlaying={isPlaying}
+                  onUpdateObject={useScenesStore.getState().updateObject}
+                  onRecordHistory={useScenesStore.getState().recordCurrentState}
+                  theme={theme}
+                  lightRenderingEnabled={lightRenderingEnabled}
+                  onLightRenderingChange={useEditorStore.getState().setLightRenderingEnabled}
+                  sceneSettings={currentScene?.settings}
+                />
+              )}
+            </div>
           </div>
 
           <InspectorPanel
