@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { generatePrefixedId } from '../utils/id.js';
 
 const DB_NAME = 'Astra3DEngine';
 const DB_VERSION = 2;
@@ -162,7 +163,7 @@ async function clearAllSnapshotsFromIndexedDB() {
  * @returns {string} 唯一的快照 ID
  */
 function generateSnapshotId() {
-  return `snap_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return generatePrefixedId('snap');
 }
 
 /**
@@ -197,7 +198,6 @@ export function useAutoSave(getProjectData, interval = 60000, maxSnapshots = 10)
       await saveSnapshotToIndexedDB(snapshot, maxSnapshots);
       lastSaveRef.current = Date.now();
       pendingRef.current = false;
-      console.log('[AutoSave] Snapshot saved to IndexedDB');
       return snapshot;
     } catch (error) {
       console.error('[AutoSave] Save failed:', error);
@@ -222,7 +222,6 @@ export function useAutoSave(getProjectData, interval = 60000, maxSnapshots = 10)
   const loadSnapshots = React.useCallback(async () => {
     try {
       const snapshots = await getAllSnapshotsFromIndexedDB();
-      console.log(`[AutoSave] Loaded ${snapshots.length} snapshots`);
       return snapshots.sort((a, b) => b.savedAt - a.savedAt);
     } catch (error) {
       console.error('[AutoSave] Load snapshots failed:', error);
@@ -234,7 +233,6 @@ export function useAutoSave(getProjectData, interval = 60000, maxSnapshots = 10)
     try {
       const snapshot = await getSnapshotFromIndexedDB(id);
       if (snapshot) {
-        console.log('[AutoSave] Loaded snapshot:', snapshot.name);
         return snapshot;
       }
       return null;
@@ -247,7 +245,6 @@ export function useAutoSave(getProjectData, interval = 60000, maxSnapshots = 10)
   const deleteSnapshot = React.useCallback(async (id) => {
     try {
       await deleteSnapshotFromIndexedDB(id);
-      console.log('[AutoSave] Deleted snapshot:', id);
       return true;
     } catch (error) {
       console.error('[AutoSave] Delete snapshot failed:', error);
@@ -258,7 +255,6 @@ export function useAutoSave(getProjectData, interval = 60000, maxSnapshots = 10)
   const clearAll = React.useCallback(async () => {
     try {
       await clearAllSnapshotsFromIndexedDB();
-      console.log('[AutoSave] Cleared all snapshots');
       return true;
     } catch (error) {
       console.error('[AutoSave] Clear all failed:', error);
@@ -284,9 +280,3 @@ export function useAutoSave(getProjectData, interval = 60000, maxSnapshots = 10)
     getLastSave: () => lastSaveRef.current,
   };
 }
-
-export {
-  getAllSnapshotsFromIndexedDB,
-  deleteSnapshotFromIndexedDB,
-  clearAllSnapshotsFromIndexedDB,
-};

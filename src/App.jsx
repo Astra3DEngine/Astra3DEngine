@@ -101,8 +101,7 @@ function AppContent() {
   const isPlaying = useEditorStore((s) => s.isPlaying);
   const lightRenderingEnabled = useEditorStore((s) => s.lightRenderingEnabled);
 
-  const ui = useUIStore();
-  const { sidebarCollapsed } = ui;
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
 
   const projectFileName = useProjectStore((s) => s.projectFileName);
   const autoSaveEnabled = useProjectStore((s) => s.autoSaveEnabled);

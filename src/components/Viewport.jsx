@@ -518,7 +518,7 @@ function Viewport({
     document.addEventListener('pointerlockchange', handlePointerLockChange);
 
     // ===== 多选变换：拖拽开始记录初始状态 =====
-    transformControls.addEventListener('dragging-changed', (event) => {
+    const handleDraggingChanged = (event) => {
       isTransformDragging = event.value;
       if (!isRightMouseDown) {
         orbitControls.enabled = !event.value;
@@ -767,10 +767,11 @@ function Viewport({
           }
         }
       }
-    });
+    };
+    transformControls.addEventListener('dragging-changed', handleDraggingChanged);
 
     // 变换实时同步（拖拽过程）
-    transformControls.addEventListener('change', () => {
+    const handleTransformChange = () => {
       if (!isTransformDragging) return;
 
       const attached = transformControls.object;
@@ -1048,7 +1049,8 @@ function Viewport({
         });
         applyDescendantsIfNeeded();
       }
-    });
+    };
+    transformControls.addEventListener('change', handleTransformChange);
 
     const animate = () => {
       animationRef.current = requestAnimationFrame(animate);
@@ -1137,8 +1139,13 @@ function Viewport({
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
+      transformControls.removeEventListener('dragging-changed', handleDraggingChanged);
+      transformControls.removeEventListener('change', handleTransformChange);
       if (transformControlsRef.current) {
         transformControlsRef.current.dispose();
+      }
+      if (orbitControlsRef.current) {
+        orbitControlsRef.current.dispose();
       }
       if (rendererRef.current) {
         rendererRef.current.dispose();

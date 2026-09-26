@@ -6,6 +6,7 @@
  */
 
 import { create } from 'zustand';
+import { readRawLocalStorage, writeRawLocalStorage } from '../utils/localstorage.js';
 
 /** 全部可停靠面板 id */
 export const ALL_DOCK_PANELS = ['hierarchy', 'scene', 'prefabs', 'assets', 'terminal'];
@@ -20,7 +21,7 @@ const DEFAULT_ZONE = {
 };
 
 const readZone = (id) => {
-  const saved = localStorage.getItem(`astra-dock-${id}-zone`);
+  const saved = readRawLocalStorage(`astra-dock-${id}-zone`, null);
   if (saved === 'left' || saved === 'bottom' || saved === 'right') return saved;
   // 兼容旧值 'sidebar'（视为 left）
   if (saved === 'sidebar') return 'left';
@@ -38,7 +39,7 @@ export const useDockStore = create((set) => {
 
     /** 移动面板到指定停靠区 */
     movePanel: (id, zone) => {
-      localStorage.setItem(`astra-dock-${id}-zone`, zone);
+      writeRawLocalStorage(`astra-dock-${id}-zone`, zone);
       set((s) => ({ panels: { ...s.panels, [id]: { zone } } }));
     },
 

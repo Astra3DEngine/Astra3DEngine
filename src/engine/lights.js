@@ -7,11 +7,6 @@
 import * as THREE from 'three';
 
 /** 光源默认强度（此前散落在 App.jsx 与 Viewport.jsx） */
-export const LIGHT_DEFAULTS = {
-  point: { intensity: 2, distance: 10, decay: 1 },
-  directional: { intensity: 1.5 },
-  spot: { intensity: 3, distance: 10, decay: 1, angle: Math.PI / 4, penumbra: 0.3 },
-};
 
 /**
  * 根据旋转角（度）计算方向光的照射方向（默认向下）。

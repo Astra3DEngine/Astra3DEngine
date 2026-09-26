@@ -165,12 +165,3 @@ export function createObject(id, name, type, asset = null) {
       return createPrimitiveObject(id, name, type);
   }
 }
-
-/**
- * 生成基础图元的名字（"Cube" -> "cube" 类型名首字母大写）。
- * @param {string} type - 对象类型
- * @returns {string}
- */
-export function getTypeLabel(type) {
-  return type.charAt(0).toUpperCase() + type.slice(1);
-}

@@ -5,6 +5,7 @@
  */
 
 import { create } from 'zustand';
+import { readRawLocalStorage, writeRawLocalStorage } from '../utils/localstorage.js';
 
 const DEFAULT_HEIGHT = 100;
 const MIN_HEIGHT = 60;
@@ -15,13 +16,13 @@ const STORAGE_KEY = 'astra-bottom-panel-height';
 const COLLAPSED_KEY = 'astra-bottom-panel-collapsed';
 
 const readHeight = () => {
-  const v = parseInt(localStorage.getItem(STORAGE_KEY) || '', 10);
+  const v = parseInt(readRawLocalStorage(STORAGE_KEY, '') || '', 10);
   return Number.isFinite(v) ? Math.max(MIN_HEIGHT, Math.min(v, MAX_HEIGHT)) : DEFAULT_HEIGHT;
 };
 
 /** 首次打开默认折叠；此后记住用户选择 */
 const readCollapsed = () => {
-  const v = localStorage.getItem(COLLAPSED_KEY);
+  const v = readRawLocalStorage(COLLAPSED_KEY, null);
   return v === null ? true : v === '1';
 };
 
@@ -36,21 +37,21 @@ export const useBottomPanelStore = create((set, get) => ({
       return;
     }
     const clamped = Math.max(MIN_HEIGHT, Math.min(h, MAX_HEIGHT));
-    localStorage.setItem(STORAGE_KEY, String(clamped));
-    localStorage.setItem(COLLAPSED_KEY, '0');
+    writeRawLocalStorage(STORAGE_KEY, String(clamped));
+    writeRawLocalStorage(COLLAPSED_KEY, '0');
     set({ height: clamped, collapsed: false });
   },
 
   /** 收起 */
   collapse: () => {
-    localStorage.setItem(COLLAPSED_KEY, '1');
+    writeRawLocalStorage(COLLAPSED_KEY, '1');
     set({ collapsed: true });
   },
 
   /** 展开（恢复上次高度） */
   expand: () => {
     const h = get().height < MIN_HEIGHT ? MIN_HEIGHT : get().height;
-    localStorage.setItem(COLLAPSED_KEY, '0');
+    writeRawLocalStorage(COLLAPSED_KEY, '0');
     set({ collapsed: false, height: h });
   },
 }));

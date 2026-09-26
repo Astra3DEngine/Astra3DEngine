@@ -28,13 +28,12 @@ export const useSelectionStore = create((set, get) => ({
           const isAlreadySelected = state.selectedObjects.some((o) => o && allIds.has(o.id));
           if (isAlreadySelected) {
             const newSelection = state.selectedObjects.filter((o) => o && !allIds.has(o.id));
-            setTimeout(() => {
-              useSelectionStore.getState()._syncSingle(newSelection);
-            }, 0);
-            return { selectedObjects: newSelection };
+            return { selectedObjects: newSelection, selectedObject: newSelection[0] || null };
           }
-          useSelectionStore.getState()._syncSingle([object]);
-          return { selectedObjects: [...state.selectedObjects, ...objectsToSelect] };
+          return {
+            selectedObjects: [...state.selectedObjects, ...objectsToSelect],
+            selectedObject: object,
+          };
         });
       } else {
         set({ selectedObject: object, selectedObjects: objectsToSelect });
@@ -47,22 +46,13 @@ export const useSelectionStore = create((set, get) => ({
         const isSelected = state.selectedObjects.some((o) => o && o.id === object.id);
         if (isSelected) {
           const newSelection = state.selectedObjects.filter((o) => o && o.id !== object.id);
-          setTimeout(() => {
-            useSelectionStore.getState()._syncSingle(newSelection);
-          }, 0);
-          return { selectedObjects: newSelection };
+          return { selectedObjects: newSelection, selectedObject: newSelection[0] || null };
         }
-        useSelectionStore.getState()._syncSingle([object]);
-        return { selectedObjects: [...state.selectedObjects, object] };
+        return { selectedObjects: [...state.selectedObjects, object], selectedObject: object };
       });
     } else {
       set({ selectedObject: object, selectedObjects: [object] });
     }
-  },
-
-  /** 内部：根据多选结果同步单选状态（保留原 setTimeout 语义避免批量冲突） */
-  _syncSingle: (selection) => {
-    set({ selectedObject: selection.length > 0 ? selection[0] : null });
   },
 
   /** 整体替换选中态（添加/粘贴/复制等操作后使用） */

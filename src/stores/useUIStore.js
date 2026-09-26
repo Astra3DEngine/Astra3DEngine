@@ -5,15 +5,16 @@
  */
 
 import { create } from 'zustand';
+import { readRawLocalStorage, writeRawLocalStorage } from '../utils/localstorage.js';
 
 const readBool = (key, fallback = false) => {
-  const saved = localStorage.getItem(key);
+  const saved = readRawLocalStorage(key, null);
   return saved === null ? fallback : saved === 'true';
 };
 
 /** 侧栏当前活动视图（VSCode 活动栏模型；含 dock 面板 id：assets/terminal） */
 const readSidebarView = () => {
-  const saved = localStorage.getItem('astra-sidebar-view');
+  const saved = readRawLocalStorage('astra-sidebar-view', null);
   return ['scene', 'prefabs', 'hierarchy', 'assets', 'terminal'].includes(saved)
     ? saved
     : 'hierarchy';
@@ -25,15 +26,15 @@ export const useUIStore = create((set) => ({
   isAssetsPanelCollapsed: readBool('astra-panel-assets-collapsed', false),
 
   setActiveSidebarView: (view) => {
-    localStorage.setItem('astra-sidebar-view', view);
+    writeRawLocalStorage('astra-sidebar-view', view);
     set({ activeSidebarView: view });
   },
   setSidebarCollapsed: (collapsed) => {
-    localStorage.setItem('astra-sidebar-collapsed', String(collapsed));
+    writeRawLocalStorage('astra-sidebar-collapsed', String(collapsed));
     set({ sidebarCollapsed: collapsed });
   },
   setAssetsPanelCollapsed: (v) => {
-    localStorage.setItem('astra-panel-assets-collapsed', String(v));
+    writeRawLocalStorage('astra-panel-assets-collapsed', String(v));
     set({ isAssetsPanelCollapsed: v });
   },
 }));

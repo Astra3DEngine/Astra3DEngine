@@ -10,6 +10,8 @@
  * @typedef {{ id: number, message: string, type: ToastType, duration: number }} ToastItem
  */
 
+import { generateId } from '../utils/id.js';
+
 class ToastManager {
   constructor() {
     /** @type {ToastItem[]} */
@@ -29,7 +31,7 @@ class ToastManager {
    * @returns {number} toast id
    */
   show(message, type = 'info', duration = 3000) {
-    const id = Date.now() + Math.random();
+    const id = generateId();
     this.toasts = [...this.toasts, { id, message, type, duration }];
     this._emit();
     return id;

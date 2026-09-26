@@ -13,6 +13,7 @@ import IconDelete from '../assets/icons/editor/delete.svg?react';
 import IconRename from '../assets/icons/editor/rename.svg?react';
 import IconPlus from '../assets/icons/editor/plus.svg?react';
 import { tip } from '../lib/tooltip.js';
+import { getBasename } from '../utils/id.js';
 
 const getMimeType = (filename) => {
   const ext = filename.split('.').pop()?.toLowerCase();
@@ -28,12 +29,6 @@ const getMimeType = (filename) => {
     bmp: 'image/bmp',
   };
   return mimeTypes[ext] || 'application/octet-stream';
-};
-
-const getBasename = (filePath) => {
-  if (!filePath) return '';
-  const parts = filePath.split(/[/\\]/);
-  return parts[parts.length - 1] || '';
 };
 
 /**

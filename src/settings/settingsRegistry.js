@@ -141,13 +141,6 @@ export function initBuiltInSettings() {
       ],
     },
     {
-      key: 'language',
-      defaultValue: 'zh',
-      category: 'general',
-      label: 'settings.language',
-      type: 'select',
-    },
-    {
       key: 'autosaveEnabled',
       defaultValue: true,
       category: 'autosave',
@@ -178,10 +171,6 @@ export function initBuiltInSettings() {
     const legacySnap = localStorage.getItem('astra-max-snapshots');
     if (legacySnap !== null) {
       Settings.set('maxSnapshots', parseInt(legacySnap, 10) || 10);
-    }
-    const legacyLocale = localStorage.getItem('astra-locale');
-    if (legacyLocale) {
-      Settings.set('language', legacyLocale);
     }
   }
 }

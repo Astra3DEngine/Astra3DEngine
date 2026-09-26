@@ -7,25 +7,7 @@
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { PROJECT_FORMAT_VERSION, ENGINE_META } from '../meta.js';
-
-/**
- * 生成 GUID
- *
- * GUID（全局唯一标识符）用于给场景对象、相机、光源等生成唯一 ID。
- * 这个实现使用 Math.random() 生成随机数，严格来说不是真正的 GUID，但足够满足编辑器需求。
- *
- * 为什么不用 crypto.randomUUID()？那个 API 更安全，但兼容性稍差，
- * 编辑器场景不需要那么高的安全性，这个简单实现足够用了。
- *
- * @returns {string} 唯一标识符
- */
-export function generateGUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+import { generateGUID } from './id.js';
 
 /**
  * 创建项目清单
@@ -85,10 +67,19 @@ export async function exportProjectAsAstra(projectData, filename) {
   };
   zip.file('project.json', JSON.stringify(projectJson, null, 2));
 
+  // 兼容多场景（{ scenes: [...] }）与旧单场景（{ scene: { objects } }）两种输入
+  const scenes = Array.isArray(projectData.scenes) ? projectData.scenes : null;
+  const mainScene = scenes
+    ? scenes.find((s) => s.id === projectData.mainScene) ||
+      scenes.find((s) => s.isMain) ||
+      scenes[0]
+    : null;
+  const sceneObjects = mainScene ? mainScene.objects : projectData.scene?.objects || [];
+
   const sceneData = {
     version: PROJECT_FORMAT_VERSION,
-    id: `scene-${generateGUID()}`,
-    name: 'Main Scene',
+    id: `scene-${mainScene?.id || generateGUID()}`,
+    name: mainScene?.name || 'Main Scene',
     settings: {
       ambientLight: {
         color: '#ffffff',
@@ -102,8 +93,9 @@ export async function exportProjectAsAstra(projectData, filename) {
         near: 10,
         far: 100,
       },
+      ...(mainScene?.settings || {}),
     },
-    objects: (projectData.scene?.objects || []).map((obj) => ({
+    objects: sceneObjects.map((obj) => ({
       id: obj.id,
       name: obj.name,
       type: obj.type,

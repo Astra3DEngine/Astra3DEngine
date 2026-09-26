@@ -130,10 +130,6 @@
   line-height: 1.4;
 }
 
-.scene-settings-panel {
-  /* 场景设置面板样式，继承 inspector-section 的样式喵！ */
-}
-
 .inspector-prefab-section {
   background-color: var(--bg-dark);
   border-radius: 6px;
@@ -377,10 +373,6 @@
 }
 
 .inspector-sidebar-btn:hover .inspector-sidebar-icon {
-  color: var(--text-primary);
-}
-
-.inspector-sidebar-btn.active .inspector-sidebar-icon {
   color: var(--text-primary);
 }
 

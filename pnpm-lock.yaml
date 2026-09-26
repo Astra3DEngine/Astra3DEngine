@@ -41,9 +41,6 @@ dependencies:
   react-rnd:
     specifier: ^10.5.3
     version: 10.5.3(react-dom@18.3.1)(react@18.3.1)
-  react-tooltip:
-    specifier: ^6.0.8
-    version: 6.0.8(react-dom@18.3.1)(react@18.3.1)
   three:
     specifier: ^0.160.0
     version: 0.160.1
@@ -775,23 +772,6 @@ packages:
       '@noble/hashes':
         optional: true
     dev: true
-
-  /@floating-ui/core@1.8.0:
-    resolution: {integrity: sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ==}
-    dependencies:
-      '@floating-ui/utils': 0.2.12
-    dev: false
-
-  /@floating-ui/dom@1.7.6:
-    resolution: {integrity: sha512-9gZSAI5XM36880PPMm//9dfiEngYoC6Am2izES1FF406YFsjvyBMmeJ2g4SAju3xWwtuynNRFL2s9hgxpLI5SQ==}
-    dependencies:
-      '@floating-ui/core': 1.8.0
-      '@floating-ui/utils': 0.2.12
-    dev: false
-
-  /@floating-ui/utils@0.2.12:
-    resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
-    dev: false
 
   /@humanfs/core@0.19.2:
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -4274,18 +4254,6 @@ packages:
       react-dom: 18.3.1(react@18.3.1)
       react-draggable: 4.7.2(react-dom@18.3.1)(react@18.3.1)
       tslib: 2.6.2
-    dev: false
-
-  /react-tooltip@6.0.8(react-dom@18.3.1)(react@18.3.1):
-    resolution: {integrity: sha512-VPjtBPyoFwq72QVE6GYB/LtfEg/mnFBHqL0nD0oNNmjH8EZYFyBwgnFKNCOp5zCte45k1weXjKc0wXE6NICpfg==}
-    peerDependencies:
-      react: '>=16.14.0'
-      react-dom: '>=16.14.0'
-    dependencies:
-      '@floating-ui/dom': 1.7.6
-      clsx: 2.1.1
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
     dev: false
 
   /react-transition-state@2.4.0(react-dom@18.3.1)(react@18.3.1):

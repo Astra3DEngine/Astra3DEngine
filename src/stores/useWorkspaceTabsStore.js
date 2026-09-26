@@ -5,9 +5,10 @@
  */
 
 import { create } from 'zustand';
+import { readRawLocalStorage, writeRawLocalStorage } from '../utils/localstorage.js';
 
 const readActiveTab = () => {
-  const saved = localStorage.getItem('astra-active-tab');
+  const saved = readRawLocalStorage('astra-active-tab', null);
   return saved === 'code' || saved === 'preview' ? saved : 'preview';
 };
 
@@ -19,7 +20,7 @@ export const WORKSPACE_TABS = [
 export const useWorkspaceTabsStore = create((set) => ({
   activeTab: readActiveTab(),
   setActiveTab: (id) => {
-    localStorage.setItem('astra-active-tab', id);
+    writeRawLocalStorage('astra-active-tab', id);
     set({ activeTab: id });
   },
 }));

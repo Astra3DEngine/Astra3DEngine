@@ -13,6 +13,17 @@
   background-color: var(--accent-hover);
 }
 
+/* 主操作按钮（高亮主题色） */
+.btn-primary {
+  background-color: var(--accent-active);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background-color: var(--theme-color);
+  filter: brightness(1.1);
+}
+
 .btn-small {
   padding: 3px 7px;
   font-size: 10px;

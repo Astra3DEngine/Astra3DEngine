@@ -135,53 +135,6 @@
   font-weight: 600;
 }
 
-.context-menu {
-  background-color: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  min-width: 160px;
-  padding: 2px 0;
-}
-
-.context-menu-item {
-  padding: 6px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background-color 0.1s;
-}
-
-.context-menu-item:hover {
-  background-color: var(--accent);
-}
-
-.context-menu-item.context-menu-danger {
-  color: #f44336;
-}
-
-.context-menu-item.context-menu-danger:hover {
-  background-color: rgba(244, 67, 54, 0.15);
-}
-
-.context-menu-divider {
-  height: 1px;
-  background-color: var(--border);
-  margin: 4px 0;
-}
-
-.context-menu-icon {
-  width: 14px;
-  height: 14px;
-  vertical-align: middle;
-  margin-right: 6px;
-}
-
-.context-menu-disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
 .hierarchy-rename-input {
   flex: 1;
   background-color: var(--bg-dark);
@@ -388,12 +341,6 @@
   flex-shrink: 0;
 }
 
-.scene-object-count {
-  font-size: 11px;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
 .scene-selector-divider {
   height: 1px;
   background-color: var(--border);
@@ -406,18 +353,6 @@
 
 .scene-create-new:hover {
   background-color: rgba(64, 120, 192, 0.15);
-}
-
-.scene-rename-input {
-  flex: 1;
-  background-color: var(--bg-dark);
-  border: 1px solid var(--accent-active);
-  border-radius: 3px;
-  padding: 2px 6px;
-  color: var(--text-primary);
-  font-size: 12px;
-  outline: none;
-  min-width: 0;
 }
 
 /* ========== 多场景系统：场景选择器样式结束喵！ ========== */

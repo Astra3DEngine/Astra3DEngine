@@ -52,30 +52,4 @@ export const ENGINE_META = {
   projectFormatVersion: PROJECT_FORMAT_VERSION,
 };
 
-/**
- * 获取完整的引擎信息字符串
- * @returns {string}
- */
-export function getEngineInfo() {
-  return `${ENGINE_NAME} ${ENGINE_VERSION}\n${ENGINE_DESCRIPTION}`;
-}
-
-/**
- * 获取项目格式版本信息
- * @returns {string}
- */
-export function getProjectFormatVersion() {
-  return PROJECT_FORMAT_VERSION;
-}
-
-/**
- * 检查项目格式版本是否兼容
- * @param {string} version - 项目文件中的版本号
- * @returns {boolean}
- */
-export function isProjectFormatCompatible(version) {
-  const supportedVersions = ['0.1.0', '1.0.0'];
-  return supportedVersions.includes(version);
-}
-
 export default ENGINE_META;

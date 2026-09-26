@@ -37,10 +37,6 @@ body {
   overflow: hidden;
 }
 
-.bottom-area {
-  flex-shrink: 0;
-}
-
 input[type='color']::-webkit-color-swatch {
   border: none;
 }

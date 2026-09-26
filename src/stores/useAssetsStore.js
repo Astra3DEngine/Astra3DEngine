@@ -193,9 +193,7 @@ export const useAssetsStore = create((set, get) => ({
     const manager = new THREE.LoadingManager();
     manager.setURLModifier((url) => {
       const resolved = resolveGltfResourceUrl(url, urlMap);
-      if (resolved !== url) {
-        console.log(`GLTF resource mapped: "${url}" -> "${resolved}"`);
-      } else if (!url.startsWith('blob:') && !url.startsWith('data:')) {
+      if (resolved === url && !url.startsWith('blob:') && !url.startsWith('data:')) {
         console.warn(`GLTF resource not found in package: "${url}"`);
       }
       return resolved;
@@ -227,7 +225,6 @@ export const useAssetsStore = create((set, get) => ({
             prepareModelScene(gltf.scene);
 
             set((s) => ({ assets: [...s.assets, asset] }));
-            console.log(`GLTF imported: ${asset.name} (scenes handled: ok)`);
           } catch (parseErr) {
             console.error('Error preparing GLTF scene:', parseErr);
           }

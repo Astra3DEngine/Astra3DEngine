@@ -15,12 +15,7 @@ import { useProjectStore } from '../stores/useProjectStore.js';
 import { msg } from '../i18n/index.js';
 import { modal } from './ModalManager.js';
 import { Toast } from './ToastManager.js';
-
-const getBasename = (filePath) => {
-  if (!filePath) return '';
-  const parts = filePath.split(/[/\\]/);
-  return parts[parts.length - 1] || '';
-};
+import { getBasename } from '../utils/id.js';
 
 /**
  * @typedef {Object} ProjectFileServiceOptions
@@ -418,8 +413,7 @@ export class ProjectFileService {
   async exportAsAstra() {
     try {
       const projectData = this.getProjectData();
-      const filename = await exportProjectAsAstra(projectData, projectData.name + '.astra');
-      console.log('Project exported as:', filename);
+      await exportProjectAsAstra(projectData, projectData.name + '.astra');
     } catch (error) {
       console.error('Export failed:', error);
       await this.dialog.alert('导出失败: ' + error.message, 'Error');

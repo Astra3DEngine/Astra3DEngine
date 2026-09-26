@@ -5,6 +5,8 @@
  * @module lib/ModalManager
  */
 
+import { generateId } from '../utils/id.js';
+
 class ModalManager {
   constructor() {
     /** @type {Array<{id: number, Component: Function, props: Object, close: Function}>} */
@@ -28,7 +30,7 @@ class ModalManager {
     if (this.stack.some((m) => m.Component === Component)) {
       return Promise.resolve(null);
     }
-    const id = Date.now() + Math.random();
+    const id = generateId();
     return new Promise((resolve) => {
       const close = (result) => {
         if (!this.stack.some((m) => m.id === id)) return;
