@@ -8,6 +8,7 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { PROJECT_FORMAT_VERSION, ENGINE_META } from '../meta.js';
 import { generateGUID } from './id.js';
+import { editorObjectToEngineObject, engineObjectToEditorObject } from './projectSchema.js';
 
 /**
  * 创建项目清单
@@ -95,27 +96,7 @@ export async function exportProjectAsAstra(projectData, filename) {
       },
       ...(mainScene?.settings || {}),
     },
-    objects: sceneObjects.map((obj) => ({
-      id: obj.id,
-      name: obj.name,
-      type: obj.type,
-      active: true,
-      transform: {
-        position: obj.position || [0, 0, 0],
-        rotation: obj.rotation || [0, 0, 0],
-        scale: obj.scale || [1, 1, 1],
-      },
-      parentId: obj.parentId || null,
-      children: [],
-      components: [
-        {
-          type: 'MeshRenderer',
-          color: obj.color || '#ffffff',
-        },
-      ],
-      prefabId: obj.prefabId || null,
-      overrides: obj.overrides || null,
-    })),
+    objects: sceneObjects.map(editorObjectToEngineObject),
     cameras: [
       {
         id: `cam-${generateGUID()}`,
@@ -289,18 +270,7 @@ export async function importProjectFromAstra(file) {
     }
   }
 
-  const objects = sceneData.objects.map((obj) => ({
-    id: obj.id,
-    name: obj.name,
-    type: obj.type,
-    position: obj.transform?.position || [0, 0, 0],
-    rotation: obj.transform?.rotation || [0, 0, 0],
-    scale: obj.transform?.scale || [1, 1, 1],
-    color: obj.components?.[0]?.color || '#ffffff',
-    parentId: obj.parentId || null,
-    prefabId: obj.prefabId || null,
-    overrides: obj.overrides || null,
-  }));
+  const objects = sceneData.objects.map(engineObjectToEditorObject);
 
   return {
     version: projectJson.version,
@@ -308,9 +278,18 @@ export async function importProjectFromAstra(file) {
     description: projectJson.description,
     author: projectJson.author,
     createdAt: projectJson.createdAt,
-    scene: {
-      objects,
-    },
+    mainScene: 'scene-main-001',
+    scenes: [
+      {
+        id: 'scene-main-001',
+        name: sceneData.name || 'Main Scene',
+        isMain: true,
+        createdAt: projectJson.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        settings: sceneData.settings,
+        objects,
+      },
+    ],
     prefabs,
     settings: sceneData.settings,
   };

@@ -37,20 +37,8 @@ function openDatabase() {
 }
 
 /**
- * 保存快照到 IndexedDB
- *
- * 自动清理旧快照：先保存新快照，然后检查总数是否超过限制，
- * 如果超过，删除最旧的快照。
- *
- * 在 transaction.oncomplete 里清理，因为 put 操作完成后才能获取准确的快照数量，
- * 如果在 put 之前清理，可能会误删。
- *
- * IndexedDB 的 transaction 很特殊：transaction.oncomplete 在所有操作完成后触发，
- * 但 request.onsuccess 在单个操作完成后就触发，所以清理逻辑要放在 transaction.oncomplete 里。
- *
- * 清理逻辑得暴力起来：每次保存都要重新排序，但快照数量通常不多（默认 10 个），
- * 性能影响很小，我的垃圾电脑也没卡过，优化万岁。
- *
+ * 自动清理旧快照：先保存新快照，然后检查总数是否超过限制，如果超过删除最旧的。
+ * 全程在同一个 readwrite 事务内完成（put → getAll → 删除超量），避免每次重复开库。
  * @param {Object} snapshot - 快照数据对象
  * @param {number} maxSnapshots - 最大快照数量
  * @returns {Promise<void>}
@@ -61,21 +49,28 @@ async function saveSnapshotToIndexedDB(snapshot, maxSnapshots) {
     const transaction = db.transaction([STORE_NAME], 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
 
-    const request = store.put(snapshot);
+    const putRequest = store.put(snapshot);
+    putRequest.onerror = () => reject(putRequest.error);
 
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
-
-    transaction.oncomplete = async () => {
-      const allSnapshots = await getAllSnapshotsFromIndexedDB();
-      if (allSnapshots.length > maxSnapshots) {
-        const toDelete = allSnapshots.sort((a, b) => b.savedAt - a.savedAt).slice(maxSnapshots);
-
+    // put 完成后在同一事务内读取全部并按时间清理超量快照
+    putRequest.onsuccess = () => {
+      const getAllRequest = store.getAll();
+      getAllRequest.onerror = () => reject(getAllRequest.error);
+      getAllRequest.onsuccess = () => {
+        const all = getAllRequest.result || [];
+        if (all.length <= maxSnapshots) return;
+        const toDelete = all.sort((a, b) => b.savedAt - a.savedAt).slice(maxSnapshots);
         for (const snap of toDelete) {
-          await deleteSnapshotFromIndexedDB(snap.id);
+          const deleteRequest = store.delete(snap.id);
+          deleteRequest.onerror = () => reject(deleteRequest.error);
         }
-      }
+      };
+    };
+
+    transaction.onerror = () => reject(transaction.error);
+    transaction.oncomplete = () => {
       db.close();
+      resolve();
     };
   });
 }

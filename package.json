@@ -15,7 +15,7 @@
     "desktop:preview": "electron dist-electron/main.js",
     "icon:generate": "node scripts/generate-icons.js",
     "typecheck": "tsc -p tsconfig.json",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "check": "prettier --check .",
     "test": "vitest run",

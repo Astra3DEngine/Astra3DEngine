@@ -227,7 +227,7 @@ ipcMain.handle('fs:listDirectory', async (event, dirPath) => {
       let stats;
       try {
         stats = await fsp.stat(fullPath);
-      } catch (e) {
+      } catch (_e) {
         stats = null;
       }
       
@@ -394,7 +394,6 @@ ipcMain.handle('fs:getDrives', async () => {
       for (const line of mounts.split('\n')) {
         if (!line.trim()) continue;
         const parts = line.split(/\s+/);
-        const device = parts[0];
         const mountPoint = parts[1];
         const fsType = parts[2];
         if (!mountPoint || mountPoint === '/') continue;

@@ -12,6 +12,7 @@ export default function TerminalPlaceholder() {
     <div className="dock-terminal-placeholder">
       <div className="dock-terminal-title">{msg('dock.terminal')}</div>
       <div className="dock-terminal-hint">
+        {/* eslint-disable-next-line no-warning-comments -- 真实终端待接入 */}
         {/* TODO: 接入真实调试终端（xterm.js 等），支持输出/命令/日志 */}
         调试终端待实现。
       </div>

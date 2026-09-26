@@ -15,9 +15,6 @@ import ja from './ja.json';
 import ru from './ru.json';
 import la from './la.json';
 
-import pluginSettingsEn from './plugin-settings/en.json';
-import pluginSettingsZh from './plugin-settings/zh.json';
-
 const STORAGE_KEY = 'astra-locale';
 
 export const languages = [
@@ -34,28 +31,13 @@ const normalizeLanguage = (lng) => {
   return supportedLngs.includes(base) ? base : 'en';
 };
 
-/**
- * 合并基础翻译和插件设置翻译。
- * 注：插件设置翻译随插件系统重构一并保留为只读资源。
- * @param {Object} base
- * @param {Object} pluginSettings
- * @returns {Object}
- */
-function mergeMessages(base, pluginSettings) {
-  const merged = { ...base };
-  Object.entries(pluginSettings).forEach(([key, value]) => {
-    merged[`pluginSettings.${key}`] = value;
-  });
-  return merged;
-}
-
 i18next.use(LanguageDetector).init({
   resources: {
-    zh: { translation: mergeMessages(zh, pluginSettingsZh) },
-    en: { translation: mergeMessages(en, pluginSettingsEn) },
-    ja: { translation: mergeMessages(ja, pluginSettingsEn) },
-    ru: { translation: mergeMessages(ru, pluginSettingsEn) },
-    la: { translation: mergeMessages(la, pluginSettingsEn) },
+    zh: { translation: zh },
+    en: { translation: en },
+    ja: { translation: ja },
+    ru: { translation: ru },
+    la: { translation: la },
   },
   supportedLngs,
   fallbackLng: 'en',

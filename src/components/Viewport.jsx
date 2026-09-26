@@ -6,7 +6,7 @@
  * @module components/Viewport
  */
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
@@ -166,28 +166,24 @@ function Viewport({
     [onCameraTypeChange]
   );
 
-  // ===== ref 同步 =====
+  // ===== ref 同步（单一 effect 保持各 ref 为最新值） =====
   useEffect(() => {
     lightRenderingEnabledRef.current = lightRenderingEnabled;
-  }, [lightRenderingEnabled]);
-  useEffect(() => {
     cameraTypeRef.current = cameraType;
-  }, [cameraType]);
-  useEffect(() => {
     uniformScaleRef.current = uniformScale;
-  }, [uniformScale]);
-  useEffect(() => {
     objectsRef.current = objects;
-  }, [objects]);
-  useEffect(() => {
     assetsRef.current = assets || [];
-  }, [assets]);
-  useEffect(() => {
     selectedObjectRef.current = selectedObject;
-  }, [selectedObject]);
-  useEffect(() => {
     selectedObjectsRef.current = selectedObjects;
-  }, [selectedObjects]);
+  }, [
+    lightRenderingEnabled,
+    cameraType,
+    uniformScale,
+    objects,
+    assets,
+    selectedObject,
+    selectedObjects,
+  ]);
   useEffect(() => {
     onRecordHistoryRef.current = onRecordHistory;
   }, [onRecordHistory]);
@@ -1784,23 +1780,29 @@ function Viewport({
     }
   };
 
-  const tools = [
-    { id: 'select', labelKey: 'tool.select', icon: <IconSelect className="tool-icon" /> },
-    { id: 'move', labelKey: 'tool.move', icon: <IconMove className="tool-icon" /> },
-    { id: 'rotate', labelKey: 'tool.rotate', icon: <IconRotate className="tool-icon" /> },
-    { id: 'scale', labelKey: 'tool.scale', icon: <IconScale className="tool-icon" /> },
-  ];
+  const tools = useMemo(
+    () => [
+      { id: 'select', labelKey: 'tool.select', icon: <IconSelect className="tool-icon" /> },
+      { id: 'move', labelKey: 'tool.move', icon: <IconMove className="tool-icon" /> },
+      { id: 'rotate', labelKey: 'tool.rotate', icon: <IconRotate className="tool-icon" /> },
+      { id: 'scale', labelKey: 'tool.scale', icon: <IconScale className="tool-icon" /> },
+    ],
+    []
+  );
 
-  const cameraModeItems = [
-    {
-      label: msg('viewport.perspective'),
-      onClick: () => handleSetCameraType('perspective'),
-    },
-    {
-      label: msg('viewport.orthographic'),
-      onClick: () => handleSetCameraType('orthographic'),
-    },
-  ];
+  const cameraModeItems = useMemo(
+    () => [
+      {
+        label: msg('viewport.perspective'),
+        onClick: () => handleSetCameraType('perspective'),
+      },
+      {
+        label: msg('viewport.orthographic'),
+        onClick: () => handleSetCameraType('orthographic'),
+      },
+    ],
+    [handleSetCameraType]
+  );
 
   return (
     <div

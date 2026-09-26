@@ -42,18 +42,32 @@ async function getAllHandles() {
 }
 
 /**
- * 保存文件句柄
- * @param {Object} handle - 文件句柄对象
+ * 批量替换所有文件句柄（单事务：clear + 逐个 put）
+ * @param {Array<Object>} handles - 新句柄列表
  * @returns {Promise<void>}
  */
-async function saveHandle(handle) {
+async function replaceAllHandles(handles) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
-    const request = store.put(handle);
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
+    const clearRequest = store.clear();
+    clearRequest.onerror = () => reject(clearRequest.error);
+    clearRequest.onsuccess = () => {
+      let remaining = handles.length;
+      if (remaining === 0) {
+        resolve();
+        return;
+      }
+      for (const handle of handles) {
+        const putRequest = store.put(handle);
+        putRequest.onerror = () => reject(putRequest.error);
+        putRequest.onsuccess = () => {
+          remaining--;
+          if (remaining === 0) resolve();
+        };
+      }
+    };
   });
 }
 
@@ -96,11 +110,6 @@ async function clearAllHandles() {
  */
 export async function addRecentProject(name, fileHandle) {
   const handles = await getAllHandles();
-  const existingIndex = handles.findIndex((h) => h.name === name);
-
-  if (existingIndex !== -1) {
-    await deleteHandle(handles[existingIndex].id);
-  }
 
   const newHandle = {
     id: Date.now(),
@@ -114,10 +123,7 @@ export async function addRecentProject(name, fileHandle) {
     MAX_RECENT_PROJECTS
   );
 
-  await clearAllHandles();
-  for (const h of updated) {
-    await saveHandle(h);
-  }
+  await replaceAllHandles(updated);
 
   return updated.map((h) => ({ id: h.id, name: h.name, lastOpened: h.lastOpened }));
 }
