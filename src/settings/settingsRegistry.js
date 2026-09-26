@@ -39,16 +39,6 @@ class SettingsRegistry {
     return this;
   }
 
-  /** 注销某分类下的所有定义（插件刷新时清理） */
-  unregisterByCategory(category) {
-    for (const key of this.definitions.keys()) {
-      if (this.definitions.get(key).category === category) {
-        this.definitions.delete(key);
-      }
-    }
-    return this;
-  }
-
   /** 构建 store（幂等） */
   build() {
     if (this._store) return this._store;
@@ -79,11 +69,6 @@ class SettingsRegistry {
   get store() {
     if (!this._store) throw new Error('Settings not built yet. Call Settings.build() first.');
     return this._store;
-  }
-
-  /** React hook 访问（类似 zustand selector） */
-  use(selector) {
-    return this.store(selector);
   }
 
   get(key) {
@@ -120,9 +105,6 @@ class SettingsRegistry {
 
 /** 全局唯一设置注册表 */
 export const Settings = new SettingsRegistry();
-
-/** React hook 封装 */
-export const useSettings = (selector) => Settings.use(selector);
 
 /**
  * 注册内置设置（应用启动时调用）

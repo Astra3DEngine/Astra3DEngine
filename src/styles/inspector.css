@@ -195,17 +195,6 @@
   cursor: pointer;
 }
 
-.btn-secondary {
-  background-color: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-}
-
-.btn-secondary:hover {
-  background-color: var(--hover-bg);
-  color: var(--text-primary);
-}
-
 .inspector-clear-btn {
   width: 18px;
   height: 18px;

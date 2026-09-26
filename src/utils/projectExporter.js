@@ -9,6 +9,17 @@ import { saveAs } from 'file-saver';
 import { PROJECT_FORMAT_VERSION, ENGINE_META } from '../meta.js';
 import { generateGUID } from './id.js';
 import { editorObjectToEngineObject, engineObjectToEditorObject } from './projectSchema.js';
+import { Settings } from '../settings/settingsRegistry.js';
+import { getLocale } from '../i18n/index.js';
+
+const readSetting = (key, fallback) => {
+  try {
+    const value = Settings.get(key);
+    return value === undefined ? fallback : value;
+  } catch {
+    return fallback;
+  }
+};
 
 /**
  * 创建项目清单
@@ -167,9 +178,9 @@ export async function exportProjectAsAstra(projectData, filename) {
 
   const settings = {
     editor: {
-      theme: 'dark',
-      language: 'zh-CN',
-      autoSave: true,
+      theme: readSetting('theme', 'dark'),
+      language: getLocale(),
+      autoSave: readSetting('autosaveEnabled', true),
       autoSaveInterval: 60000,
     },
     viewport: {
@@ -186,15 +197,7 @@ export async function exportProjectAsAstra(projectData, filename) {
   };
   zip.file('settings.json', JSON.stringify(settings, null, 2));
 
-  const files = [
-    { path: 'project.json', size: JSON.stringify(projectJson).length },
-    { path: 'scenes/main.scene', size: JSON.stringify(sceneData).length },
-    { path: 'settings.json', size: JSON.stringify(settings).length },
-  ];
-
-  const manifest = createManifest(files);
-  zip.file('manifest.json', JSON.stringify(manifest, null, 2));
-
+  // manifest 基于 zip 内真实文件生成，避免遗漏 prefabs/README 等
   const readme = `# ${projectData.name || 'Untitled Project'}
 
 Created with Astra 3D Engine
@@ -205,10 +208,17 @@ Created with Astra 3D Engine
 - manifest.json - Project manifest
 
 ## Statistics
-- Total files: ${files.length}
+- Total files: ${zip.files.length}
 - Objects: ${sceneData.objects.length}
 `;
   zip.file('README.txt', readme);
+
+  const files = Object.keys(zip.files)
+    .filter((path) => !path.endsWith('/'))
+    .map((path) => ({ path, size: zip.file(path)?._data?.length || 0 }));
+
+  const manifest = createManifest(files);
+  zip.file('manifest.json', JSON.stringify(manifest, null, 2));
 
   const blob = await zip.generateAsync({
     type: 'blob',
@@ -237,6 +247,12 @@ export async function importProjectFromAstra(file) {
   }
 
   const projectJson = JSON.parse(projectJsonStr);
+
+  // 版本校验：仅接受已知格式版本
+  const SUPPORTED_VERSIONS = ['0.1.0', '1.0.0'];
+  if (!SUPPORTED_VERSIONS.includes(projectJson.version)) {
+    throw new Error(`Unsupported .astra format version: ${projectJson.version}`);
+  }
 
   const sceneStr = await zip.file('scenes/main.scene')?.async('string');
   if (!sceneStr) {
