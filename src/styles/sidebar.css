@@ -1,0 +1,148 @@
+﻿/* ===== VSCode 寮忎晶鏍?===== */
+.sidebar {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  min-height: 0;
+}
+
+.activity-bar {
+  width: 36px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
+  background-color: var(--bg-toolbar);
+  border-right: 1px solid var(--border);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.activity-bar-item {
+  width: 36px;
+  height: 36px;
+  padding: 0 0 0 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  border-radius: 0;
+  position: relative;
+  overflow: hidden;
+  transition: background-color 0.2s ease;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/* 宸︿晶婵€娲绘寚绀哄櫒锛圴SCode 椋庢牸锛岃创灞忓箷宸﹁竟缂橈級 */
+.activity-bar-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background-color: var(--theme-color);
+  transition: width 0.15s ease;
+}
+
+.activity-bar-item.active::before {
+  width: 2px;
+}
+
+.activity-bar-item:hover {
+  background-color: var(--bg-hover);
+}
+
+.activity-bar-item.active {
+  background-color: var(--bg-hover);
+}
+
+.activity-bar-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.activity-bar-item:hover .activity-bar-icon,
+.activity-bar-item.active .activity-bar-icon {
+  color: var(--text-primary);
+}
+
+.sidebar-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 24px;
+  padding: 0 4px 0 12px;
+  background-color: var(--bg-toolbar);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.sidebar-title-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.sidebar-action-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.sidebar-action-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar-action-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.sidebar-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}

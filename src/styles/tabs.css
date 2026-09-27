@@ -1,0 +1,95 @@
+﻿/* ===== 椤堕儴缂栬緫鍣?Tab 鏉★紙Godot 椋庢牸锛氬眳涓函鍥炬爣锛?===== */
+.editor-tab-bar {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  height: 32px;
+  flex-shrink: 0;
+  background-color: var(--bg-toolbar);
+  border-bottom: 1px solid var(--border);
+  padding: 0;
+}
+
+.editor-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+/* 椤堕儴婵€娲绘寚绀哄櫒锛堝悓渚ф爮鎸夐挳椋庢牸锛?*/
+.editor-tab::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  background-color: var(--theme-color);
+  transition: height 0.15s ease;
+}
+
+.editor-tab.active::before {
+  height: 2px;
+}
+
+.editor-tab:hover {
+  background-color: var(--bg-hover);
+}
+
+.editor-tab.active {
+  background-color: var(--bg-hover);
+}
+
+.editor-tab-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.editor-tab:hover .editor-tab-icon,
+.editor-tab.active .editor-tab-icon {
+  color: var(--text-primary);
+}
+
+/* 缂栬緫鍣ㄥ唴瀹瑰尯锛坱ab 鏍忎笅鏂癸級 */
+.center-area-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+/* 浠ｇ爜缂栬緫鍣ㄥ崰浣?*/
+.code-editor-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  background-color: var(--bg-dark);
+}
+
+.code-editor-title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.code-editor-hint {
+  opacity: 0.7;
+  font-size: 12px;
+}

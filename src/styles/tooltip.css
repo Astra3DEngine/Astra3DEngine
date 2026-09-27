@@ -1,0 +1,95 @@
+/* 全局 Tooltip：矩形边框 + 双层三角箭头，带淡入动画 */
+.astra-tooltip {
+  position: fixed;
+  z-index: 3000;
+  max-width: 320px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  border-radius: 4px;
+  background-color: var(--bg-toolbar);
+  color: var(--text-primary);
+  border: 1px solid var(--text-muted);
+  pointer-events: none;
+  user-select: none;
+  white-space: normal;
+  overflow-wrap: break-word;
+  animation: astra-tooltip-in 0.18s ease-out;
+}
+
+@keyframes astra-tooltip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 外层三角 = 边框色（比内层大 1px），内层三角 = 气泡背景色 */
+.astra-tooltip::before {
+  content: '';
+  position: absolute;
+  border: 8px solid transparent;
+}
+.astra-tooltip::after {
+  content: '';
+  position: absolute;
+  border: 7px solid transparent;
+}
+
+/* 气泡在元素上方 → 箭头在底部，尖朝下 */
+.astra-tooltip-top::before {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-color: var(--text-muted);
+}
+.astra-tooltip-top::after {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-color: var(--bg-toolbar);
+}
+
+/* 气泡在元素下方 → 箭头在顶部，尖朝上 */
+.astra-tooltip-bottom::before {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-color: var(--text-muted);
+}
+.astra-tooltip-bottom::after {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-color: var(--bg-toolbar);
+}
+
+/* 气泡在元素左侧 → 箭头在右侧，尖朝右 */
+.astra-tooltip-left::before {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left-color: var(--text-muted);
+}
+.astra-tooltip-left::after {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left-color: var(--bg-toolbar);
+}
+
+/* 气泡在元素右侧 → 箭头在左侧，尖朝左 */
+.astra-tooltip-right::before {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-right-color: var(--text-muted);
+}
+.astra-tooltip-right::after {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-right-color: var(--bg-toolbar);
+}

@@ -1,9 +1,0 @@
-{
-  "name": "Auto Save",
-  "description": "Automatically save scene to local storage to prevent data loss",
-  "activated": "Auto-save plugin activated",
-  "deactivated": "Auto-save plugin deactivated",
-  "started": "Auto-save started, interval: {0} seconds",
-  "saved": "Auto-save completed",
-  "failed": "Auto-save failed: {0}"
-}

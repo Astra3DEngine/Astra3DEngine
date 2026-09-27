@@ -1,37 +1,41 @@
-/**
+﻿/**
  * @file components/Toolbar.jsx
  * @description 工具栏组件，提供菜单栏、文件操作和窗口控制
  * @module components/Toolbar
- * 
- * 工具栏可以拖的，Electron 场景下。
+ *
+ * 工具栏可以拖的，Electron 场景下也可拖动。
  */
 
 import React, { useRef, useEffect, useState } from 'react';
 import { msg, languages, getLocale } from '../i18n/index.js';
 import DropdownMenu from './DropdownMenu.jsx';
+import IconLogo from '../assets/icons/logo/logo.svg?react';
 import InfoModal from './InfoModal.jsx';
+import useDropdownMenu from '../hooks/useDropdownMenu.js';
+import { modal as modalService } from '../lib/ModalManager.js';
+import { shortcuts, formatShortcutDisplay } from '../lib/ShortcutManager.js';
+import { tip } from '../lib/tooltip.js';
 
-import IconNewProject from '../icons/new-project.svg?react';
-import IconOpenProject from '../icons/open-project.svg?react';
-import IconSave from '../icons/save.svg?react';
-import IconSaveAs from '../icons/save-as.svg?react';
-import IconUndo from '../icons/undo.svg?react';
-import IconRedo from '../icons/redo.svg?react';
-import IconTheme from '../icons/theme.svg?react';
-import IconLanguage from '../icons/language.svg?react';
-import IconSettings from '../icons/settings.svg?react';
-import IconPuzzle from '../icons/puzzle.svg?react';
-import IconPlay from '../icons/play.svg?react';
-import IconStop from '../icons/stop.svg?react';
-import IconImport from '../icons/import.svg?react';
-import IconExport from '../icons/export.svg?react';
-import IconSnapshot from '../icons/snapshot.svg?react';
-import IconRecent from '../icons/recent.svg?react';
+import IconNewProject from '../assets/icons/editor/new-project.svg?react';
+import IconOpenProject from '../assets/icons/editor/open-project.svg?react';
+import IconSave from '../assets/icons/editor/save.svg?react';
+import IconSaveAs from '../assets/icons/editor/save-as.svg?react';
+import IconUndo from '../assets/icons/editor/undo.svg?react';
+import IconRedo from '../assets/icons/editor/redo.svg?react';
+import IconTheme from '../assets/icons/misc/theme.svg?react';
+import IconLanguage from '../assets/icons/misc/language.svg?react';
+import IconSettings from '../assets/icons/editor/settings.svg?react';
+import IconPlay from '../assets/icons/viewport/play.svg?react';
+import IconStop from '../assets/icons/viewport/stop.svg?react';
+import IconImport from '../assets/icons/editor/import.svg?react';
+import IconExport from '../assets/icons/editor/export.svg?react';
+import IconSnapshot from '../assets/icons/editor/snapshot.svg?react';
+import IconRecent from '../assets/icons/editor/recent.svg?react';
 
-import IconWindowMinimize from '../icons/window-minimize.svg?react';
-import IconWindowMaximize from '../icons/window-maximize.svg?react';
-import IconWindowRestore from '../icons/window-restore.svg?react';
-import IconWindowClose from '../icons/window-close.svg?react';
+import IconWindowMinimize from '../assets/icons/window/window-minimize.svg?react';
+import IconWindowMaximize from '../assets/icons/window/window-maximize.svg?react';
+import IconWindowRestore from '../assets/icons/window/window-restore.svg?react';
+import IconWindowClose from '../assets/icons/window/window-close.svg?react';
 
 /**
  * 工具栏组件
@@ -54,16 +58,14 @@ import IconWindowClose from '../icons/window-close.svg?react';
  * @param {Function} props.onOpenPreferences - 打开设置回调
  * @param {Array} props.recentProjects - 最近项目列表
  * @param {Function} props.onOpenRecentProject - 打开最近项目回调
- * @param {Function} props.onExportAsAstra - 导出为 .astra 回调
+ * @param {Function} props.onExportAsAstra - 导出 ..astra 回调
  * @param {Function} props.onImportAstra - 导入 .astra 回调
  * @param {Function} props.onOpenSnapshots - 打开快照管理回调
- * @param {Function} props.onOpenPluginSettings - 打开插件设置回调
  * @returns {JSX.Element} 工具栏组件
  */
-function Toolbar({ 
-  isPlaying, 
-  setIsPlaying, 
-  onToggleLocale,
+function Toolbar({
+  isPlaying,
+  setIsPlaying,
   onSetLocale,
   onSaveProject,
   onSaveAsProject,
@@ -82,56 +84,48 @@ function Toolbar({
   onExportAsAstra,
   onImportAstra,
   onOpenSnapshots,
-  onOpenPluginSettings
 }) {
   const fileMenuRef = useRef(null);
   const editMenuRef = useRef(null);
   const viewMenuRef = useRef(null);
   const runMenuRef = useRef(null);
-  const logoMenuRef = useRef(null);
-  
+
   const [isMaximized, setIsMaximized] = useState(false);
   const [isElectron, setIsElectron] = useState(false);
-  const [logoMenuOpen, setLogoMenuOpen] = useState(false);
-  const [infoModalOpen, setInfoModalOpen] = useState(false);
-  const [infoModalType, setInfoModalType] = useState('about');
+  const modal = modalService;
+
+  const logoMenu = useDropdownMenu();
+
+  // 订阅快捷键绑定变化，让菜单项快捷键提示跟随热设置
+  const [, setShortcutTick] = useState(0);
+  useEffect(() => shortcuts.subscribe(() => setShortcutTick((t) => t + 1)), []);
+  const shortcutOf = (id) => formatShortcutDisplay(shortcuts.getBinding(id));
 
   useEffect(() => {
     const electronDetected = typeof window !== 'undefined' && !!window.electronAPI;
     setIsElectron(electronDetected);
-    
+
     if (electronDetected) {
       window.electronAPI.isMaximized().then(setIsMaximized);
-      
+
       window.electronAPI.onMaximize(() => setIsMaximized(true));
       window.electronAPI.onUnmaximize(() => setIsMaximized(false));
     }
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (logoMenuRef.current && !logoMenuRef.current.contains(event.target)) {
-        setLogoMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
     const handleMenuShortcut = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-      
+
       if (e.altKey && !e.ctrlKey && !e.shiftKey) {
         const key = e.key.toLowerCase();
         const allRefs = [fileMenuRef, editMenuRef, viewMenuRef, runMenuRef];
-        
+
         if (key === 'f' || key === 'e' || key === 'v' || key === 'r') {
           e.preventDefault();
-          allRefs.forEach(ref => ref.current?.close());
+          allRefs.forEach((ref) => ref.current?.close());
           // 快捷键舒爽啊
-          
+
           if (key === 'f') fileMenuRef.current?.open();
           else if (key === 'e') editMenuRef.current?.open();
           else if (key === 'v') viewMenuRef.current?.open();
@@ -148,110 +142,108 @@ function Toolbar({
     {
       label: msg('menu.newProject'),
       icon: <IconNewProject className="menu-icon" />,
-      shortcut: 'Ctrl+Alt+N',
-      onClick: onNewProject
+      shortcut: shortcutOf('file.new'),
+      onClick: onNewProject,
     },
     {
       label: msg('menu.openProject'),
       icon: <IconOpenProject className="menu-icon" />,
-      shortcut: 'Ctrl+O',
-      onClick: onLoadProject
+      shortcut: shortcutOf('file.open'),
+      onClick: onLoadProject,
     },
     {
       label: msg('menu.importAstra'),
       icon: <IconImport className="menu-icon" />,
-      onClick: onImportAstra
+      onClick: onImportAstra,
     },
     { divider: true },
     {
       label: msg('menu.saveProject'),
       icon: <IconSave className="menu-icon" />,
-      shortcut: 'Ctrl+S',
-      onClick: onSaveProject
+      shortcut: shortcutOf('file.save'),
+      onClick: onSaveProject,
     },
     {
       label: msg('menu.saveAs'),
       icon: <IconSaveAs className="menu-icon" />,
-      shortcut: 'Ctrl+Shift+S',
-      onClick: onSaveAsProject
+      shortcut: shortcutOf('file.saveAs'),
+      onClick: onSaveAsProject,
     },
     {
       label: msg('menu.exportAstra'),
       icon: <IconExport className="menu-icon" />,
-      onClick: onExportAsAstra
+      onClick: onExportAsAstra,
     },
     { divider: true },
     {
       label: msg('menu.snapshots'),
       icon: <IconSnapshot className="menu-icon" />,
-      onClick: onOpenSnapshots
+      onClick: onOpenSnapshots,
     },
-    ...(recentProjects.length > 0 ? [
-      { divider: true },
-      {
-        label: msg('menu.recentProjects'),
-        icon: <IconRecent className="menu-icon" />,
-        submenu: recentProjects.slice(0, 5).map(project => ({
-          label: project.name,
-          hint: new Date(project.lastOpened).toLocaleDateString(),
-          onClick: () => onOpenRecentProject && onOpenRecentProject(project)
-        }))
-      }
-    ] : [])
+    ...(recentProjects.length > 0
+      ? [
+          { divider: true },
+          {
+            label: msg('menu.recentProjects'),
+            icon: <IconRecent className="menu-icon" />,
+            submenu: recentProjects.slice(0, 5).map((project) => ({
+              label: project.name,
+              hint: new Date(project.lastOpened).toLocaleDateString(),
+              onClick: () => onOpenRecentProject && onOpenRecentProject(project),
+            })),
+          },
+        ]
+      : []),
   ];
 
   const editMenuItems = [
     {
       label: msg('menu.undo'),
       icon: <IconUndo className="menu-icon" />,
-      shortcut: 'Ctrl+Z',
+      shortcut: shortcutOf('edit.undo'),
       disabled: !canUndo,
-      onClick: onUndo
+      onClick: onUndo,
     },
     {
       label: msg('menu.redo'),
       icon: <IconRedo className="menu-icon" />,
-      shortcut: 'Ctrl+Y',
+      shortcut: shortcutOf('edit.redo'),
       disabled: !canRedo,
-      onClick: onRedo
-    }
+      onClick: onRedo,
+    },
   ];
 
   const viewMenuItems = [
     {
       label: theme === 'dark' ? msg('menu.lightMode') : msg('menu.darkMode'),
       icon: <IconTheme className="menu-icon" />,
-      onClick: onToggleTheme
+      onClick: onToggleTheme,
     },
     {
       label: msg('menu.language'),
       icon: <IconLanguage className="menu-icon" />,
-      submenu: languages.map(lang => ({
+      submenu: languages.map((lang) => ({
         label: lang.nativeName,
         active: getLocale() === lang.code,
-        onClick: () => onSetLocale(lang.code)
-      }))
+        onClick: () => onSetLocale(lang.code),
+      })),
     },
     { divider: true },
     {
       label: msg('menu.preferences'),
       icon: <IconSettings className="menu-icon" />,
-      onClick: onOpenPreferences
+      shortcut: shortcutOf('preferences.open'),
+      onClick: onOpenPreferences,
     },
-    {
-      label: msg('menu.plugins') || '插件管理',
-      icon: <IconPuzzle className="menu-icon" />,
-      onClick: onOpenPluginSettings
-    }
   ];
 
   const runMenuItems = [
     {
       label: isPlaying ? msg('toolbar.stop') : msg('toolbar.play'),
       icon: isPlaying ? <IconStop className="menu-icon" /> : <IconPlay className="menu-icon" />,
-      shortcut: 'F5',
-      onClick: () => setIsPlaying(!isPlaying)
-    }
+      shortcut: shortcutOf('view.togglePlay'),
+      onClick: () => setIsPlaying(!isPlaying),
+    },
   ];
 
   const handleMinimize = () => {
@@ -276,82 +268,89 @@ function Toolbar({
     if (e.altKey && isElectron) {
       window.electronAPI.openGame();
     } else {
-      setLogoMenuOpen(!logoMenuOpen);
+      if (logoMenu.isOpen) {
+        logoMenu.close();
+      } else {
+        const rect = e.currentTarget.getBoundingClientRect();
+        logoMenu.openAt(rect.left, rect.bottom);
+      }
     }
   };
 
+  // 若任一菜单已打开，鼠标移到其他菜单项时自动切换展开
+  const menuRefs = [fileMenuRef, editMenuRef, viewMenuRef, runMenuRef];
+  const handleMenuHover = (targetRef) => {
+    const anyOpen = menuRefs.some((ref) => ref.current?.isOpen());
+    if (!anyOpen) return;
+    menuRefs.forEach((ref) => ref.current?.close());
+    targetRef.current?.open();
+  };
+
   const handleLogoMenuItemClick = (action) => {
-    setLogoMenuOpen(false);
+    logoMenu.close();
     if (action === 'source') {
       window.open('https://github.com/LanwyWriteXU/Astra3DEngine', '_blank');
     } else {
-      setInfoModalType(action);
-      setInfoModalOpen(true);
+      modal.open(InfoModal, { type: action });
     }
   };
+
+  const logoMenuItems = [
+    { label: msg('logo.privacy'), onClick: () => handleLogoMenuItemClick('privacy') },
+    { label: msg('logo.source'), onClick: () => handleLogoMenuItemClick('source') },
+    { label: msg('logo.update'), onClick: () => handleLogoMenuItemClick('update') },
+    { label: msg('logo.about'), onClick: () => handleLogoMenuItemClick('about') },
+  ];
 
   return (
     <>
       <div className={`toolbar ${isElectron ? 'toolbar-electron' : ''}`}>
         <div className="toolbar-left">
-          <div className="toolbar-logo-wrapper" ref={logoMenuRef}>
-            <button className="toolbar-logo-btn" onClick={handleLogoClick}>
-              <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink"
-                  height="24" viewBox="0,0,69.99346,66.43688">
-                  <g transform="translate(-205.00327,-146.78156)">
-                      <g stroke="#000000" strokeWidth="0" strokeMiterlimit="10">
-                          <path d="M274.99673,190.93032l-11.95866,22.28812h-44.44009l13.31277,-22.10459z"
-                              fill="#0073bf" />
-                          <path d="M216.31868,212.14198l-11.31541,-21.28864l24.21416,-0.00471z" fill="#66ccff" />
-                          <path d="M227.50821,146.78156l23.50249,0.00667l23.98603,44.14209l-11.95866,22.28812z"
-                              fill="#0099ff" />
-                          <path d="M205.06042,188.54619l22.44779,-41.76463l23.50249,0.00667l-20.58917,41.73314z"
-                              fill="#66ccff" />
-                      </g>
-                  </g>
-              </svg>
+          <div className="toolbar-logo-wrapper">
+            <button
+              className="toolbar-logo-btn"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={handleLogoClick}
+            >
+              <IconLogo className="toolbar-logo" />
             </button>
-            {logoMenuOpen && (
-              <div className="logo-dropdown-menu">
-                <button className="logo-menu-item" onClick={() => handleLogoMenuItemClick('privacy')}>
-                  {msg('logo.privacy')}
-                </button>
-                <button className="logo-menu-item" onClick={() => handleLogoMenuItemClick('source')}>
-                  {msg('logo.source')}
-                </button>
-                <button className="logo-menu-item" onClick={() => handleLogoMenuItemClick('update')}>
-                  {msg('logo.update')}
-                </button>
-                <button className="logo-menu-item" onClick={() => handleLogoMenuItemClick('about')}>
-                  {msg('logo.about')}
-                </button>
-              </div>
-            )}
+            <DropdownMenu
+              isOpen={logoMenu.isOpen}
+              onClose={logoMenu.close}
+              position={logoMenu.position}
+              menuRef={logoMenu.menuRef}
+              roundedCorners="all"
+              items={logoMenuItems}
+            />
           </div>
           <div className="toolbar-menus">
-            <DropdownMenu 
+            <DropdownMenu
               ref={fileMenuRef}
-              label={msg('menu.file')} 
+              label={msg('menu.file')}
               items={fileMenuItems}
               roundedCorners="bottom"
+              onMouseEnter={() => handleMenuHover(fileMenuRef)}
             />
-            <DropdownMenu 
+            <DropdownMenu
               ref={editMenuRef}
-              label={msg('menu.edit')} 
+              label={msg('menu.edit')}
               items={editMenuItems}
               roundedCorners="bottom"
+              onMouseEnter={() => handleMenuHover(editMenuRef)}
             />
-            <DropdownMenu 
+            <DropdownMenu
               ref={viewMenuRef}
-              label={msg('menu.view')} 
+              label={msg('menu.view')}
               items={viewMenuItems}
               roundedCorners="bottom"
+              onMouseEnter={() => handleMenuHover(viewMenuRef)}
             />
-            <DropdownMenu 
+            <DropdownMenu
               ref={runMenuRef}
-              label={msg('menu.run')} 
+              label={msg('menu.run')}
               items={runMenuItems}
               roundedCorners="bottom"
+              onMouseEnter={() => handleMenuHover(runMenuRef)}
             />
           </div>
           {projectFileName && (
@@ -360,30 +359,36 @@ function Toolbar({
             </div>
           )}
         </div>
-        
+
         {isElectron && (
           <>
             <div className="toolbar-spacer"></div>
             <div className="toolbar-window-controls">
-              <button className="window-control-btn minimize" onClick={handleMinimize} title="最小化">
+              <button
+                className="window-control-btn minimize"
+                onClick={handleMinimize}
+                {...tip(msg('window.minimize'))}
+              >
                 <IconWindowMinimize />
               </button>
-              <button className="window-control-btn maximize" onClick={handleMaximize} title={isMaximized ? "还原" : "最大化"}>
+              <button
+                className="window-control-btn maximize"
+                onClick={handleMaximize}
+                {...tip(msg(isMaximized ? 'window.restore' : 'window.maximize'))}
+              >
                 {isMaximized ? <IconWindowRestore /> : <IconWindowMaximize />}
               </button>
-              <button className="window-control-btn close" onClick={handleClose} title="关闭">
+              <button
+                className="window-control-btn close"
+                onClick={handleClose}
+                {...tip(msg('window.close'))}
+              >
                 <IconWindowClose />
               </button>
             </div>
           </>
         )}
       </div>
-      
-      <InfoModal 
-        isOpen={infoModalOpen} 
-        onClose={() => setInfoModalOpen(false)} 
-        type={infoModalType}
-      />
     </>
   );
 }

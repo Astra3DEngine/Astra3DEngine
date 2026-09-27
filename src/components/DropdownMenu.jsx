@@ -1,75 +1,70 @@
 /**
  * @file components/DropdownMenu.jsx
- * @description 下拉菜单组件，支持子菜单和快捷键显示
+ * @description 统一下拉/右键菜单组件（基于 @szhsin/react-menu）。
+ *
+ * 支持两种模式（与旧实现 API 一致）：
+ * 1. Trigger 模式：label + items，点击按钮自动开关（Toolbar 菜单）
+ * 2. 受控模式：isOpen + onClose + position({x,y}) + menuRef（右键/Add/Logo 菜单）
+ *
  * @module components/DropdownMenu
- * 
- * 我喜欢这个！
  */
 
-import React, { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useImperativeHandle, forwardRef, useRef } from 'react';
+import { Menu, MenuItem, MenuDivider, SubMenu, ControlledMenu } from '@szhsin/react-menu';
+import '@szhsin/react-menu/dist/index.css';
 
 /**
- * 下拉菜单组件
- * @param {Object} props - 组件属性
- * @param {string} props.label - 菜单按钮标签
- * @param {Array} props.items - 菜单项列表
- * @param {string} props.className - 自定义类名
- * @param {string|Object} props.roundedCorners - 圆角配置
- * @param {string} props.position - 菜单位置（top/bottom）
- * @param {Object} ref - 组件引用，提供 open/close/toggle 方法
- * @returns {JSX.Element} 下拉菜单组件
+ * 渲染统一的菜单项内容（图标 + 标签 + 快捷键 + 复选）。
+ * @param {Object} item
+ * @param {Function} onClick
+ * @param {boolean} includeCheck
  */
-const DropdownMenu = forwardRef(function DropdownMenu({ label, items, className = '', roundedCorners = 'all', position = 'bottom' }, ref) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeSubmenu, setActiveSubmenu] = useState(null);
-  const menuRef = useRef(null);
-  const submenuTimeoutRef = useRef(null);
+function renderItemContent(item, includeCheck = false) {
+  return (
+    <>
+      {item.icon && <span className="dropdown-icon">{item.icon}</span>}
+      <span className="dropdown-label">{item.label}</span>
+      {item.shortcut && <span className="dropdown-shortcut">{item.shortcut}</span>}
+      {includeCheck && item.active && <span className="dropdown-check">✓</span>}
+    </>
+  );
+}
 
-  useImperativeHandle(ref, () => ({
-    open: () => setIsOpen(true),
-    close: () => setIsOpen(false),
-    toggle: () => setIsOpen(prev => !prev)
-  }));
+const DropdownMenu = forwardRef(function DropdownMenu(
+  {
+    label,
+    items,
+    children,
+    className = '',
+    roundedCorners = 'all',
+    position = 'bottom',
+    isOpen: isOpenProp,
+    onClose,
+    onMouseEnter,
+  },
+  ref
+) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isControlled = isOpenProp !== undefined;
+  const isOpen = isControlled ? isOpenProp : internalIsOpen;
+  const menuInstanceRef = useRef(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setIsOpen(false);
-        setActiveSubmenu(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleItemClick = (item) => {
-    if (item.submenu) return;
-    if (item.onClick) {
-      item.onClick();
-    }
-    setIsOpen(false);
-    setActiveSubmenu(null);
-  };
-
-  const handleSubmenuEnter = (index) => {
-    if (submenuTimeoutRef.current) {
-      clearTimeout(submenuTimeoutRef.current);
-    }
-    setActiveSubmenu(index);
-  };
-
-  const handleSubmenuLeave = () => {
-    submenuTimeoutRef.current = setTimeout(() => {
-      setActiveSubmenu(null);
-    }, 100);
-  };
+  useImperativeHandle(
+    ref,
+    () => ({
+      open: () => menuInstanceRef.current?.openMenu?.(),
+      close: () => menuInstanceRef.current?.closeMenu?.(),
+      toggle: () =>
+        isOpen ? menuInstanceRef.current?.closeMenu?.() : menuInstanceRef.current?.openMenu?.(),
+      isOpen: () => isOpen,
+    }),
+    [isOpen]
+  );
 
   const getRoundedClass = () => {
     if (typeof roundedCorners === 'string') {
       return `dropdown-rounded-${roundedCorners}`;
     }
-    
     const classes = [];
     if (roundedCorners.topLeft) classes.push('dropdown-rounded-tl');
     if (roundedCorners.topRight) classes.push('dropdown-rounded-tr');
@@ -78,67 +73,88 @@ const DropdownMenu = forwardRef(function DropdownMenu({ label, items, className 
     return classes.join(' ');
   };
 
-  const positionClass = position === 'top' ? 'dropdown-position-top' : '';
+  const menuClassName = `${getRoundedClass()} ${className}`.trim();
 
-  return (
-    <div className={`dropdown-menu ${className}`} ref={menuRef}>
-      <button
-        className="menu-btn dropdown-trigger"
-        onClick={() => setIsOpen(!isOpen)}
+  const renderItems = () =>
+    (items || []).map((item, index) => {
+      if (item.divider) {
+        return <MenuDivider key={index} />;
+      }
+      if (item.submenu) {
+        return (
+          <SubMenu
+            key={index}
+            label={renderItemContent(item)}
+            className={item.danger ? 'danger' : ''}
+          >
+            {item.submenu.map((subItem, subIndex) => (
+              <MenuItem
+                key={subIndex}
+                className={subItem.danger ? 'danger' : ''}
+                disabled={subItem.disabled}
+                onClick={() => !subItem.disabled && subItem.onClick?.()}
+              >
+                {renderItemContent(subItem, true)}
+              </MenuItem>
+            ))}
+          </SubMenu>
+        );
+      }
+      return (
+        <MenuItem
+          key={index}
+          className={`${item.danger ? 'danger' : ''} ${item.active ? 'active' : ''}`.trim()}
+          disabled={item.disabled}
+          onClick={() => !item.disabled && item.onClick?.()}
+        >
+          {renderItemContent(item, true)}
+        </MenuItem>
+      );
+    });
+
+  const closeMenu = () => {
+    if (isControlled) onClose?.();
+    else setInternalIsOpen(false);
+  };
+
+  // 受控模式（无 label）：定位到屏幕坐标，portal 到 body 避免被容器/视口遮挡
+  if (!label) {
+    if (!isOpen) return null;
+    return (
+      <ControlledMenu
+        state="open"
+        onClose={closeMenu}
+        onItemClick={closeMenu}
+        anchorPoint={typeof position === 'object' && position !== null ? position : undefined}
+        menuClassName={menuClassName}
+        portal={{ target: document.body }}
       >
-        {label}
-      </button>
-      {isOpen && (
-        <div className={`dropdown-content ${getRoundedClass()} ${positionClass}`}>
-          {items.map((item, index) => (
-            <React.Fragment key={index}>
-              {item.divider ? (
-                <div className="dropdown-divider" />
-              ) : (
-                <div 
-                  className="dropdown-item-wrapper"
-                  onMouseEnter={() => item.submenu && handleSubmenuEnter(index)}
-                  onMouseLeave={() => item.submenu && handleSubmenuLeave()}
-                >
-                  <button
-                    className={`dropdown-item ${item.disabled ? 'disabled' : ''} ${item.submenu ? 'has-submenu' : ''}`}
-                    onClick={() => !item.disabled && handleItemClick(item)}
-                    disabled={item.disabled}
-                  >
-                    {item.icon && <span className="dropdown-icon">{item.icon}</span>}
-                    <span className="dropdown-label">{item.label}</span>
-                    {item.shortcut && <span className="dropdown-shortcut">{item.shortcut}</span>}
-                    {item.submenu && <span className="dropdown-submenu-arrow">▶</span>}
-                  </button>
-                  {item.submenu && activeSubmenu === index && (
-                    <div className="dropdown-submenu">
-                      {item.submenu.map((subItem, subIndex) => (
-                        <button
-                          key={subIndex}
-                          className={`dropdown-item ${subItem.disabled ? 'disabled' : ''} ${subItem.active ? 'active' : ''}`}
-                          onClick={() => {
-                            if (!subItem.disabled && subItem.onClick) {
-                              subItem.onClick();
-                              setIsOpen(false);
-                              setActiveSubmenu(null);
-                            }
-                          }}
-                          disabled={subItem.disabled}
-                        >
-                          {subItem.icon && <span className="dropdown-icon">{subItem.icon}</span>}
-                          <span className="dropdown-label">{subItem.label}</span>
-                          {subItem.active && <span className="dropdown-check">✓</span>}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </React.Fragment>
-          ))}
-        </div>
-      )}
-    </div>
+        {items ? renderItems() : children}
+      </ControlledMenu>
+    );
+  }
+
+  // Trigger 模式
+  return (
+    <Menu
+      instanceRef={menuInstanceRef}
+      onMenuChange={({ open: next }) => {
+        if (!isControlled) setInternalIsOpen(next);
+        else if (!next) onClose?.();
+      }}
+      onItemClick={closeMenu}
+      menuButton={
+        <button type="button" className="menu-btn dropdown-trigger" onMouseEnter={onMouseEnter}>
+          {label}
+        </button>
+      }
+      menuClassName={menuClassName}
+      position={typeof position === 'object' ? 'anchor' : 'auto'}
+      direction={position === 'top' ? 'top' : 'bottom'}
+      portal={{ target: document.body }}
+    >
+      {items ? renderItems() : children}
+    </Menu>
   );
 });
 

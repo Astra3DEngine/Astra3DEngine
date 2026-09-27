@@ -1,9 +1,0 @@
-{
-  "name": "自动保存",
-  "description": "自动保存场景到本地存储，防止数据丢失",
-  "version": "1.0.0",
-  "author": "Astra3D Team",
-  "enabledByDefault": false,
-  "userscript": "index.js",
-  "tags": ["recommended"]
-}

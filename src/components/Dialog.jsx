@@ -1,100 +1,89 @@
 /**
  * @file components/Dialog.jsx
- * @description 对话框组件，提供警告、确认和输入对话框
+ * @description 对话框组件（警告/确认/输入），统一复用 Modal 外壳。
  * @module components/Dialog
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { msg } from '../i18n/index.js';
-import IconClose from '../icons/close.svg?react';
+import Modal from './Modal.jsx';
 
 /**
- * 警告对话框组件
- * @param {Object} props - 组件属性
- * @param {boolean} props.isOpen - 是否打开
- * @param {string} props.title - 标题
- * @param {string} props.message - 消息内容
- * @param {Function} props.onClose - 关闭回调
- * @returns {JSX.Element|null} 警告对话框组件
+ * 警告对话框
+ * @param {Object} props
+ * @param {boolean} props.isOpen
+ * @param {string} props.title
+ * @param {string} props.message
+ * @param {Function} props.onClose
  */
 export function AlertDialog({ isOpen, title, message, onClose }) {
-  if (!isOpen) return null;
-
   return (
-    <div className="dialog-overlay" onClick={onClose}>
-      <div className="dialog-content dialog-alert" onClick={e => e.stopPropagation()}>
-        <div className="dialog-header">
-          {title && <h3 className="dialog-title">{title}</h3>}
-          <button className="dialog-close-btn" onClick={onClose}>
-            <IconClose className="dialog-close-icon" />
-          </button>
-        </div>
-        <div className="dialog-body">
-          <p className="dialog-message">{message}</p>
-        </div>
-        <div className="dialog-footer">
-          <button className="btn btn-primary" onClick={onClose}>
-            {msg('dialog.ok')}
-          </button>
-        </div>
+    <Modal isOpen={isOpen} onClose={onClose} title={title} width={400}>
+      <p className="dialog-message">{message}</p>
+      <div className="modal-footer">
+        <button className="btn btn-primary" onClick={onClose}>
+          {msg('dialog.ok')}
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 }
 
 /**
- * 确认对话框组件
- * @param {Object} props - 组件属性
- * @param {boolean} props.isOpen - 是否打开
- * @param {string} props.title - 标题
- * @param {string} props.message - 消息内容
- * @param {string} props.confirmText - 确认按钮文本
- * @param {string} props.cancelText - 取消按钮文本
- * @param {Function} props.onConfirm - 确认回调
- * @param {Function} props.onCancel - 取消回调
- * @returns {JSX.Element|null} 确认对话框组件
+ * 确认对话框
+ * @param {Object} props
+ * @param {boolean} props.isOpen
+ * @param {string} props.title
+ * @param {string} props.message
+ * @param {string} props.confirmText
+ * @param {string} props.cancelText
+ * @param {Function} props.onConfirm
+ * @param {Function} props.onCancel
  */
-export function ConfirmDialog({ isOpen, title, message, confirmText, cancelText, onConfirm, onCancel }) {
-  if (!isOpen) return null;
-
+export function ConfirmDialog({
+  isOpen,
+  title,
+  message,
+  confirmText,
+  cancelText,
+  onConfirm,
+  onCancel,
+}) {
   return (
-    <div className="dialog-overlay" onClick={onCancel}>
-      <div className="dialog-content dialog-confirm" onClick={e => e.stopPropagation()}>
-        <div className="dialog-header">
-          {title && <h3 className="dialog-title">{title}</h3>}
-          <button className="dialog-close-btn" onClick={onCancel}>
-            <IconClose className="dialog-close-icon" />
-          </button>
-        </div>
-        <div className="dialog-body">
-          <p className="dialog-message">{message}</p>
-        </div>
-        <div className="dialog-footer">
-          <button className="btn" onClick={onCancel}>
-            {cancelText || msg('dialog.cancel')}
-          </button>
-          <button className="btn btn-primary" onClick={onConfirm}>
-            {confirmText || msg('dialog.confirm')}
-          </button>
-        </div>
+    <Modal isOpen={isOpen} onClose={onCancel} title={title} width={400}>
+      <p className="dialog-message">{message}</p>
+      <div className="modal-footer">
+        <button className="btn" onClick={onCancel}>
+          {cancelText || msg('dialog.cancel')}
+        </button>
+        <button className="btn btn-primary" onClick={onConfirm}>
+          {confirmText || msg('dialog.confirm')}
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 }
 
 /**
- * 输入对话框组件
- * @param {Object} props - 组件属性
- * @param {boolean} props.isOpen - 是否打开
- * @param {string} props.title - 标题
- * @param {string} props.message - 消息内容
- * @param {string} props.defaultValue - 默认值
- * @param {string} props.placeholder - 占位符
- * @param {Function} props.onConfirm - 确认回调（传入输入值）
- * @param {Function} props.onCancel - 取消回调
- * @returns {JSX.Element|null} 输入对话框组件
+ * 输入对话框
+ * @param {Object} props
+ * @param {boolean} props.isOpen
+ * @param {string} props.title
+ * @param {string} props.message
+ * @param {string} props.defaultValue
+ * @param {string} props.placeholder
+ * @param {Function} props.onConfirm
+ * @param {Function} props.onCancel
  */
-export function PromptDialog({ isOpen, title, message, defaultValue, placeholder, onConfirm, onCancel }) {
+export function PromptDialog({
+  isOpen,
+  title,
+  message,
+  defaultValue,
+  placeholder,
+  onConfirm,
+  onCancel,
+}) {
   const [value, setValue] = useState(defaultValue || '');
 
   const handleSubmit = (e) => {
@@ -102,39 +91,27 @@ export function PromptDialog({ isOpen, title, message, defaultValue, placeholder
     onConfirm(value);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="dialog-overlay" onClick={onCancel}>
-      <div className="dialog-content dialog-prompt" onClick={e => e.stopPropagation()}>
-        <form onSubmit={handleSubmit}>
-          <div className="dialog-header">
-            {title && <h3 className="dialog-title">{title}</h3>}
-            <button type="button" className="dialog-close-btn" onClick={onCancel}>
-              <IconClose className="dialog-close-icon" />
-            </button>
-          </div>
-          <div className="dialog-body">
-            {message && <p className="dialog-message">{message}</p>}
-            <input
-              type="text"
-              className="dialog-input"
-              value={value}
-              onChange={e => setValue(e.target.value)}
-              placeholder={placeholder}
-              autoFocus
-            />
-          </div>
-          <div className="dialog-footer">
-            <button type="button" className="btn" onClick={onCancel}>
-              {msg('dialog.cancel')}
-            </button>
-            <button type="submit" className="btn btn-primary">
-              {msg('dialog.ok')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <Modal isOpen={isOpen} onClose={onCancel} title={title} width={400} closeOnOverlayClick={false}>
+      <form onSubmit={handleSubmit}>
+        <p className="dialog-message">{message}</p>
+        <input
+          type="text"
+          className="dialog-input"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={placeholder}
+          autoFocus
+        />
+        <div className="modal-footer">
+          <button type="button" className="btn" onClick={onCancel}>
+            {msg('dialog.cancel')}
+          </button>
+          <button type="submit" className="btn btn-primary">
+            {msg('dialog.ok')}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

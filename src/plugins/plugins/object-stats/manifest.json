@@ -1,9 +1,0 @@
-{
-  "name": "对象统计",
-  "description": "在控制台显示场景中对象的统计信息",
-  "version": "1.0.0",
-  "author": "Astra3D Team",
-  "enabledByDefault": false,
-  "userscript": "index.js",
-  "tags": ["debug"]
-}

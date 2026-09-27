@@ -1,9 +1,9 @@
-.left-sidebar {
+﻿.left-sidebar {
   display: flex;
   flex-direction: column;
   background-color: var(--bg-panel);
   overflow: hidden;
-  height: 100%; /* 确保左侧边栏填满父容器高度喵！ */
+  height: 100%; /* 纭繚宸︿晶杈规爮濉弧鐖跺鍣ㄩ珮搴﹀柕锛?*/
 }
 
 .left-sidebar.all-collapsed {
@@ -99,7 +99,7 @@
 }
 
 .panel-header:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .panel-header-left {
@@ -155,7 +155,7 @@
 }
 
 .collapsible-panel.vertical-collapsed:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .panel-vertical-title {
@@ -168,7 +168,7 @@
   letter-spacing: 0.5px;
 }
 
-/* 多场景系统：vertical 模式折叠时的 headerRight 样式喵！ */
+/* 澶氬満鏅郴缁燂細vertical 妯″紡鎶樺彔鏃剁殑 headerRight 鏍峰紡鍠碉紒 */
 .panel-vertical-header-right {
   position: absolute;
   bottom: 4px;
@@ -216,7 +216,7 @@
   min-height: 0 !important;
 }
 
-/* 预制件面板和层级面板之间的拖拽分隔条喵 */
+/* 棰勫埗浠堕潰鏉垮拰灞傜骇闈㈡澘涔嬮棿鐨勬嫋鎷藉垎闅旀潯鍠?*/
 .panel-resize-handle {
   height: 4px;
   width: 100%;
@@ -260,7 +260,7 @@
 }
 
 .prefab-item:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .prefab-item.selected {
@@ -304,78 +304,4 @@
 
 .prefab-item:hover .icon-btn {
   opacity: 1;
-}
-
-.add-menu-container {
-  position: relative;
-}
-
-.add-menu-trigger {
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: all 0.15s;
-}
-
-.add-menu-trigger:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.add-menu-icon {
-  width: 12px;
-  height: 12px;
-}
-
-.add-menu-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 2px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  min-width: 100px;
-  z-index: 1000;
-  overflow: hidden;
-  padding: 2px 0;
-}
-
-.add-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  font-size: 11px;
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: background 0.1s;
-}
-
-.add-menu-item:hover {
-  background: var(--accent);
-}
-
-.add-menu-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 4px 0;
-}
-
-.add-menu-item-icon {
-  width: 12px;
-  height: 12px;
-  color: var(--text-secondary);
-}
-
-.add-menu-item:hover .add-menu-item-icon {
-  color: var(--text-primary);
 }

@@ -4,67 +4,46 @@
  * @module components/ScenePanel
  */
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { msg } from '../i18n/index.js';
-import CollapsiblePanel from './CollapsiblePanel.jsx';
-import IconScene from '../icons/scene.svg?react';
-import IconStar from '../icons/star.svg?react';
-import IconPlus from '../icons/plus.svg?react';
-import IconDelete from '../icons/delete.svg?react';
-import IconRename from '../icons/rename.svg?react';
+import RenameInput from './primitives/RenameInput.jsx';
+import IconScene from '../assets/icons/tools/scene.svg?react';
+import IconStar from '../assets/icons/tools/star.svg?react';
+import IconPlus from '../assets/icons/editor/plus.svg?react';
+import IconDelete from '../assets/icons/editor/delete.svg?react';
+import IconRename from '../assets/icons/editor/rename.svg?react';
+import { useScenesStore } from '../stores/useScenesStore.js';
+import { tip } from '../lib/tooltip.js';
 
 /**
- * 场景面板组件
- * 
- * 专门用于管理所有场景的面板喵！
- * 支持场景切换、新建、删除、重命名、设置主场景等功能。
- * 
- * @param {Object} props - 组件属性
- * @param {Array} props.scenes - 所有场景列表
- * @param {string} props.currentSceneId - 当前激活场景ID
- * @param {Function} props.onSwitchScene - 切换场景回调
- * @param {Function} props.onCreateScene - 创建新场景回调
- * @param {Function} props.onDeleteScene - 删除场景回调
- * @param {Function} props.onRenameScene - 重命名场景回调
- * @param {Function} props.onSetMainScene - 设置主场景回调
- * @param {boolean} props.vertical - 是否垂直布局
- * @param {Function} props.onCollapseChange - 折叠状态变化回调
- * @param {Object} props.style - 自定义样式（用于动态高度喵！）
+ * 场景面板组件：直接读取 store 管理所有场景（切换/新建/删除/重命名/设主场景）。
  * @returns {JSX.Element} 场景面板组件
  */
-function ScenePanel({
-  scenes = [],
-  currentSceneId,
-  onSwitchScene,
-  onCreateScene,
-  onDeleteScene,
-  onRenameScene,
-  onSetMainScene,
-  vertical,
-  onCollapseChange,
-  style
-}) {
+function ScenePanel() {
+  // ===== store 驱动 =====
+  const scenes = useScenesStore((s) => s.scenes);
+  const currentSceneId = useScenesStore((s) => s.currentSceneId);
+  const onSwitchScene = useScenesStore.getState().switchScene;
+  const onCreateScene = useScenesStore.getState().createScene;
+  const onDeleteScene = useScenesStore.getState().deleteScene;
+  const onRenameScene = useScenesStore.getState().renameScene;
+  const onSetMainScene = useScenesStore.getState().setMainScene;
   // 场景重命名状态喵！
   const [isRenaming, setIsRenaming] = useState(null);
-  const [renameValue, setRenameValue] = useState('');
-  const renameInputRef = useRef(null);
 
   /**
    * 获取当前场景对象
    */
   const currentScene = useMemo(() => {
-    return scenes.find(s => s.id === currentSceneId) || scenes[0];
+    return scenes.find((s) => s.id === currentSceneId) || scenes[0];
   }, [scenes, currentSceneId]);
 
   /**
-   * 重命名输入框聚焦喵！
+   * 开始场景重命名
    */
-  useEffect(() => {
-    if (isRenaming && renameInputRef.current) {
-      renameInputRef.current.focus();
-      renameInputRef.current.select();
-    }
-  }, [isRenaming]);
+  const handleStartRename = (sceneId) => {
+    setIsRenaming(sceneId);
+  };
 
   /**
    * 切换场景
@@ -72,37 +51,6 @@ function ScenePanel({
   const handleSwitchScene = (sceneId) => {
     if (sceneId !== currentSceneId && onSwitchScene) {
       onSwitchScene(sceneId);
-    }
-  };
-
-  /**
-   * 开始场景重命名
-   */
-  const handleStartRename = (sceneId, currentName) => {
-    setIsRenaming(sceneId);
-    setRenameValue(currentName);
-  };
-
-  /**
-   * 场景重命名提交
-   */
-  const handleRenameSubmit = () => {
-    if (isRenaming && renameValue.trim() && onRenameScene) {
-      onRenameScene(isRenaming, renameValue.trim());
-    }
-    setIsRenaming(null);
-    setRenameValue('');
-  };
-
-  /**
-   * 场景重命名键盘事件
-   */
-  const handleRenameKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      handleRenameSubmit();
-    } else if (e.key === 'Escape') {
-      setIsRenaming(null);
-      setRenameValue('');
     }
   };
 
@@ -115,13 +63,13 @@ function ScenePanel({
       alert(msg('scene.cannotDeleteLast'));
       return;
     }
-    
-    const sceneToDelete = scenes.find(s => s.id === sceneId);
+
+    const sceneToDelete = scenes.find((s) => s.id === sceneId);
     if (sceneToDelete?.isMain) {
       alert(msg('scene.cannotDeleteMain'));
       return;
     }
-    
+
     if (onDeleteScene) {
       onDeleteScene(sceneId);
     }
@@ -151,9 +99,9 @@ function ScenePanel({
   const renderSceneItem = (scene) => {
     const isActive = scene.id === currentSceneId;
     const isMain = scene.isMain;
-    
+
     return (
-      <div 
+      <div
         key={scene.id}
         className={`scene-item ${isActive ? 'active' : ''} ${isMain ? 'is-main' : ''}`}
         onClick={() => handleSwitchScene(scene.id)}
@@ -161,31 +109,26 @@ function ScenePanel({
         <div className="scene-item-icon-wrapper">
           <IconScene className="scene-item-icon" />
         </div>
-        
+
         {isRenaming === scene.id ? (
-          <input
-            ref={renameInputRef}
-            type="text"
+          <RenameInput
+            value={scene.name}
             className="scene-rename-input"
-            value={renameValue}
-            onChange={(e) => setRenameValue(e.target.value)}
-            onBlur={handleRenameSubmit}
-            onKeyDown={handleRenameKeyDown}
-            onClick={(e) => e.stopPropagation()}
+            onSubmit={(value) => {
+              if (onRenameScene) onRenameScene(scene.id, value);
+              setIsRenaming(null);
+            }}
+            onCancel={() => setIsRenaming(null)}
           />
         ) : (
           <>
             <span className="scene-item-name">{scene.name}</span>
-            {isMain && (
-              <IconStar className="scene-main-star" title={msg('scene.isMain')} />
-            )}
+            {isMain && <IconStar className="scene-main-star" {...tip(msg('scene.isMain'))} />}
           </>
         )}
-        
-        <span className="scene-object-count">
-          {scene.objects?.length || 0}
-        </span>
-        
+
+        <span className="scene-object-count">{scene.objects?.length || 0}</span>
+
         {/* 场景操作按钮喵！ */}
         <div className="scene-item-actions">
           {!isMain && (
@@ -195,23 +138,23 @@ function ScenePanel({
                 e.stopPropagation();
                 handleSetMainScene(scene.id);
               }}
-              title={msg('scene.setMain')}
+              {...tip(msg('scene.setMain'))}
             >
               <IconStar className="scene-action-icon" />
             </button>
           )}
-          
+
           <button
             className="scene-action-btn"
             onClick={(e) => {
               e.stopPropagation();
-              handleStartRename(scene.id, scene.name);
+              handleStartRename(scene.id);
             }}
-            title={msg('scene.rename')}
+            {...tip(msg('scene.rename'))}
           >
             <IconRename className="scene-action-icon" />
           </button>
-          
+
           {!isMain && scenes.length > 1 && (
             <button
               className="scene-action-btn scene-action-danger"
@@ -219,7 +162,7 @@ function ScenePanel({
                 e.stopPropagation();
                 handleDeleteScene(scene.id);
               }}
-              title={msg('scene.delete')}
+              {...tip(msg('scene.delete'))}
             >
               <IconDelete className="scene-action-icon" />
             </button>
@@ -230,45 +173,24 @@ function ScenePanel({
   };
 
   /**
-   * 头部右侧按钮：新建场景（与层级面板样式一致喵！）
+   * 渲染场景列表（新建场景入口在侧栏标题栏）
    */
-  const headerRight = (
-    <button 
-      className="add-menu-trigger"
-      onClick={handleCreateScene}
-      title={msg('scene.createNew')}
-    >
-      <IconPlus className="add-menu-icon" />
-    </button>
-  );
-
   return (
-    <CollapsiblePanel 
-      title={msg('scene.panelTitle')} 
-      className="scene-panel"
-      storageKey="astra-panel-scene-collapsed"
-      vertical={vertical}
-      onCollapseChange={onCollapseChange}
-      headerRight={headerRight}
-      style={style}
-    >
+    <div className="scene-panel">
       <div className="scene-list">
         {scenes.length === 0 ? (
           <div className="scene-empty">
             {msg('scene.empty')}
-            <button 
-              className="scene-empty-create-btn"
-              onClick={handleCreateScene}
-            >
+            <button className="scene-empty-create-btn" onClick={handleCreateScene}>
               <IconPlus className="scene-empty-create-icon" />
               {msg('scene.createNew')}
             </button>
           </div>
         ) : (
-          scenes.map(scene => renderSceneItem(scene))
+          scenes.map((scene) => renderSceneItem(scene))
         )}
       </div>
-      
+
       {/* 当前场景信息喵！ */}
       {currentScene && (
         <div className="scene-current-info">
@@ -276,13 +198,11 @@ function ScenePanel({
           <div className="scene-info-value">
             <IconScene className="scene-info-icon" />
             <span>{currentScene.name}</span>
-            {currentScene.isMain && (
-              <IconStar className="scene-info-main-star" />
-            )}
+            {currentScene.isMain && <IconStar className="scene-info-main-star" />}
           </div>
         </div>
       )}
-    </CollapsiblePanel>
+    </div>
   );
 }
 

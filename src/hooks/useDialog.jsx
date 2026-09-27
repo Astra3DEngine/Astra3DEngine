@@ -6,7 +6,6 @@
 
 import React, { useState, useCallback, createContext, useContext, useEffect } from 'react';
 import { AlertDialog, ConfirmDialog, PromptDialog } from '../components/Dialog.jsx';
-import { msg } from '../i18n/index.js';
 
 const DialogContext = createContext(null);
 
@@ -26,7 +25,7 @@ export function DialogProvider({ children }) {
    * @returns {Promise<void>} 用户关闭对话框后 resolve
    */
   const alert = useCallback((message, title) => {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       setDialog({
         type: 'alert',
         message,
@@ -34,7 +33,7 @@ export function DialogProvider({ children }) {
         onClose: () => {
           setDialog(null);
           resolve();
-        }
+        },
       });
     });
   }, []);
@@ -49,7 +48,7 @@ export function DialogProvider({ children }) {
    * @returns {Promise<boolean>} 用户确认返回 true，取消返回 false
    */
   const confirm = useCallback((message, title, options = {}) => {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       setDialog({
         type: 'confirm',
         message,
@@ -63,7 +62,7 @@ export function DialogProvider({ children }) {
         onCancel: () => {
           setDialog(null);
           resolve(false);
-        }
+        },
       });
     });
   }, []);
@@ -77,7 +76,7 @@ export function DialogProvider({ children }) {
    * @returns {Promise<string|null>} 用户确认返回输入值，取消返回 null
    */
   const prompt = useCallback((message, defaultValue = '', title, placeholder = '') => {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       setDialog({
         type: 'prompt',
         message,
@@ -91,7 +90,7 @@ export function DialogProvider({ children }) {
         onCancel: () => {
           setDialog(null);
           resolve(null);
-        }
+        },
       });
     });
   }, []);

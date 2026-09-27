@@ -226,10 +226,6 @@
   border-color: var(--accent-active);
 }
 
-.camera-mode-dropdown .dropdown-content {
-  min-width: 100px;
-}
-
 .multi-viewport-container {
   flex: 1;
   position: relative;

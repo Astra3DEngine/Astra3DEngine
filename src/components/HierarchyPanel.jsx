@@ -4,27 +4,34 @@
  * @module components/HierarchyPanel
  */
 
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { msg } from '../i18n/index.js';
-import CollapsiblePanel from './CollapsiblePanel.jsx';
-import IconCube from '../icons/cube.svg?react';
-import IconSphere from '../icons/sphere.svg?react';
-import IconPlane from '../icons/plane.svg?react';
-import IconModel from '../icons/model.svg?react';
-import IconFolder from '../icons/folder.svg?react';
-import IconPrefabInstance from '../icons/prefab-instance.svg?react';
-import IconDelete from '../icons/delete.svg?react';
-import IconPrefab from '../icons/prefab.svg?react';
-import IconCopy from '../icons/copy.svg?react';
-import IconPaste from '../icons/paste.svg?react';
-import IconDuplicate from '../icons/duplicate.svg?react';
-import IconRename from '../icons/rename.svg?react';
-import IconPlus from '../icons/plus.svg?react';
-import IconSearch from '../icons/search.svg?react';
-import IconChevronCollapsed from '../icons/chevron-collapsed.svg?react';
-import IconPointLight from '../icons/light-point.svg?react';
-import IconDirectionalLight from '../icons/light-directional.svg?react';
-import IconSpotLight from '../icons/light-spot.svg?react';
+import useDropdownMenu from '../hooks/useDropdownMenu.js';
+import usePanelSearch from '../hooks/usePanelSearch.js';
+import DropdownMenu from './DropdownMenu.jsx';
+import { getAllDescendants, getAllDescendantIds } from '../engine/TreeMath.js';
+import RenameInput from './primitives/RenameInput.jsx';
+import { useScenesStore } from '../stores/useScenesStore.js';
+import { useSelectionStore } from '../stores/useSelectionStore.js';
+import { usePrefabsStore } from '../stores/usePrefabsStore.js';
+import IconCube from '../assets/icons/tools/cube.svg?react';
+import IconSphere from '../assets/icons/tools/sphere.svg?react';
+import IconPlane from '../assets/icons/tools/plane.svg?react';
+import IconModel from '../assets/icons/tools/model.svg?react';
+import IconFolder from '../assets/icons/editor/folder.svg?react';
+import IconPrefabInstance from '../assets/icons/tools/prefab-instance.svg?react';
+import IconDelete from '../assets/icons/editor/delete.svg?react';
+import IconPrefab from '../assets/icons/tools/prefab.svg?react';
+import IconCopy from '../assets/icons/editor/copy.svg?react';
+import IconPaste from '../assets/icons/editor/paste.svg?react';
+import IconDuplicate from '../assets/icons/editor/duplicate.svg?react';
+import IconRename from '../assets/icons/editor/rename.svg?react';
+import IconSearch from '../assets/icons/editor/search.svg?react';
+import IconChevronCollapsed from '../assets/icons/nav/chevron-collapsed.svg?react';
+import IconPointLight from '../assets/icons/tools/light-point.svg?react';
+import IconDirectionalLight from '../assets/icons/tools/light-directional.svg?react';
+import IconSpotLight from '../assets/icons/tools/light-spot.svg?react';
+import { tip } from '../lib/tooltip.js';
 
 /**
  * 层级面板组件
@@ -33,7 +40,6 @@ import IconSpotLight from '../icons/light-spot.svg?react';
  * @param {Object} props.selectedObject - 当前选中的对象
  * @param {Array} props.selectedObjects - 多选对象列表
  * @param {Function} props.onSelectObject - 选择对象回调
- * @param {Function} props.onAddObject - 添加对象回调
  * @param {Function} props.onDeleteObject - 删除对象回调
  * @param {Function} props.onDeleteSelectedObjects - 删除选中对象回调
  * @param {Function} props.onCreatePrefab - 创建预制件回调
@@ -43,64 +49,49 @@ import IconSpotLight from '../icons/light-spot.svg?react';
  * @param {Function} props.onDuplicateObject - 复制对象回调
  * @param {Function} props.onRenameObject - 重命名对象回调
  * @param {Object} props.clipboard - 剪贴板内容
- * @param {boolean} props.vertical - 是否垂直布局
- * @param {Function} props.onCollapseChange - 折叠状态变化回调
  * @param {Function} props.onReorderObjects - 重排序对象回调
  * @returns {JSX.Element} 层级面板组件
  */
-function HierarchyPanel({ 
-  objects, 
-  selectedObject, 
-  selectedObjects = [],
-  onSelectObject, 
-  onAddObject, 
-  onDeleteObject,
-  onDeleteSelectedObjects,
-  onCreatePrefab,
-  prefabs,
-  onCopyObject,
-  onPasteObject,
-  onDuplicateObject,
-  onRenameObject,
-  clipboard,
-  vertical,
-  onCollapseChange,
-  onReorderObjects
-}) {
-  const [contextMenu, setContextMenu] = useState(null);
+function HierarchyPanel() {
+  // ===== 直接读取 store，避免 App 层层传 props =====
+  const objects = useScenesStore(
+    (s) => s.scenes.find((sc) => sc.id === s.currentSceneId)?.objects || []
+  );
+  const selectedObjects = useSelectionStore((s) => s.selectedObjects);
+  const prefabs = usePrefabsStore((s) => s.prefabs);
+  const clipboard = useScenesStore((s) => s.clipboard);
+  const onSelectObject = useSelectionStore.getState().selectObject;
+  const onDeleteObject = useScenesStore.getState().deleteObject;
+  const onDeleteSelectedObjects = useScenesStore.getState().deleteSelectedObjects;
+  const onCreatePrefab = usePrefabsStore.getState().createPrefab;
+  const onCopyObject = useScenesStore.getState().copyObject;
+  const onPasteObject = useScenesStore.getState().pasteObject;
+  const onDuplicateObject = useScenesStore.getState().duplicateObject;
+  const onRenameObject = useScenesStore.getState().renameObject;
+  const onReorderObjects = useScenesStore.getState().reorderObjects;
+
+  const [contextMenuObject, setContextMenuObject] = useState(null);
   const [isRenaming, setIsRenaming] = useState(null);
-  const [renameValue, setRenameValue] = useState('');
   const [draggedId, setDraggedId] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const [dropPosition, setDropPosition] = useState(null);
-  const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const [searchText, setSearchText] = useState('');
   const [expandedIds, setExpandedIds] = useState(() => new Set());
-  
-  const addMenuRef = useRef(null);
-  const contextMenuRef = useRef(null);
-  const renameInputRef = useRef(null);
-  const searchInputRef = useRef(null);
+
+  const ctxMenu = useDropdownMenu({
+    onClose: () => setContextMenuObject(null),
+  });
+
+  const {
+    containerRef: panelRef,
+    inputRef: searchInputRef,
+    searchText,
+    setSearchText,
+    searchVisible,
+  } = usePanelSearch();
   const objectsRef = useRef(objects);
 
   useEffect(() => {
     objectsRef.current = objects;
-  }, [objects]);
-
-  /**
-   * 获取对象的所有后代对象（包括嵌套的子对象）
-   * @param {number} parentId - 父对象ID
-   * @returns {Array} 所有后代对象列表
-   */
-  const getAllDescendants = useCallback((parentId) => {
-    const descendants = [];
-    const children = objects.filter(o => o.parentId === parentId);
-    children.forEach(child => {
-      descendants.push(child);
-      const nestedChildren = getAllDescendants(child.id);
-      descendants.push(...nestedChildren);
-    });
-    return descendants;
   }, [objects]);
 
   const computedExpandedIds = useMemo(() => {
@@ -108,7 +99,7 @@ function HierarchyPanel({
   }, [expandedIds]);
 
   const toggleExpanded = (id) => {
-    setExpandedIds(prev => {
+    setExpandedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -119,123 +110,87 @@ function HierarchyPanel({
     });
   };
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target)) {
-        setContextMenu(null);
-      }
-      if (addMenuRef.current && !addMenuRef.current.contains(e.target)) {
-        setAddMenuOpen(false);
-      }
-    };
-    
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (isRenaming && renameInputRef.current) {
-      renameInputRef.current.focus();
-      renameInputRef.current.select();
-    }
-  }, [isRenaming]);
-
   const handleContextMenu = (e, obj) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (isRenaming) return;
-    
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      object: obj
-    });
+
+    setContextMenuObject(obj);
+    ctxMenu.openAt(e.clientX, e.clientY);
   };
 
   const handleCreatePrefab = () => {
-    if (contextMenu?.object) {
-      if (!contextMenu.object.prefabId) {
-        onCreatePrefab(contextMenu.object.id);
+    if (contextMenuObject) {
+      if (!contextMenuObject.prefabId) {
+        onCreatePrefab(contextMenuObject.id);
       }
     }
-    setContextMenu(null);
+    ctxMenu.close();
   };
 
   const handleDelete = () => {
-    if (contextMenu?.object) {
-      if (selectedObjects.length > 1 && selectedObjects.some(o => o && o.id === contextMenu.object.id)) {
+    if (contextMenuObject) {
+      if (
+        selectedObjects.length > 1 &&
+        selectedObjects.some((o) => o && o.id === contextMenuObject.id)
+      ) {
         onDeleteSelectedObjects();
       } else {
-        onDeleteObject(contextMenu.object.id);
+        onDeleteObject(contextMenuObject.id);
       }
     }
-    setContextMenu(null);
+    ctxMenu.close();
   };
 
   /**
    * 复制对象到剪贴板
-   * 
+   *
    * 如果当前有多个选中对象，且右键菜单的对象在其中，
    * 则复制所有选中的对象。否则只复制单个对象。
    */
   const handleCopy = () => {
-    if (contextMenu?.object) {
-      if (selectedObjects && selectedObjects.length > 1 && 
-          selectedObjects.some(o => o && o.id === contextMenu.object.id)) {
-        onCopyObject(contextMenu.object.id);
+    if (contextMenuObject) {
+      if (
+        selectedObjects &&
+        selectedObjects.length > 1 &&
+        selectedObjects.some((o) => o && o.id === contextMenuObject.id)
+      ) {
+        onCopyObject(contextMenuObject.id);
       } else {
-        onCopyObject(contextMenu.object.id);
+        onCopyObject(contextMenuObject.id);
       }
     }
-    setContextMenu(null);
+    ctxMenu.close();
   };
 
   const handlePaste = () => {
     onPasteObject();
-    setContextMenu(null);
+    ctxMenu.close();
   };
 
   /**
    * 复制对象（原地复制）
-   * 
+   *
    * 如果当前有多个选中对象，且右键菜单的对象在其中，
    * 则复制所有选中的对象。否则只复制单个对象。
    */
   const handleDuplicate = () => {
-    if (contextMenu?.object) {
-      onDuplicateObject(contextMenu.object.id);
+    if (contextMenuObject) {
+      onDuplicateObject(contextMenuObject.id);
     }
-    setContextMenu(null);
+    ctxMenu.close();
   };
 
   const handleRename = () => {
-    if (contextMenu?.object) {
-      setIsRenaming(contextMenu.object.id);
-      setRenameValue(contextMenu.object.name);
+    if (contextMenuObject) {
+      setIsRenaming(contextMenuObject.id);
     }
-    setContextMenu(null);
-  };
-
-  const handleRenameSubmit = () => {
-    if (isRenaming && renameValue.trim()) {
-      onRenameObject(isRenaming, renameValue.trim());
-    }
-    setIsRenaming(null);
-    setRenameValue('');
-  };
-
-  const handleRenameKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      handleRenameSubmit();
-    } else if (e.key === 'Escape') {
-      setIsRenaming(null);
-      setRenameValue('');
-    }
+    ctxMenu.close();
   };
 
   const getPrefabName = (prefabId) => {
-    const prefab = prefabs?.find(p => p.id === prefabId);
+    const prefab = prefabs?.find((p) => p.id === prefabId);
     return prefab?.name || 'Unknown Prefab';
   };
 
@@ -255,30 +210,16 @@ function HierarchyPanel({
 
   /**
    * 递归获取所有后代对象的 ID
-   * 
+   *
    * 这个函数非常重要，用于防止循环父子关系，自己的儿子不能是自己的父亲。
    * 傻逼。
-   * 
+   *
    * 这个递归实现有点暴力，每次拖拽都要重新计算，但考虑到场景对象数量通常不多，
    * 能跑就行，不肉，能跑就行。
-   * 
+   *
    * @param {number} objId - 对象 ID
    * @returns {Set<number>} 所有后代对象的 ID 集合
    */
-  const getAllDescendantIds = (objId) => {
-    const descendants = new Set();
-    const findDescendants = (id) => {
-      objects.forEach(obj => {
-        if (obj.parentId === id) {
-          descendants.add(obj.id);
-          findDescendants(obj.id);
-        }
-      });
-    };
-    findDescendants(objId);
-    return descendants;
-  };
-
   const handleDragStart = (e, obj) => {
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', obj.id.toString());
@@ -296,29 +237,29 @@ function HierarchyPanel({
 
   /**
    * 拖拽悬停事件处理
-   * 
+   *
    * 这里实现了三种拖拽放置位置的判断：上方 1/3 是 before（插入到目标前面），
    * 中间 1/3 是 inside（成为目标的子对象），下方 1/3 是 after（插入到目标后面）。
-   * 
+   *
    * 用 1/3 分割而不是 1/2，是因为 "inside" 操作更重要，需要更大的触发区域，
    * 用户创建父子关系的意图通常比排序更常见，这样设计可以让拖拽体验更流畅。
-   * 
+   *
    * 关键检查：不能拖到自己身上（废话），不能拖到自己的后代身上。
-   * 
+   *
    * HTML5 拖拽 API 看起来像个傻逼一样，dataTransfer.dropEffect 在不同浏览器表现不一致。
    */
   const handleDragOver = (e, obj) => {
     e.preventDefault();
-    
+
     if (!draggedId || draggedId === obj.id) return;
-    
-    const descendantIds = getAllDescendantIds(draggedId);
+
+    const descendantIds = getAllDescendantIds(draggedId, objects);
     if (descendantIds.has(obj.id)) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const y = e.clientY - rect.top;
     const height = rect.height;
-    
+
     let newDropPosition;
     if (y < height * 0.33) {
       newDropPosition = 'before';
@@ -327,7 +268,7 @@ function HierarchyPanel({
     } else {
       newDropPosition = 'inside';
     }
-    
+
     setDropPosition(newDropPosition);
     setDropTarget(obj.id);
     e.dataTransfer.dropEffect = 'move';
@@ -335,12 +276,11 @@ function HierarchyPanel({
 
   const handleDragLeave = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const isOutside = (
+    const isOutside =
       e.clientX < rect.left ||
       e.clientX >= rect.right ||
       e.clientY < rect.top ||
-      e.clientY >= rect.bottom
-    );
+      e.clientY >= rect.bottom;
     if (isOutside) {
       setDropTarget(null);
       setDropPosition(null);
@@ -350,12 +290,12 @@ function HierarchyPanel({
   const handleDrop = (e, targetObj) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!draggedId || draggedId === targetObj.id) {
       return;
     }
-    
-    const descendantIds = getAllDescendantIds(draggedId);
+
+    const descendantIds = getAllDescendantIds(draggedId, objects);
     if (descendantIds.has(targetObj.id)) {
       return;
     }
@@ -365,16 +305,16 @@ function HierarchyPanel({
     if (onReorderObjects) {
       onReorderObjects(draggedId, targetObj.id, finalDropPosition);
     }
-    
+
     // 拖拽创建父子关系时自动展开父对象
     if (finalDropPosition === 'inside') {
-      setExpandedIds(prev => {
+      setExpandedIds((prev) => {
         const next = new Set(prev);
         next.add(targetObj.id);
         return next;
       });
     }
-    
+
     setDraggedId(null);
     setDropTarget(null);
     setDropPosition(null);
@@ -383,20 +323,20 @@ function HierarchyPanel({
   const handleDropOnEmpty = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!draggedId) {
       return;
     }
-    
+
     const data = e.dataTransfer.getData('application/json');
-    
+
     if (data) {
       try {
         const parsed = JSON.parse(data);
         if (parsed.id && onReorderObjects) {
           onReorderObjects(parsed.id, null, 'end');
         }
-      } catch (err) {
+      } catch {
         if (onReorderObjects) {
           onReorderObjects(draggedId, null, 'end');
         }
@@ -404,7 +344,7 @@ function HierarchyPanel({
     } else if (onReorderObjects) {
       onReorderObjects(draggedId, null, 'end');
     }
-    
+
     setDraggedId(null);
     setDropTarget(null);
     setDropPosition(null);
@@ -413,10 +353,10 @@ function HierarchyPanel({
   const renderObject = (obj, depth = 0) => {
     const isDropTarget = dropTarget === obj.id;
     const isDragged = draggedId === obj.id;
-    const hasChildren = objects.some(o => o.parentId === obj.id);
-    const isSelected = selectedObjects.some(o => o && o.id === obj.id);
+    const hasChildren = objects.some((o) => o.parentId === obj.id);
+    const isSelected = selectedObjects.some((o) => o && o.id === obj.id);
     const isExpanded = computedExpandedIds.has(obj.id);
-    
+
     return (
       <React.Fragment key={obj.id}>
         <div
@@ -425,7 +365,7 @@ function HierarchyPanel({
           onClick={(e) => {
             if (isRenaming) return;
             if (obj.isFolder) {
-              const descendants = getAllDescendants(obj.id);
+              const descendants = getAllDescendants(obj.id, objects);
               onSelectObject(obj, e.ctrlKey || e.metaKey, [obj, ...descendants]);
             } else {
               onSelectObject(obj, e.ctrlKey || e.metaKey);
@@ -446,7 +386,7 @@ function HierarchyPanel({
           onDrop={(e) => handleDrop(e, obj)}
         >
           {hasChildren && (
-            <span 
+            <span
               className={`hierarchy-expand-icon ${isExpanded ? 'expanded' : ''}`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -457,28 +397,23 @@ function HierarchyPanel({
               <IconChevronCollapsed className="hierarchy-expand-svg" />
             </span>
           )}
-          {!hasChildren && depth > 0 && (
-            <span className="hierarchy-expand-placeholder" />
-          )}
-          <span className="hierarchy-item-icon">
-            {getObjectIcon(obj)}
-          </span>
+          {!hasChildren && depth > 0 && <span className="hierarchy-expand-placeholder" />}
+          <span className="hierarchy-item-icon">{getObjectIcon(obj)}</span>
           {isRenaming === obj.id ? (
-            <input
-              ref={renameInputRef}
-              type="text"
+            <RenameInput
+              value={obj.name}
               className="hierarchy-rename-input"
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              onBlur={handleRenameSubmit}
-              onKeyDown={handleRenameKeyDown}
-              onClick={(e) => e.stopPropagation()}
+              onSubmit={(value) => {
+                onRenameObject(obj.id, value);
+                setIsRenaming(null);
+              }}
+              onCancel={() => setIsRenaming(null)}
             />
           ) : (
             <span className="hierarchy-item-name">{obj.name}</span>
           )}
           {obj.prefabId && (
-            <span className="hierarchy-prefab-badge" title={getPrefabName(obj.prefabId)}>
+            <span className="hierarchy-prefab-badge" {...tip(getPrefabName(obj.prefabId))}>
               P
             </span>
           )}
@@ -488,20 +423,20 @@ function HierarchyPanel({
               e.stopPropagation();
               onDeleteObject(obj.id);
             }}
-            title={msg('hierarchy.delete')}
+            {...tip(msg('hierarchy.delete'))}
           >
             <IconDelete className="btn-icon" />
           </button>
         </div>
-        {isExpanded && objects
-          .filter(o => o.parentId === obj.id)
-          .sort((a, b) => {
-            const indexA = objects.findIndex(item => item.id === a.id);
-            const indexB = objects.findIndex(item => item.id === b.id);
-            return indexA - indexB;
-          })
-          .map(child => renderObject(child, depth + 1))
-        }
+        {isExpanded &&
+          objects
+            .filter((o) => o.parentId === obj.id)
+            .sort((a, b) => {
+              const indexA = objects.findIndex((item) => item.id === a.id);
+              const indexB = objects.findIndex((item) => item.id === b.id);
+              return indexA - indexB;
+            })
+            .map((child) => renderObject(child, depth + 1))}
       </React.Fragment>
     );
   };
@@ -509,107 +444,83 @@ function HierarchyPanel({
   const filteredObjects = useMemo(() => {
     if (!searchText.trim()) return objects;
     const lowerSearch = searchText.toLowerCase().trim();
-    return objects.filter(obj => obj.name.toLowerCase().includes(lowerSearch));
+    return objects.filter((obj) => obj.name.toLowerCase().includes(lowerSearch));
   }, [objects, searchText]);
 
   const isSearching = searchText.trim().length > 0;
 
-  const headerRight = (
-    <div className="add-menu-container" ref={addMenuRef}>
-      <button 
-        className="add-menu-trigger"
-        onClick={() => setAddMenuOpen(!addMenuOpen)}
-        title={msg('hierarchy.addObject')}
-      >
-        <IconPlus className="add-menu-icon" />
-      </button>
-      {addMenuOpen && (
-        <div className="add-menu-dropdown">
-          <div 
-            className="add-menu-item"
-            onClick={() => { onAddObject('folder'); setAddMenuOpen(false); }}
-          >
-            <IconFolder className="add-menu-item-icon" />
-            {msg('hierarchy.folder')}
-          </div>
-          <div className="add-menu-divider" />
-          <div 
-            className="add-menu-item"
-            onClick={() => { onAddObject('cube'); setAddMenuOpen(false); }}
-          >
-            <IconCube className="add-menu-item-icon" />
-            {msg('hierarchy.cube')}
-          </div>
-          <div 
-            className="add-menu-item"
-            onClick={() => { onAddObject('sphere'); setAddMenuOpen(false); }}
-          >
-            <IconSphere className="add-menu-item-icon" />
-            {msg('hierarchy.sphere')}
-          </div>
-          <div 
-            className="add-menu-item"
-            onClick={() => { onAddObject('plane'); setAddMenuOpen(false); }}
-          >
-            <IconPlane className="add-menu-item-icon" />
-            {msg('hierarchy.plane')}
-          </div>
-          <div className="add-menu-divider" />
-          <div 
-            className="add-menu-item"
-            onClick={() => { onAddObject('pointLight'); setAddMenuOpen(false); }}
-          >
-            <IconPointLight className="add-menu-item-icon" />
-            {msg('hierarchy.pointLight')}
-          </div>
-          <div 
-            className="add-menu-item"
-            onClick={() => { onAddObject('directionalLight'); setAddMenuOpen(false); }}
-          >
-            <IconDirectionalLight className="add-menu-item-icon" />
-            {msg('hierarchy.directionalLight')}
-          </div>
-          <div 
-            className="add-menu-item"
-            onClick={() => { onAddObject('spotLight'); setAddMenuOpen(false); }}
-          >
-            <IconSpotLight className="add-menu-item-icon" />
-            {msg('hierarchy.spotLight')}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  const ctxMenuItems = useMemo(() => {
+    if (!contextMenuObject) return [];
+    return [
+      {
+        label: msg('hierarchy.copy'),
+        icon: <IconCopy className="dropdown-icon" />,
+        onClick: handleCopy,
+      },
+      {
+        label: msg('hierarchy.paste'),
+        icon: <IconPaste className="dropdown-icon" />,
+        disabled: !clipboard,
+        onClick: handlePaste,
+      },
+      {
+        label: msg('hierarchy.duplicate'),
+        icon: <IconDuplicate className="dropdown-icon" />,
+        onClick: handleDuplicate,
+      },
+      {
+        label: msg('hierarchy.rename'),
+        icon: <IconRename className="dropdown-icon" />,
+        onClick: handleRename,
+      },
+      { divider: true },
+      {
+        label: contextMenuObject?.prefabId
+          ? getPrefabName(contextMenuObject.prefabId)
+          : msg('prefabs.createFromObject'),
+        icon: contextMenuObject?.prefabId ? (
+          <IconPrefabInstance className="dropdown-icon" />
+        ) : (
+          <IconPrefab className="dropdown-icon" />
+        ),
+        onClick: handleCreatePrefab,
+      },
+      { divider: true },
+      {
+        label:
+          selectedObjects.length > 1 &&
+          selectedObjects.some((o) => o && o.id === contextMenuObject?.id)
+            ? `${msg('hierarchy.deleteSelected')} (${selectedObjects.length})`
+            : msg('hierarchy.delete'),
+        icon: <IconDelete className="dropdown-icon" />,
+        danger: true,
+        onClick: handleDelete,
+      },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contextMenuObject, clipboard, selectedObjects, msg]);
 
   return (
-    <CollapsiblePanel 
-      title={msg('hierarchy.title')} 
-      className="hierarchy-panel"
-      storageKey="astra-panel-hierarchy-collapsed"
-      vertical={vertical}
-      onCollapseChange={onCollapseChange}
-      headerRight={headerRight}
-    >
-      <div className="hierarchy-search">
-        <IconSearch className="hierarchy-search-icon" />
-        <input
-          ref={searchInputRef}
-          type="text"
-          className="hierarchy-search-input"
-          placeholder={msg('hierarchy.searchPlaceholder')}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-        />
-        {searchText && (
-          <button
-            className="hierarchy-search-clear"
-            onClick={() => setSearchText('')}
-          >
-            ×
-          </button>
-        )}
-      </div>
-      <div 
+    <div className="hierarchy-panel" ref={panelRef}>
+      {searchVisible && (
+        <div className="hierarchy-search">
+          <IconSearch className="hierarchy-search-icon" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            className="hierarchy-search-input"
+            placeholder={msg('hierarchy.searchPlaceholder')}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+          {searchText && (
+            <button className="hierarchy-search-clear" onClick={() => setSearchText('')}>
+              ×
+            </button>
+          )}
+        </div>
+      )}
+      <div
         className="panel-content"
         onDragOver={(e) => {
           if (!draggedId) return;
@@ -619,15 +530,18 @@ function HierarchyPanel({
         onDrop={handleDropOnEmpty}
       >
         {filteredObjects.length === 0 ? (
-          <div style={{
-            color: 'var(--text-secondary)',
-            textAlign: 'center',
-            padding: '20px',
-            fontSize: '12px'
-          }}>
+          <div
+            style={{
+              color: 'var(--text-secondary)',
+              textAlign: 'center',
+              padding: '20px',
+              fontSize: '12px',
+            }}
+          >
             {objects.length === 0 ? (
               <>
-                {msg('hierarchy.empty')}<br />
+                {msg('hierarchy.empty')}
+                <br />
                 <span style={{ opacity: 0.7 }}>{msg('hierarchy.emptyHint')}</span>
               </>
             ) : (
@@ -635,56 +549,20 @@ function HierarchyPanel({
             )}
           </div>
         ) : isSearching ? (
-          filteredObjects.map(obj => renderObject(obj))
+          filteredObjects.map((obj) => renderObject(obj))
         ) : (
-          filteredObjects.filter(obj => !obj.parentId).map(obj => renderObject(obj))
+          filteredObjects.filter((obj) => !obj.parentId).map((obj) => renderObject(obj))
         )}
       </div>
 
-      {contextMenu && (
-        <div 
-          ref={contextMenuRef}
-          className="context-menu"
-          style={{
-            position: 'fixed',
-            left: contextMenu.x,
-            top: contextMenu.y,
-            zIndex: 1000
-          }}
-        >
-          <div className="context-menu-item" onClick={handleCopy}>
-            <IconCopy className="context-menu-icon" /> {msg('hierarchy.copy')}
-          </div>
-          <div 
-            className={`context-menu-item ${!clipboard ? 'context-menu-disabled' : ''}`} 
-            onClick={clipboard ? handlePaste : undefined}
-          >
-            <IconPaste className="context-menu-icon" /> {msg('hierarchy.paste')}
-          </div>
-          <div className="context-menu-item" onClick={handleDuplicate}>
-            <IconDuplicate className="context-menu-icon" /> {msg('hierarchy.duplicate')}
-          </div>
-          <div className="context-menu-item" onClick={handleRename}>
-            <IconRename className="context-menu-icon" /> {msg('hierarchy.rename')}
-          </div>
-          <div className="context-menu-divider" />
-          <div className="context-menu-item" onClick={handleCreatePrefab}>
-            {contextMenu.object.prefabId 
-              ? <><IconPrefabInstance className="context-menu-icon" /> {getPrefabName(contextMenu.object.prefabId)}</>
-              : <><IconPrefab className="context-menu-icon" /> {msg('prefabs.createFromObject')}</>
-            }
-          </div>
-          <div className="context-menu-divider" />
-          <div className="context-menu-item context-menu-danger" onClick={handleDelete}>
-            <IconDelete className="context-menu-icon" /> 
-            {selectedObjects.length > 1 && selectedObjects.some(o => o && o.id === contextMenu?.object?.id)
-              ? `${msg('hierarchy.deleteSelected')} (${selectedObjects.length})`
-              : msg('hierarchy.delete')
-            }
-          </div>
-        </div>
-      )}
-    </CollapsiblePanel>
+      <DropdownMenu
+        isOpen={ctxMenu.isOpen}
+        onClose={ctxMenu.close}
+        position={ctxMenu.position}
+        roundedCorners="all"
+        items={ctxMenuItems}
+      />
+    </div>
   );
 }
 

@@ -1,9 +1,0 @@
-{
-  "name": "现代深色主题",
-  "description": "一个现代化的深色主题，使用更柔和的颜色和更好的对比度",
-  "activated": "现代深色主题插件已激活",
-  "deactivated": "现代深色主题插件已停用",
-  "registered": "主题已注册: {0}",
-  "registerFailed": "主题注册失败",
-  "unregistered": "主题已注销: {0}"
-}

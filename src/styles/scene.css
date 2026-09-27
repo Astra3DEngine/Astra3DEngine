@@ -1,18 +1,29 @@
-.scene-panel {
-  flex: none;
-  min-height: 100px;
+﻿.scene-panel {
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-/* 当场景面板折叠时（普通折叠，不是 vertical 模式），显示小的折叠栏 */
+.scene-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* 褰撳満鏅潰鏉挎姌鍙犳椂锛堟櫘閫氭姌鍙狅紝涓嶆槸 vertical 妯″紡锛夛紝鏄剧ず灏忕殑鎶樺彔鏍?*/
 .scene-panel.collapsed:not(.vertical-collapsed) {
   flex: none !important;
   min-height: 0 !important;
   height: auto !important;
-  max-height: 30px; /* 只显示折叠栏的高度喵！ */
+  max-height: 30px; /* 鍙樉绀烘姌鍙犳爮鐨勯珮搴﹀柕锛?*/
 }
 
-/* vertical 模式折叠时（所有面板都折叠），贴着容器上下端 */
+/* vertical 妯″紡鎶樺彔鏃讹紙鎵€鏈夐潰鏉块兘鎶樺彔锛夛紝璐寸潃瀹瑰櫒涓婁笅绔?*/
 .scene-panel.vertical-collapsed {
   flex: none !important;
   height: 100% !important;
@@ -25,7 +36,7 @@
   padding: 0;
 }
 
-/* 场景列表项样式，与层级面板保持一致 */
+/* 鍦烘櫙鍒楄〃椤规牱寮忥紝涓庡眰绾ч潰鏉夸繚鎸佷竴鑷?*/
 .scene-item {
   display: flex;
   align-items: center;
@@ -41,7 +52,7 @@
 }
 
 .scene-item:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .scene-item.active {
@@ -118,7 +129,7 @@
 }
 
 .scene-action-btn:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .scene-action-icon {

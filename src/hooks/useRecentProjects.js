@@ -4,13 +4,13 @@
  * @module hooks/useRecentProjects
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   addRecentProject as addProjectToDB,
   getRecentProjects as getProjectsFromDB,
   getProjectHandle,
   removeRecentProject as removeProjectFromDB,
-  clearRecentProjects as clearProjectsFromDB
+  clearRecentProjects as clearProjectsFromDB,
 } from '../utils/recentProjectsDB.js';
 
 /**
@@ -49,21 +49,21 @@ export function useRecentProjects() {
   const openRecentProject = useCallback(async (id) => {
     const handle = await getProjectHandle(id);
     if (!handle) return null;
-    
+
     try {
       const permission = await handle.queryPermission({ mode: 'read' });
       if (permission === 'granted') {
         return handle;
       }
-      
+
       const requestPermission = await handle.requestPermission({ mode: 'read' });
       if (requestPermission === 'granted') {
         return handle;
       }
-    } catch (e) {
+    } catch {
       return null;
     }
-    
+
     return null;
   }, []);
 
@@ -89,6 +89,6 @@ export function useRecentProjects() {
     addRecentProject,
     openRecentProject,
     removeRecentProject,
-    clearRecentProjects
+    clearRecentProjects,
   };
 }

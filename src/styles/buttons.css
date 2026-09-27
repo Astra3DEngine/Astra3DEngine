@@ -1,4 +1,4 @@
-.btn {
+﻿.btn {
   background-color: var(--accent);
   color: var(--text-primary);
   border: none;
@@ -13,6 +13,17 @@
   background-color: var(--accent-hover);
 }
 
+/* 涓绘搷浣滄寜閽紙楂樹寒涓婚鑹诧級 */
+.btn-primary {
+  background-color: var(--accent-active);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background-color: var(--theme-color);
+  filter: brightness(1.1);
+}
+
 .btn-small {
   padding: 3px 7px;
   font-size: 10px;
@@ -24,12 +35,27 @@
 }
 
 .btn-danger:hover {
-  background-color: #e53935;
+  background-color: var(--danger-dark);
+}
+
+/* 娆＄骇鎿嶄綔鎸夐挳 */
+.btn-secondary {
+  background-color: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .icon-btn {
   opacity: 0;
-  transition: opacity 0.15s, color 0.15s, background-color 0.15s;
+  transition:
+    opacity 0.15s,
+    color 0.15s,
+    background-color 0.15s;
   background: transparent;
   border: none;
   color: var(--text-secondary);
@@ -44,7 +70,7 @@
 
 .icon-btn:hover {
   color: var(--text-primary);
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .icon-btn.icon-btn-danger:hover {

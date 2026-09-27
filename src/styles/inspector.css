@@ -1,39 +1,12 @@
-.inspector-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.inspector-panel.collapsed {
-  flex: none !important;
-  min-height: 0 !important;
-}
-
-.inspector-panel.vertical-collapsed {
-  width: 24px;
-  min-width: 24px;
-  flex: 1 !important;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--bg-toolbar);
-  border-left: 1px solid var(--border);
-}
-
-.inspector-panel.vertical-collapsed:hover {
-  background-color: var(--hover-bg);
-}
-
-.inspector-section {
-  margin-bottom: 14px;
+﻿.inspector-section {
+  margin-bottom: 10px;
 }
 
 .inspector-section-title {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   text-transform: uppercase;
 }
 
@@ -47,7 +20,7 @@
 .inspector-row {
   display: flex;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .inspector-label {
@@ -150,6 +123,13 @@
   opacity: 0.3;
 }
 
+.inspector-empty-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
 .inspector-prefab-section {
   background-color: var(--bg-dark);
   border-radius: 6px;
@@ -209,19 +189,182 @@
   cursor: pointer;
 }
 
-.inspector-override-label input[type="checkbox"] {
+.inspector-override-label input[type='checkbox'] {
   width: 12px;
   height: 12px;
   cursor: pointer;
 }
 
-.btn-secondary {
-  background-color: transparent;
-  border: 1px solid var(--border);
+.inspector-clear-btn {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.inspector-clear-btn:hover {
+  background-color: var(--bg-hover);
+}
+
+.inspector-clear-icon {
+  width: 14px;
+  height: 14px;
   color: var(--text-secondary);
 }
 
-.btn-secondary:hover {
-  background-color: var(--hover-bg);
+.inspector-clear-btn:hover .inspector-clear-icon {
+  color: var(--text-primary);
+}
+
+/* VSCode 椋庢牸鐨勪晶鏍忓鍣ㄥ柕锛?*/
+.inspector-container {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
+  flex-shrink: 0;
+  width: auto;
+}
+
+/* 闈㈡澘鍐呭鍖哄煙鍠碉紒 */
+.inspector-content {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  position: relative;
+  width: 280px;
+  min-width: 200px;
+  max-width: 400px;
+}
+
+/* 鎷変几鎶婃墜鍠碉紒 */
+.inspector-resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+  background-color: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.inspector-resize-handle:hover {
+  background-color: var(--accent);
+}
+
+/* 闈㈡澘鏍囬鏍忓柕锛?*/
+.inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-toolbar);
+  min-height: 36px;
+}
+
+.inspector-header-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* 闈㈡澘鍐呭涓讳綋鍠碉紒 */
+.inspector-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px;
+}
+
+/* VSCode 椋庢牸鐨勫浘鏍囨寜閽爮鍠碉紒 */
+.inspector-sidebar {
+  width: 36px;
+  min-width: 36px;
+  max-width: 36px;
+  height: 100%;
+  background-color: var(--bg-toolbar);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* 褰撻潰鏉挎敹璧锋椂锛屾寜閽爮闇€瑕佸乏杈规鍠碉紒 */
+.inspector-container:not(.panel-expanded) .inspector-sidebar {
+  border-left: 1px solid var(--border);
+}
+
+/* 褰撻潰鏉垮睍寮€鏃讹紝鎸夐挳鏍忎笉闇€瑕佸乏杈规锛屽洜涓洪潰鏉垮唴瀹瑰凡缁忔湁鍙宠竟妗嗗柕锛?*/
+.inspector-container.panel-expanded .inspector-sidebar {
+  border-left: none;
+}
+
+.inspector-sidebar-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0 8px 0 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  border-radius: 0;
+  position: relative;
+  overflow: hidden;
+  transition: background-color 0.2s ease;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/* 鍙充晶婵€娲绘寚绀哄櫒锛圴SCode 椋庢牸锛?*/
+.inspector-sidebar-btn::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background-color: var(--theme-color);
+  transition: width 0.15s ease;
+}
+
+.inspector-sidebar-btn.active::before {
+  width: 2px;
+}
+
+.inspector-sidebar-btn:hover {
+  background-color: var(--bg-hover);
+}
+
+.inspector-sidebar-btn.active {
+  background-color: var(--bg-hover);
+}
+
+.inspector-sidebar-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.inspector-sidebar-btn:hover .inspector-sidebar-icon {
+  color: var(--text-primary);
+}
+
+.inspector-sidebar-btn.active .inspector-sidebar-icon {
   color: var(--text-primary);
 }

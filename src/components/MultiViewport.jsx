@@ -2,41 +2,42 @@
  * @file components/MultiViewport.jsx
  * @description 多视口布局组件，支持单视图和四视图切换
  * @module components/MultiViewport
- * 
+ *
  * 复杂，复杂就是爽。
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import Viewport from './Viewport.jsx';
 import { msg } from '../i18n/index.js';
-import IconLayoutSingle from '../icons/layout-single.svg?react';
-import IconLayoutQuad from '../icons/layout-quad.svg?react';
+import IconLayoutSingle from '../assets/icons/viewport/layout-single.svg?react';
+import IconLayoutQuad from '../assets/icons/viewport/layout-quad.svg?react';
+import { tip } from '../lib/tooltip.js';
 
 const VIEW_CONFIGS = {
   perspective: {
     label: 'viewport.perspective',
     cameraType: 'perspective',
     cameraPosition: [5, 5, 5],
-    cameraLookAt: [0, 0, 0]
+    cameraLookAt: [0, 0, 0],
   },
   top: {
     label: 'viewport.top',
     cameraType: 'orthographic',
     cameraPosition: [0, 10, 0],
-    cameraLookAt: [0, 0, 0]
+    cameraLookAt: [0, 0, 0],
   },
   front: {
     label: 'viewport.front',
     cameraType: 'orthographic',
     cameraPosition: [0, 0, 10],
-    cameraLookAt: [0, 0, 0]
+    cameraLookAt: [0, 0, 0],
   },
   side: {
     label: 'viewport.side',
     cameraType: 'orthographic',
     cameraPosition: [10, 0, 0],
-    cameraLookAt: [0, 0, 0]
-  }
+    cameraLookAt: [0, 0, 0],
+  },
 };
 
 /**
@@ -55,6 +56,7 @@ const VIEW_CONFIGS = {
  * @param {string} props.theme - 主题
  * @param {boolean} props.lightRenderingEnabled - 是否启用光渲染
  * @param {Function} props.onLightRenderingChange - 光渲染开关变化回调
+ * @param {Object} props.sceneSettings - 场景设置对象
  * @returns {JSX.Element} 多视口组件
  */
 function MultiViewport({
@@ -70,7 +72,8 @@ function MultiViewport({
   onRecordHistory,
   theme,
   lightRenderingEnabled,
-  onLightRenderingChange
+  onLightRenderingChange,
+  sceneSettings,
 }) {
   const [layoutMode, setLayoutMode] = useState('single');
   const [activeView, setActiveView] = useState('perspective');
@@ -78,23 +81,22 @@ function MultiViewport({
     perspective: { cameraType: 'perspective' },
     top: { cameraType: 'orthographic' },
     front: { cameraType: 'orthographic' },
-    side: { cameraType: 'orthographic' }
+    side: { cameraType: 'orthographic' },
   });
 
-  const handleLayoutToggle = useCallback(() => {
-    setLayoutMode(prev => prev === 'single' ? 'quad' : 'single');
-  }, []);
-
-  const handleViewClick = useCallback((e, viewName) => {
-    if (layoutMode === 'quad') {
-      setActiveView(viewName);
-    }
-  }, [layoutMode]);
+  const handleViewClick = useCallback(
+    (e, viewName) => {
+      if (layoutMode === 'quad') {
+        setActiveView(viewName);
+      }
+    },
+    [layoutMode]
+  );
 
   const handleViewportCameraChange = useCallback((viewName, cameraType) => {
-    setViewStates(prev => ({
+    setViewStates((prev) => ({
       ...prev,
-      [viewName]: { ...prev[viewName], cameraType }
+      [viewName]: { ...prev[viewName], cameraType },
     }));
   }, []);
 
@@ -104,7 +106,7 @@ function MultiViewport({
     const viewState = viewStates[viewName];
 
     return (
-      <div 
+      <div
         key={viewName}
         className={`multi-viewport-item ${isActive ? 'active' : ''}`}
         style={style}
@@ -132,6 +134,7 @@ function MultiViewport({
           onCameraTypeChange={(type) => handleViewportCameraChange(viewName, type)}
           lightRenderingEnabled={lightRenderingEnabled}
           onLightRenderingChange={onLightRenderingChange}
+          sceneSettings={sceneSettings}
         />
       </div>
     );
@@ -140,22 +143,22 @@ function MultiViewport({
   return (
     <div className="multi-viewport-container">
       <div className="multi-viewport-layout-toggle">
-        <button 
+        <button
           className={`layout-toggle-btn ${layoutMode === 'single' ? 'active' : ''}`}
           onClick={() => setLayoutMode('single')}
-          title={msg('viewport.singleView')}
+          {...tip(msg('viewport.singleView'))}
         >
           <IconLayoutSingle className="layout-icon" />
         </button>
-        <button 
+        <button
           className={`layout-toggle-btn ${layoutMode === 'quad' ? 'active' : ''}`}
           onClick={() => setLayoutMode('quad')}
-          title={msg('viewport.quadView')}
+          {...tip(msg('viewport.quadView'))}
         >
           <IconLayoutQuad className="layout-icon" />
         </button>
       </div>
-      
+
       {layoutMode === 'single' ? (
         renderViewport(activeView, { top: 0, left: 0, right: 0, bottom: 0 })
       ) : (

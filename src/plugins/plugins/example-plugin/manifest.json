@@ -1,9 +1,0 @@
-{
-  "name": "示例插件",
-  "description": "这是一个示例插件，展示插件系统的基本功能",
-  "version": "1.0.0",
-  "author": "Astra3D Team",
-  "enabledByDefault": false,
-  "userscript": "index.js",
-  "tags": ["new", "recommended"]
-}

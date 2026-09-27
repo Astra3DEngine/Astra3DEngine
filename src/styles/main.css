@@ -5,6 +5,9 @@
 @import './panel.css';
 @import './scene.css';
 @import './hierarchy.css';
+@import './sidebar.css';
+@import './dock.css';
+@import './tabs.css';
 @import './inspector.css';
 @import './viewport.css';
 @import './assets.css';
@@ -12,5 +15,6 @@
 @import './buttons.css';
 @import './scrollbar.css';
 @import './modal.css';
-@import './plugin-settings.css';
+@import './color-picker.css';
+@import './tooltip.css';
 @import './file-browser.css';
