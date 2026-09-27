@@ -13,24 +13,15 @@ import { TransformControls } from 'three/examples/jsm/controls/TransformControls
 import { msg } from '../i18n/index.js';
 import DropdownMenu from './DropdownMenu.jsx';
 import {
-  ensureStandardMaterial,
-  applyTextureToMaterial,
-  cloneTexture,
-  createPrimitiveMaterial,
-} from '../engine/materials.js';
-import {
   collectDescendantRelativeTransforms,
   applyTransformToDescendants,
-  applyTransformToObject3D,
   extractTransformFromObject3D,
 } from '../engine/TreeMath.js';
-import { buildModelGroup, buildMeshPart, findMeshByPath } from '../engine/ModelLoader.js';
-import {
-  createLightFromObject,
-  updateLightTargetFromObject,
-  createDefaultDirectionalLight,
-} from '../engine/lights.js';
-import { ViewCube, animateCameraToDirection } from '../engine/ViewCube.js';
+import { createDefaultDirectionalLight } from '../engine/lights.js';
+import { useViewportPick } from '../hooks/useViewportPick.js';
+import { useSelectionOutline } from '../hooks/useSelectionOutline.js';
+import { useViewCubeMount } from '../hooks/useViewCubeMount.js';
+import { useSceneObjectSync, FALLBACK_FACE_TEXTURES } from '../hooks/useSceneObjectSync.js';
 
 import IconSelect from '../assets/icons/tools/select.svg?react';
 import IconMove from '../assets/icons/tools/move.svg?react';
@@ -52,18 +43,6 @@ import IconSunOff from '../assets/icons/viewport/sun-off.svg?react';
 import { tip } from '../lib/tooltip.js';
 
 /** cube 的六个面，顺序与 BoxGeometry 材质数组一致 */
-const CUBE_FACE_NAMES = ['right', 'left', 'top', 'bottom', 'front', 'back'];
-
-/** 兼容旧项目缺少 faceTextures 字段的情况 */
-const FALLBACK_FACE_TEXTURES = () => ({
-  right: null,
-  left: null,
-  top: null,
-  bottom: null,
-  front: null,
-  back: null,
-});
-
 function Viewport({
   objects,
   assets,
@@ -1152,32 +1131,15 @@ function Viewport({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount once, deps intentionally stable
   }, []);
 
-  // 视图立方体
-  useEffect(() => {
-    if (!viewCubeElRef.current) return;
-
-    const viewCube = new ViewCube(viewCubeElRef.current, {
-      getActiveCamera: () =>
-        cameraTypeRef.current === 'orthographic'
-          ? orthographicCameraRef.current
-          : cameraRef.current,
-      isOrthographic: () => cameraTypeRef.current === 'orthographic',
-      getOrbitTarget: () => orbitControlsRef.current?.target.clone() || new THREE.Vector3(0, 0, 0),
-      onFaceClick: (direction) => {
-        animateCameraToDirection(
-          cameraRef.current,
-          orbitControlsRef.current?.target.clone() || new THREE.Vector3(0, 0, 0),
-          direction,
-          () => orbitControlsRef.current?.update()
-        );
-      },
-    });
-    viewCubeRef.current = viewCube;
-
-    return () => {
-      viewCubeRef.current = null;
-    };
-  }, []);
+  // 视图立方体 已抽至 useViewCubeMount 钩子
+  useViewCubeMount({
+    viewCubeElRef,
+    viewCubeRef,
+    cameraRef,
+    orthographicCameraRef,
+    cameraTypeRef,
+    orbitControlsRef,
+  });
 
   // 主题背景色
   useEffect(() => {
@@ -1195,491 +1157,23 @@ function Viewport({
     tc.showX = tc.showY = tc.showZ = currentTool !== 'select';
   }, [currentTool]);
 
-  // 对象同步：创建 / 更新 / 移除场景对象
-  useEffect(() => {
-    if (!sceneRef.current) return;
+  // 对象同步：创建 / 更新 / 移除场景对象（已抽至 useSceneObjectSync 钩子）
+  useSceneObjectSync(
+    { sceneRef, meshesRef, assetsRef, defaultLightRef, lightRenderingEnabledRef },
+    { objects, assets, lightRenderingEnabled }
+  );
 
-    const hasUserLights = objects.some((obj) => obj.isLight);
-    if (defaultLightRef.current) {
-      defaultLightRef.current.intensity = hasUserLights ? 0 : 0.2;
-      defaultLightRef.current.castShadow = hasUserLights ? false : lightRenderingEnabled;
-    }
+  // 选中高亮 + 变换轴心 已抽至 useSelectionOutline 钩子
+  useSelectionOutline(
+    { sceneRef, meshesRef, transformControlsRef },
+    { selectedObject, selectedObjects, getMeshGeometryCenterWorld, calculateSelectionsCenter }
+  );
 
-    const existingIds = new Set(Object.keys(meshesRef.current));
-    const newIds = new Set(objects.map((obj) => obj.id));
-
-    // 移除已不存在的对象
-    existingIds.forEach((id) => {
-      if (!newIds.has(parseInt(id))) {
-        const mesh = meshesRef.current[id];
-        if (mesh) {
-          sceneRef.current.remove(mesh);
-          if (mesh.userData.isLight && mesh.target) {
-            sceneRef.current.remove(mesh.target);
-          }
-          if (mesh.geometry) {
-            mesh.geometry.dispose();
-          }
-          if (mesh.material) {
-            if (Array.isArray(mesh.material)) {
-              mesh.material.forEach((m) => m.dispose());
-            } else {
-              mesh.material.dispose();
-            }
-          }
-          mesh.traverse((child) => {
-            if (child !== mesh && child.geometry) child.geometry.dispose();
-          });
-          delete meshesRef.current[id];
-        }
-      }
-    });
-
-    objects.forEach((obj) => {
-      const existingMesh = meshesRef.current[obj.id];
-
-      if (existingMesh) {
-        const mesh = existingMesh;
-
-        // model 未加载内容时补充重建（资产已就绪但 Group 为空）
-        if (obj.isModel && mesh.userData.isModel && mesh.children.length === 0) {
-          const asset = assetsRef.current.find((a) => a.id === obj.assetId);
-          if (asset && asset.gltfScene) {
-            sceneRef.current.remove(mesh);
-            const modelGroup = buildModelGroup(asset, { ...obj, assets: assetsRef.current });
-            sceneRef.current.add(modelGroup);
-            meshesRef.current[obj.id] = modelGroup;
-            return;
-          }
-        }
-
-        applyTransformToObject3D(mesh, obj);
-
-        if (obj.type === 'cube') {
-          const faceTextures = obj.faceTextures || FALLBACK_FACE_TEXTURES();
-          if (Array.isArray(mesh.material)) {
-            CUBE_FACE_NAMES.forEach((faceName, index) => {
-              const textureId = faceTextures[faceName];
-              const textureAsset = textureId
-                ? assetsRef.current.find((a) => a.id === textureId)
-                : null;
-              mesh.material[index].color.setStyle(obj.color || '#4a90d9');
-              mesh.material[index].map = textureAsset?.texture || null;
-              mesh.material[index].needsUpdate = true;
-            });
-          }
-        } else if (obj.type === 'sphere' || obj.type === 'plane') {
-          if (mesh.material) {
-            mesh.material.color.setStyle(obj.color || '#4a90d9');
-            if (obj.textureId) {
-              const textureAsset = assetsRef.current.find((a) => a.id === obj.textureId);
-              if (textureAsset && textureAsset.texture) {
-                const texture = cloneTexture(textureAsset.texture, obj.uvScale, obj.uvOffset);
-                mesh.material.map = texture;
-                mesh.material.needsUpdate = true;
-              } else {
-                mesh.material.map = null;
-                mesh.material.needsUpdate = true;
-              }
-            } else if (mesh.material.map) {
-              mesh.material.map = null;
-              mesh.material.needsUpdate = true;
-            }
-          }
-        } else if (obj.isModel && mesh.userData.isModel) {
-          if (obj.textureId) {
-            const textureAsset = assetsRef.current.find((a) => a.id === obj.textureId);
-            if (textureAsset && textureAsset.texture) {
-              const texture = cloneTexture(textureAsset.texture, obj.uvScale, obj.uvOffset);
-              mesh.traverse((child) => {
-                if (child.isMesh && child.material) {
-                  // 模型材质使用 specular 推导的转换，兼容原始行为
-                  child.material = ensureStandardMaterial(child.material, true);
-                  child.material.map = texture;
-                  child.material.needsUpdate = true;
-                }
-              });
-            }
-          } else {
-            mesh.traverse((child) => {
-              if (child.isMesh && child.material) {
-                child.material.map = null;
-                child.material.needsUpdate = true;
-              }
-            });
-          }
-        } else if (obj.type === 'mesh' && mesh.userData.isMeshPart) {
-          if (obj.textureId) {
-            const textureAsset = assetsRef.current.find((a) => a.id === obj.textureId);
-            if (textureAsset && textureAsset.texture) {
-              const texture = cloneTexture(textureAsset.texture, obj.uvScale, obj.uvOffset);
-              mesh.material = applyTextureToMaterial(mesh.material, texture);
-            }
-          } else {
-            // 清除贴图，恢复原始材质
-            const asset = assetsRef.current.find((a) => a.id === obj.assetId);
-            if (asset && asset.gltfScene) {
-              const targetMesh = findMeshByPath(asset.gltfScene, obj.meshPath);
-              if (targetMesh) {
-                if (Array.isArray(mesh.material)) {
-                  mesh.material.forEach((mat, i) => {
-                    if (targetMesh.material[i]) {
-                      mat.map = targetMesh.material[i].map;
-                      mat.needsUpdate = true;
-                    }
-                  });
-                } else {
-                  mesh.material.map = targetMesh.material.map;
-                  mesh.material.needsUpdate = true;
-                }
-              }
-            }
-          }
-        } else if (mesh.material && mesh.material.color) {
-          mesh.material.color.setStyle(obj.color || '#4a90d9');
-        }
-
-        // 光源属性更新
-        if (obj.isLight && mesh.userData.isLight) {
-          mesh.color.setStyle(obj.color || '#ffffff');
-          mesh.intensity = obj.intensity || 2;
-          if (obj.lightType === 'point' || obj.lightType === 'spot') {
-            mesh.distance = obj.distance || 10;
-            mesh.decay = obj.decay || 1;
-          }
-          if (obj.lightType === 'spot') {
-            mesh.angle = obj.angle || Math.PI / 4;
-            mesh.penumbra = obj.penumbra || 0.3;
-          }
-          if (obj.lightType === 'directional' || obj.lightType === 'spot') {
-            updateLightTargetFromObject(mesh, obj);
-          }
-          if (mesh.userData.visualMesh) {
-            mesh.userData.visualMesh.traverse((child) => {
-              if (child.material) {
-                const mats = Array.isArray(child.material) ? child.material : [child.material];
-                mats.forEach((m) => {
-                  if (m.color) m.color.setStyle(obj.color || '#ffffff');
-                });
-              }
-            });
-            if (obj.lightType === 'spot') {
-              const coneLength = 0.6;
-              const coneRadius = coneLength * Math.tan(obj.angle || Math.PI / 4);
-              mesh.userData.visualMesh.children.forEach((child) => {
-                if (child.geometry) {
-                  if (child.geometry.type === 'ConeGeometry') {
-                    child.geometry.dispose();
-                    child.geometry = new THREE.ConeGeometry(coneRadius, coneLength, 16, 1, true);
-                  } else if (child.geometry.type === 'EdgesGeometry') {
-                    const newConeGeo = new THREE.ConeGeometry(coneRadius, coneLength, 16, 1, true);
-                    child.geometry.dispose();
-                    child.geometry = new THREE.EdgesGeometry(newConeGeo);
-                    newConeGeo.dispose();
-                  }
-                }
-              });
-            }
-          }
-        }
-        return;
-      }
-
-      // ===== 新对象创建 =====
-
-      if (obj.isFolder) {
-        return;
-      }
-
-      if (obj.type === 'mesh' && obj.assetId && obj.meshPath) {
-        const asset = assetsRef.current.find((a) => a.id === obj.assetId);
-        if (asset && asset.gltfScene) {
-          const mesh = buildMeshPart(asset, { ...obj, assets: assetsRef.current });
-          if (mesh) {
-            sceneRef.current.add(mesh);
-            meshesRef.current[obj.id] = mesh;
-          }
-        }
-        return;
-      }
-
-      if (obj.isModel && obj.assetId) {
-        const asset = assetsRef.current.find((a) => a.id === obj.assetId);
-        if (asset && asset.gltfScene) {
-          const modelGroup = buildModelGroup(asset, { ...obj, assets: assetsRef.current });
-          sceneRef.current.add(modelGroup);
-          meshesRef.current[obj.id] = modelGroup;
-        }
-        return;
-      }
-
-      if (obj.isLight) {
-        const light = createLightFromObject(obj);
-        if (light) {
-          if (!lightRenderingEnabledRef.current) {
-            light.userData.originalIntensity = light.intensity;
-            light.intensity = 0;
-            light.castShadow = false;
-          }
-          sceneRef.current.add(light);
-          if (light.userData.visualMesh) {
-            light.add(light.userData.visualMesh);
-          }
-          meshesRef.current[obj.id] = light;
-        }
-        return;
-      }
-
-      // 基础图元
-      let geometry;
-      switch (obj.type) {
-        case 'cube':
-          geometry = new THREE.BoxGeometry(1, 1, 1);
-          break;
-        case 'sphere':
-          geometry = new THREE.SphereGeometry(0.5, 32, 32);
-          break;
-        case 'plane':
-          geometry = new THREE.PlaneGeometry(2, 2);
-          break;
-        default:
-          geometry = new THREE.BoxGeometry(1, 1, 1);
-      }
-
-      let material;
-      if (obj.type === 'cube') {
-        const faceTextures = obj.faceTextures || FALLBACK_FACE_TEXTURES();
-        material = CUBE_FACE_NAMES.map((faceName) => {
-          const textureId = faceTextures[faceName];
-          const textureAsset = textureId ? assetsRef.current.find((a) => a.id === textureId) : null;
-          if (textureAsset && textureAsset.texture) {
-            return new THREE.MeshStandardMaterial({
-              map: textureAsset.texture,
-              color: obj.color || 0x4a90d9,
-              metalness: 0.3,
-              roughness: 0.7,
-            });
-          }
-          return createPrimitiveMaterial(obj.color);
-        });
-      } else if ((obj.type === 'sphere' || obj.type === 'plane') && obj.textureId) {
-        const textureAsset = assetsRef.current.find((a) => a.id === obj.textureId);
-        if (textureAsset && textureAsset.texture) {
-          const texture = cloneTexture(textureAsset.texture, obj.uvScale, obj.uvOffset);
-          material = new THREE.MeshStandardMaterial({
-            map: texture,
-            color: obj.color || 0x4a90d9,
-            metalness: 0.3,
-            roughness: 0.7,
-          });
-        } else {
-          material = createPrimitiveMaterial(obj.color);
-        }
-      } else {
-        material = createPrimitiveMaterial(obj.color);
-      }
-
-      const mesh = new THREE.Mesh(geometry, material);
-      applyTransformToObject3D(mesh, obj);
-      mesh.userData = { id: obj.id };
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-
-      sceneRef.current.add(mesh);
-      meshesRef.current[obj.id] = mesh;
-    });
-  }, [objects, assets, lightRenderingEnabled]);
-
-  // 选中高亮 + 变换轴心
-  useEffect(() => {
-    if (!transformControlsRef.current || !sceneRef.current) return;
-
-    Object.values(meshesRef.current).forEach((mesh) => {
-      if (mesh.userData.outline) {
-        mesh.remove(mesh.userData.outline);
-        mesh.userData.outline.geometry.dispose();
-        mesh.userData.outline.material.dispose();
-        mesh.userData.outline = null;
-      }
-    });
-
-    const objectsToHighlight =
-      selectedObjects.length > 1
-        ? selectedObjects.filter((o) => o)
-        : selectedObject
-          ? [selectedObject]
-          : [];
-
-    objectsToHighlight.forEach((obj, index) => {
-      const mesh = meshesRef.current[obj.id];
-      if (!mesh) return;
-
-      const isPrimary = index === 0;
-
-      if (mesh.userData.isModel) {
-        const modelContent = mesh.children[0];
-        if (modelContent) {
-          const box = new THREE.Box3().setFromObject(modelContent);
-          const size = new THREE.Vector3();
-          box.getSize(size);
-          const boxCenter = new THREE.Vector3();
-          box.getCenter(boxCenter);
-          const localCenter = modelContent.worldToLocal(boxCenter.clone());
-
-          const outlineGeo = new THREE.BoxGeometry(size.x * 1.02, size.y * 1.02, size.z * 1.02);
-          const outline = new THREE.LineSegments(
-            new THREE.EdgesGeometry(outlineGeo),
-            new THREE.LineBasicMaterial({ color: isPrimary ? 0x4a90d9 : 0x66aaff, linewidth: 2 })
-          );
-          outline.position.copy(localCenter);
-          modelContent.add(outline);
-          mesh.userData.outline = outline;
-        }
-      } else if (mesh.userData.isLight) {
-        const outline = new THREE.LineSegments(
-          new THREE.EdgesGeometry(new THREE.SphereGeometry(0.6, 8, 8)),
-          new THREE.LineBasicMaterial({ color: isPrimary ? 0x4a90d9 : 0x66aaff, linewidth: 2 })
-        );
-        mesh.add(outline);
-        mesh.userData.outline = outline;
-      } else {
-        const outline = new THREE.LineSegments(
-          new THREE.EdgesGeometry(mesh.geometry),
-          new THREE.LineBasicMaterial({ color: isPrimary ? 0x4a90d9 : 0x66aaff, linewidth: 2 })
-        );
-        outline.scale.setScalar(1.01);
-        mesh.add(outline);
-        mesh.userData.outline = outline;
-      }
-    });
-
-    if (objectsToHighlight.length === 0) {
-      transformControlsRef.current.detach();
-    } else if (objectsToHighlight.length === 1) {
-      const mesh = meshesRef.current[objectsToHighlight[0].id];
-      if (mesh && mesh.parent === sceneRef.current) {
-        const worldCenter = getMeshGeometryCenterWorld(mesh);
-        const pivot = sceneRef.current.getObjectByName('singleSelectPivot');
-        if (pivot) {
-          pivot.position.copy(worldCenter);
-          pivot.rotation.copy(mesh.rotation);
-          pivot.scale.copy(mesh.scale);
-          transformControlsRef.current.attach(pivot);
-        }
-      }
-    } else {
-      const meshes = objectsToHighlight
-        .map((obj) => meshesRef.current[obj.id])
-        .filter((m) => m && m.parent === sceneRef.current);
-
-      if (meshes.length === 0) {
-        const firstObj = objectsToHighlight[0];
-        if (firstObj && firstObj.position) {
-          const pivot = sceneRef.current.getObjectByName('multiSelectPivot');
-          if (pivot) {
-            pivot.position.set(firstObj.position[0], firstObj.position[1], firstObj.position[2]);
-            pivot.rotation.set(
-              THREE.MathUtils.degToRad(firstObj.rotation[0] || 0),
-              THREE.MathUtils.degToRad(firstObj.rotation[1] || 0),
-              THREE.MathUtils.degToRad(firstObj.rotation[2] || 0)
-            );
-            pivot.scale.set(firstObj.scale[0] || 1, firstObj.scale[1] || 1, firstObj.scale[2] || 1);
-            transformControlsRef.current.attach(pivot);
-          }
-        }
-        return;
-      }
-
-      const center = calculateSelectionsCenter(meshes);
-      const primaryMesh = meshes[0];
-      if (primaryMesh) {
-        const pivot = sceneRef.current.getObjectByName('multiSelectPivot');
-        if (pivot) {
-          pivot.position.copy(center);
-          pivot.rotation.copy(primaryMesh.rotation);
-          pivot.scale.copy(primaryMesh.scale);
-          transformControlsRef.current.attach(pivot);
-        }
-      }
-    }
-  }, [
-    selectedObject,
-    selectedObjects,
-    currentTool,
-    calculateSelectionsCenter,
-    getMeshGeometryCenterWorld,
-  ]);
-
-  // 射线拾取
-  useEffect(() => {
-    if (!containerRef.current || !rendererRef.current) return;
-
-    const canvas = rendererRef.current.domElement;
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-
-    const handleClick = (e) => {
-      if (hasDraggedRef.current) {
-        hasDraggedRef.current = false;
-        return;
-      }
-
-      const rect = canvas.getBoundingClientRect();
-      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-      raycaster.setFromCamera(mouse, cameraRef.current);
-
-      const validObjects = Object.values(meshesRef.current).filter(
-        (mesh) => mesh.parent === sceneRef.current
-      );
-      const intersects = raycaster.intersectObjects(validObjects, true);
-
-      if (intersects.length > 0) {
-        let clickedMesh = intersects[0].object;
-        while (clickedMesh.parent && !meshesRef.current[clickedMesh.userData?.id]) {
-          clickedMesh = clickedMesh.parent;
-        }
-        if (clickedMesh.userData?.id) {
-          const found = objects.find((obj) => obj.id === clickedMesh.userData.id);
-          if (found) {
-            onSelectObject(found);
-          }
-        }
-      } else if (currentTool === 'select') {
-        onSelectObject(null);
-      }
-    };
-
-    canvas.addEventListener('click', handleClick);
-    return () => {
-      canvas.removeEventListener('click', handleClick);
-    };
-  }, [objects, currentTool, onSelectObject]);
-
-  // 播放模式：旋转实体对象（排除灯光/可视化/轴心/网格辅助）
-  useEffect(() => {
-    if (!sceneRef.current || !isPlaying) return;
-
-    const animate = () => {
-      Object.values(meshesRef.current).forEach((mesh) => {
-        if (
-          mesh.userData?.id &&
-          !mesh.userData?.isLight &&
-          !mesh.userData?.visualMesh &&
-          !mesh.userData?.outline &&
-          mesh.type !== 'DirectionalLight' &&
-          mesh.type !== 'PointLight' &&
-          mesh.type !== 'SpotLight' &&
-          mesh.type !== 'Object3D'
-        ) {
-          mesh.rotation.y += 0.01;
-        }
-      });
-    };
-    const interval = setInterval(animate, 16);
-    return () => clearInterval(interval);
-  }, [isPlaying]);
+  // 射线拾取 + 播放模式旋转 已抽至 useViewportPick 钩子
+  useViewportPick(
+    { containerRef, rendererRef, cameraRef, sceneRef, meshesRef, hasDraggedRef },
+    { objects, currentTool, onSelectObject, isPlaying }
+  );
 
   // ===== 贴图拖拽 =====
   const handleDragOver = (e) => {

@@ -40,6 +40,16 @@ export default tseslint.config(
     }
   },
   {
+    // 测试文件使用 vitest 全局（describe/it/expect 等）
+    files: ['src/tests/**/*.{js,jsx,ts,tsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.vitest
+      }
+    }
+  },
+  {
     files: ['electron/**/*.js', 'scripts/**/*.js', 'vite.config.js', 'vite.config.desktop.js'],
     languageOptions: {
       globals: globals.node
