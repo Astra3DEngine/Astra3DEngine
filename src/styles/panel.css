@@ -1,9 +1,9 @@
-.left-sidebar {
+﻿.left-sidebar {
   display: flex;
   flex-direction: column;
   background-color: var(--bg-panel);
   overflow: hidden;
-  height: 100%; /* 确保左侧边栏填满父容器高度喵！ */
+  height: 100%; /* 纭繚宸︿晶杈规爮濉弧鐖跺鍣ㄩ珮搴﹀柕锛?*/
 }
 
 .left-sidebar.all-collapsed {
@@ -99,7 +99,7 @@
 }
 
 .panel-header:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .panel-header-left {
@@ -155,7 +155,7 @@
 }
 
 .collapsible-panel.vertical-collapsed:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .panel-vertical-title {
@@ -168,7 +168,7 @@
   letter-spacing: 0.5px;
 }
 
-/* 多场景系统：vertical 模式折叠时的 headerRight 样式喵！ */
+/* 澶氬満鏅郴缁燂細vertical 妯″紡鎶樺彔鏃剁殑 headerRight 鏍峰紡鍠碉紒 */
 .panel-vertical-header-right {
   position: absolute;
   bottom: 4px;
@@ -216,7 +216,7 @@
   min-height: 0 !important;
 }
 
-/* 预制件面板和层级面板之间的拖拽分隔条喵 */
+/* 棰勫埗浠堕潰鏉垮拰灞傜骇闈㈡澘涔嬮棿鐨勬嫋鎷藉垎闅旀潯鍠?*/
 .panel-resize-handle {
   height: 4px;
   width: 100%;
@@ -260,7 +260,7 @@
 }
 
 .prefab-item:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .prefab-item.selected {

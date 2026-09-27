@@ -165,7 +165,7 @@ export class ProjectFileService {
     if (this.isElectron) {
       try {
         const filePath = await this._openFileBrowser('save', {
-          title: '保存项目',
+          title: msg('file.saveDialogTitle'),
           defaultPath: projectFileName || 'astra_project.json',
           filters: [
             { name: 'Astra Project', extensions: ['json'] },
@@ -180,17 +180,17 @@ export class ProjectFileService {
           JSON.stringify(projectData, null, 2)
         );
         if (!writeResult.success) {
-          Toast.error('保存失败: ' + writeResult.error);
+          Toast.error(msg('file.saveFailed', { error: writeResult.error }));
           return;
         }
 
         this.fileHandle = filePath;
         useProjectStore.getState().setProjectFileName(fileName);
         useProjectStore.getState().setHasUnsavedChanges(false);
-        Toast.success(`已保存: ${fileName}`);
+        Toast.success(msg('file.saved', { name: fileName }));
       } catch (error) {
         console.error('Error saving file:', error);
-        Toast.error('保存失败: ' + error.message);
+        Toast.error(msg('file.saveFailed', { error: error.message }));
       }
       return;
     }
@@ -210,7 +210,7 @@ export class ProjectFileService {
         useProjectStore.getState().setProjectFileName(handle.name);
         await this._writeToFile(handle, projectData);
         useProjectStore.getState().setHasUnsavedChanges(false);
-        Toast.success(`已保存: ${handle.name}`);
+        Toast.success(msg('file.saved', { name: handle.name }));
       } catch (error) {
         if (error.name !== 'AbortError') {
           console.error('Error saving file:', error);
@@ -228,7 +228,7 @@ export class ProjectFileService {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       useProjectStore.getState().setHasUnsavedChanges(false);
-      Toast.success(`已保存: ${projectFileName || 'astra_project.json'}`);
+      Toast.success(msg('file.saved', { name: projectFileName || 'astra_project.json' }));
     }
   }
 
@@ -242,11 +242,11 @@ export class ProjectFileService {
         JSON.stringify(projectData, null, 2)
       );
       if (!writeResult.success) {
-        Toast.error('保存失败: ' + writeResult.error);
+        Toast.error(msg('file.saveFailed', { error: writeResult.error }));
         return;
       }
       useProjectStore.getState().setHasUnsavedChanges(false);
-      Toast.success(`已保存: ${projectFileName}`);
+      Toast.success(msg('file.saved', { name: projectFileName }));
       return;
     }
 
@@ -254,8 +254,8 @@ export class ProjectFileService {
       const hasPermission = await this._verifyFileHandle(this.fileHandle);
       if (!hasPermission) {
         const shouldReselect = await this.dialog.confirm(
-          '文件访问权限已失效。是否选择新的保存位置？',
-          '保存失败'
+          msg('file.permissionLost'),
+          msg('file.saveFailedTitle')
         );
         if (shouldReselect) {
           this.fileHandle = null;
@@ -267,13 +267,13 @@ export class ProjectFileService {
       try {
         await this._writeToFile(this.fileHandle, projectData);
         useProjectStore.getState().setHasUnsavedChanges(false);
-        Toast.success(`已保存: ${projectFileName}`);
+        Toast.success(msg('file.saved', { name: projectFileName }));
         return;
       } catch (error) {
         if (error.message === 'FILE_HANDLE_INVALID') {
           const shouldReselect = await this.dialog.confirm(
-            '文件可能已被外部修改或移动。是否选择新的保存位置？',
-            '保存失败'
+            msg('file.externallyModified'),
+            msg('file.saveFailedTitle')
           );
           if (shouldReselect) {
             this.fileHandle = null;
@@ -282,7 +282,7 @@ export class ProjectFileService {
           return;
         }
         console.error('Error saving file:', error);
-        Toast.error('保存失败: ' + error.message);
+        Toast.error(msg('file.saveFailed', { error: error.message }));
         return;
       }
     }
@@ -294,7 +294,7 @@ export class ProjectFileService {
     if (this.isElectron) {
       try {
         const filePath = await this._openFileBrowser('open', {
-          title: '打开项目',
+          title: msg('file.openDialogTitle'),
           filters: [
             { name: 'Astra Project', extensions: ['json'] },
             { name: 'All Files', extensions: ['*'] },
@@ -304,7 +304,7 @@ export class ProjectFileService {
 
         const readResult = await window.electronAPI.readFile(filePath);
         if (!readResult.success) {
-          Toast.error('读取失败: ' + readResult.error);
+          Toast.error(msg('file.readFailed', { error: readResult.error }));
           return;
         }
         const projectData = JSON.parse(readResult.content);
@@ -313,10 +313,10 @@ export class ProjectFileService {
 
         this.fileHandle = filePath;
         this.loadProjectData(projectData, projectName);
-        Toast.success(`已打开: ${projectName}`);
+        Toast.success(msg('file.opened', { name: projectName }));
       } catch (error) {
         console.error('Error loading file:', error);
-        Toast.error('打开失败: ' + error.message);
+        Toast.error(msg('file.openFailed', { error: error.message }));
       }
       return;
     }
@@ -389,8 +389,8 @@ export class ProjectFileService {
     const handle = await this.recent?.open(project.id);
     if (!handle) {
       const shouldRemove = await this.dialog.confirm(
-        `文件可能已被移动或删除。是否从最近项目列表中移除？`,
-        `无法访问 "${project.name}"`
+        msg('file.recentMissing'),
+        msg('file.recentMissingTitle', { name: project.name })
       );
       if (shouldRemove) {
         await this.recent?.remove(project.id);
@@ -416,7 +416,7 @@ export class ProjectFileService {
       await exportProjectAsAstra(projectData, projectData.name + '.astra');
     } catch (error) {
       console.error('Export failed:', error);
-      await this.dialog.alert('导出失败: ' + error.message, 'Error');
+      await this.dialog.alert(msg('file.exportFailed', { error: error.message }), 'Error');
     }
   }
 
@@ -424,7 +424,7 @@ export class ProjectFileService {
     if (this.isElectron) {
       try {
         const filePath = await this._openFileBrowser('open', {
-          title: '导入 .astra 项目',
+          title: msg('file.importDialogTitle'),
           filters: [
             { name: 'Astra Package', extensions: ['astra'] },
             { name: 'All Files', extensions: ['*'] },
@@ -434,17 +434,17 @@ export class ProjectFileService {
 
         const readResult = await window.electronAPI.readFile(filePath);
         if (!readResult.success) {
-          Toast.error('导入失败: ' + readResult.error);
+          Toast.error(msg('file.importFailed', { error: readResult.error }));
           return;
         }
         const fileName = getBasename(filePath);
         const file = new File([readResult.content], fileName, { type: 'application/octet-stream' });
         const projectData = await importProjectFromAstra(file);
         this.loadProjectData(projectData, projectData.name + '.astra');
-        Toast.success(`已导入: ${projectData.name}.astra`);
+        Toast.success(msg('file.imported', { name: projectData.name }));
       } catch (error) {
         console.error('Import failed:', error);
-        Toast.error('导入失败: ' + error.message);
+        Toast.error(msg('file.importFailed', { error: error.message }));
       }
       return;
     }
@@ -464,7 +464,7 @@ export class ProjectFileService {
         });
       } catch (error) {
         console.error('Import failed:', error);
-        await this.dialog.alert('导入失败: ' + error.message, 'Error');
+        await this.dialog.alert(msg('file.importFailed', { error: error.message }), 'Error');
       }
     };
     input.click();

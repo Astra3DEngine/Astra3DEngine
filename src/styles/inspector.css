@@ -1,4 +1,4 @@
-.inspector-section {
+﻿.inspector-section {
   margin-bottom: 10px;
 }
 
@@ -209,7 +209,7 @@
 }
 
 .inspector-clear-btn:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .inspector-clear-icon {
@@ -222,7 +222,7 @@
   color: var(--text-primary);
 }
 
-/* VSCode 风格的侧栏容器喵！ */
+/* VSCode 椋庢牸鐨勪晶鏍忓鍣ㄥ柕锛?*/
 .inspector-container {
   display: flex;
   flex-direction: row;
@@ -233,7 +233,7 @@
   width: auto;
 }
 
-/* 面板内容区域喵！ */
+/* 闈㈡澘鍐呭鍖哄煙鍠碉紒 */
 .inspector-content {
   display: flex;
   flex-direction: column;
@@ -245,7 +245,7 @@
   max-width: 400px;
 }
 
-/* 拉伸把手喵！ */
+/* 鎷変几鎶婃墜鍠碉紒 */
 .inspector-resize-handle {
   position: absolute;
   left: 0;
@@ -261,7 +261,7 @@
   background-color: var(--accent);
 }
 
-/* 面板标题栏喵！ */
+/* 闈㈡澘鏍囬鏍忓柕锛?*/
 .inspector-header {
   display: flex;
   align-items: center;
@@ -278,7 +278,7 @@
   color: var(--text-primary);
 }
 
-/* 面板内容主体喵！ */
+/* 闈㈡澘鍐呭涓讳綋鍠碉紒 */
 .inspector-body {
   flex: 1;
   overflow-y: auto;
@@ -286,7 +286,7 @@
   padding: 12px;
 }
 
-/* VSCode 风格的图标按钮栏喵！ */
+/* VSCode 椋庢牸鐨勫浘鏍囨寜閽爮鍠碉紒 */
 .inspector-sidebar {
   width: 36px;
   min-width: 36px;
@@ -302,12 +302,12 @@
   overflow: hidden;
 }
 
-/* 当面板收起时，按钮栏需要左边框喵！ */
+/* 褰撻潰鏉挎敹璧锋椂锛屾寜閽爮闇€瑕佸乏杈规鍠碉紒 */
 .inspector-container:not(.panel-expanded) .inspector-sidebar {
   border-left: 1px solid var(--border);
 }
 
-/* 当面板展开时，按钮栏不需要左边框，因为面板内容已经有右边框喵！ */
+/* 褰撻潰鏉垮睍寮€鏃讹紝鎸夐挳鏍忎笉闇€瑕佸乏杈规锛屽洜涓洪潰鏉垮唴瀹瑰凡缁忔湁鍙宠竟妗嗗柕锛?*/
 .inspector-container.panel-expanded .inspector-sidebar {
   border-left: none;
 }
@@ -330,7 +330,7 @@
   flex-shrink: 0;
 }
 
-/* 右侧激活指示器（VSCode 风格） */
+/* 鍙充晶婵€娲绘寚绀哄櫒锛圴SCode 椋庢牸锛?*/
 .inspector-sidebar-btn::before {
   content: '';
   position: absolute;
@@ -347,11 +347,11 @@
 }
 
 .inspector-sidebar-btn:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .inspector-sidebar-btn.active {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .inspector-sidebar-icon {

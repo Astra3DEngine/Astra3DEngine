@@ -1,4 +1,4 @@
-/* ===== 顶部编辑器 Tab 条（Godot 风格：居中纯图标） ===== */
+﻿/* ===== 椤堕儴缂栬緫鍣?Tab 鏉★紙Godot 椋庢牸锛氬眳涓函鍥炬爣锛?===== */
 .editor-tab-bar {
   display: flex;
   align-items: stretch;
@@ -27,7 +27,7 @@
   transition: background-color 0.2s ease;
 }
 
-/* 顶部激活指示器（同侧栏按钮风格） */
+/* 椤堕儴婵€娲绘寚绀哄櫒锛堝悓渚ф爮鎸夐挳椋庢牸锛?*/
 .editor-tab::before {
   content: '';
   position: absolute;
@@ -44,11 +44,11 @@
 }
 
 .editor-tab:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .editor-tab.active {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .editor-tab-icon {
@@ -64,14 +64,14 @@
   color: var(--text-primary);
 }
 
-/* 编辑器内容区（tab 栏下方） */
+/* 缂栬緫鍣ㄥ唴瀹瑰尯锛坱ab 鏍忎笅鏂癸級 */
 .center-area-body {
   flex: 1;
   min-height: 0;
   display: flex;
 }
 
-/* 代码编辑器占位 */
+/* 浠ｇ爜缂栬緫鍣ㄥ崰浣?*/
 .code-editor-placeholder {
   flex: 1;
   display: flex;

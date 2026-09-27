@@ -8,6 +8,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { msg } from '../../i18n/index.js';
 import { HexColorPicker } from 'react-colorful';
 import { tip } from '../../lib/tooltip.js';
 
@@ -70,7 +71,7 @@ function ColorPicker({ value = '#ffffff', onChange, className = '', title }) {
           style={{ background: color }}
           onClick={openPopover}
           {...tip(title)}
-          aria-label="打开取色器"
+          aria-label={msg('color.pick')}
         />
       </div>
       {open &&

@@ -72,14 +72,7 @@ function PreferencesModal({
       if (!combo) return;
       const conflict = shortcuts
         .getCommands()
-        .find(
-          (c) =>
-            c.id !== recordingId &&
-            shortcuts
-              .getBinding(c.id)
-              .split('|')
-              .includes(combo)
-        );
+        .find((c) => c.id !== recordingId && shortcuts.getBinding(c.id).split('|').includes(combo));
       if (conflict) {
         setConflictKey(combo);
         return;
@@ -119,16 +112,24 @@ function PreferencesModal({
           <h3 className="preferences-section-title">{msg('preferences.theme.title')}</h3>
           <p className="preferences-section-description">{msg('preferences.theme.description')}</p>
           <div className="preferences-options">
-            {availableThemes.map((t) => (
-              <button
-                key={t.id}
-                className={`preference-option-btn ${theme === t.id ? 'active' : ''}`}
-                onClick={() => theme !== t.id && onSetTheme(t.id)}
-              >
-                <span className="preference-option-label">{t.name}</span>
-                {theme === t.id && <span className="preference-option-check">✓</span>}
-              </button>
-            ))}
+            {availableThemes.map((t) => {
+              const label =
+                t.id === 'dark'
+                  ? msg('menu.darkMode')
+                  : t.id === 'light'
+                    ? msg('menu.lightMode')
+                    : t.name;
+              return (
+                <button
+                  key={t.id}
+                  className={`preference-option-btn ${theme === t.id ? 'active' : ''}`}
+                  onClick={() => theme !== t.id && onSetTheme(t.id)}
+                >
+                  <span className="preference-option-label">{label}</span>
+                  {theme === t.id && <span className="preference-option-check">✓</span>}
+                </button>
+              );
+            })}
           </div>
         </div>
       );
@@ -182,9 +183,7 @@ function PreferencesModal({
 
           {groups.map((group) => (
             <div key={group.category || '_'} className="keybind-group">
-              {group.category && (
-                <div className="keybind-group-title">{msg(group.category)}</div>
-              )}
+              {group.category && <div className="keybind-group-title">{msg(group.category)}</div>}
               {group.commands.map((cmd) => {
                 const recording = recordingId === cmd.id;
                 return (

@@ -752,7 +752,7 @@ function InspectorPanel({
         <div className="inspector-section">
           <div className="inspector-section-title">
             {msg('inspector.transform')}
-            {parentObject && <span className="inspector-relative-hint"> (相对)</span>}
+            {parentObject && <span className="inspector-relative-hint"> ({msg('window.relative')})</span>}
           </div>
 
           <div className="inspector-row">

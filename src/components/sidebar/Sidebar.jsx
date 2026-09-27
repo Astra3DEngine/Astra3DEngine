@@ -133,7 +133,7 @@ export default function Sidebar() {
             onDragStart={handleTitleDragStart}
             onDragOver={(e) => e.dataTransfer.types.includes(DRAG_MIME) && e.preventDefault()}
             onDrop={handleTitleDrop}
-            {...tip(def ? '拖拽此标题栏可将面板移回底部' : undefined)}
+            {...tip(def ? msg('sidebar.dragTitleHint') : undefined)}
           >
             <span className="sidebar-title-label">{def ? msg(def.titleKey) : ''}</span>
             <div className="sidebar-title-actions">{renderTitleActions()}</div>

@@ -1,4 +1,4 @@
-.hierarchy-panel {
+﻿.hierarchy-panel {
   flex: 1;
   min-height: 200px;
   overflow: hidden;
@@ -57,7 +57,7 @@
 }
 
 .hierarchy-search-clear:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
   color: var(--text-primary);
 }
 
@@ -75,7 +75,7 @@
 }
 
 .hierarchy-item:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .hierarchy-item.selected {
@@ -148,7 +148,7 @@
 
 .hierarchy-item.dragging {
   opacity: 0.5;
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .hierarchy-item.drop-before {
@@ -203,7 +203,7 @@
 
 .hierarchy-expand-icon:hover {
   color: var(--text-primary);
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .hierarchy-expand-icon.expanded {
@@ -221,7 +221,7 @@
   flex-shrink: 0;
 }
 
-/* ========== 多场景系统：场景选择器样式喵！ ========== */
+/* ========== 澶氬満鏅郴缁燂細鍦烘櫙閫夋嫨鍣ㄦ牱寮忓柕锛?========== */
 
 .scene-selector-container {
   position: relative;
@@ -246,7 +246,7 @@
 }
 
 .scene-selector-trigger:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
   border-color: var(--accent);
 }
 
@@ -307,7 +307,7 @@
 }
 
 .scene-selector-item:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .scene-selector-item.active {
@@ -355,4 +355,4 @@
   background-color: rgba(64, 120, 192, 0.15);
 }
 
-/* ========== 多场景系统：场景选择器样式结束喵！ ========== */
+/* ========== 澶氬満鏅郴缁燂細鍦烘櫙閫夋嫨鍣ㄦ牱寮忕粨鏉熷柕锛?========== */

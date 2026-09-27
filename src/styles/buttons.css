@@ -1,4 +1,4 @@
-.btn {
+﻿.btn {
   background-color: var(--accent);
   color: var(--text-primary);
   border: none;
@@ -13,7 +13,7 @@
   background-color: var(--accent-hover);
 }
 
-/* 主操作按钮（高亮主题色） */
+/* 涓绘搷浣滄寜閽紙楂樹寒涓婚鑹诧級 */
 .btn-primary {
   background-color: var(--accent-active);
   color: #ffffff;
@@ -38,7 +38,7 @@
   background-color: var(--danger-dark);
 }
 
-/* 次级操作按钮 */
+/* 娆＄骇鎿嶄綔鎸夐挳 */
 .btn-secondary {
   background-color: transparent;
   border: 1px solid var(--border);
@@ -46,7 +46,7 @@
 }
 
 .btn-secondary:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
   color: var(--text-primary);
 }
 
@@ -70,7 +70,7 @@
 
 .icon-btn:hover {
   color: var(--text-primary);
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .icon-btn.icon-btn-danger:hover {

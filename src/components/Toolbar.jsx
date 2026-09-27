@@ -367,18 +367,22 @@ function Toolbar({
               <button
                 className="window-control-btn minimize"
                 onClick={handleMinimize}
-                {...tip('最小化')}
+                {...tip(msg('window.minimize'))}
               >
                 <IconWindowMinimize />
               </button>
               <button
                 className="window-control-btn maximize"
                 onClick={handleMaximize}
-                {...tip(isMaximized ? '还原' : '最大化')}
+                {...tip(msg(isMaximized ? 'window.restore' : 'window.maximize'))}
               >
                 {isMaximized ? <IconWindowRestore /> : <IconWindowMaximize />}
               </button>
-              <button className="window-control-btn close" onClick={handleClose} {...tip('关闭')}>
+              <button
+                className="window-control-btn close"
+                onClick={handleClose}
+                {...tip(msg('window.close'))}
+              >
                 <IconWindowClose />
               </button>
             </div>

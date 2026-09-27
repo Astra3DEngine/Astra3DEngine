@@ -1,4 +1,4 @@
-/* ===== VSCode 式侧栏 ===== */
+﻿/* ===== VSCode 寮忎晶鏍?===== */
 .sidebar {
   display: flex;
   flex-direction: row;
@@ -38,7 +38,7 @@
   flex-shrink: 0;
 }
 
-/* 左侧激活指示器（VSCode 风格，贴屏幕左边缘） */
+/* 宸︿晶婵€娲绘寚绀哄櫒锛圴SCode 椋庢牸锛岃创灞忓箷宸﹁竟缂橈級 */
 .activity-bar-item::before {
   content: '';
   position: absolute;
@@ -55,11 +55,11 @@
 }
 
 .activity-bar-item:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .activity-bar-item.active {
-  background-color: var(--hover-bg);
+  background-color: var(--bg-hover);
 }
 
 .activity-bar-icon {
