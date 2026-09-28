@@ -102,6 +102,118 @@ export function computeWorldTransformFromRelative(parentMesh, relativeTransform)
 }
 
 /**
+ * 计算子对象相对于父对象的相对变换（数据版，基于编辑器数组坐标）。
+ *
+ * 相对位置、旋转、缩放均以父对象局部坐标系表示。
+ * 输入输出均为编辑器对象数据格式：{ position: number[], rotation: number[](度), scale: number[] }。
+ *
+ * @param {Object} child - 子对象数据
+ * @param {Object} parent - 父对象数据
+ * @returns {{ position: number[], rotation: number[], scale: number[] }} 相对变换（rotation 为度）
+ */
+export function computeRelativeTransformData(child, parent) {
+  const childPos = new THREE.Vector3(child.position[0], child.position[1], child.position[2]);
+  const childRot = new THREE.Euler(
+    THREE.MathUtils.degToRad(child.rotation[0]),
+    THREE.MathUtils.degToRad(child.rotation[1]),
+    THREE.MathUtils.degToRad(child.rotation[2])
+  );
+  const childQuat = new THREE.Quaternion().setFromEuler(childRot);
+  const childScale = new THREE.Vector3(child.scale[0], child.scale[1], child.scale[2]);
+
+  const parentPos = new THREE.Vector3(parent.position[0], parent.position[1], parent.position[2]);
+  const parentRot = new THREE.Euler(
+    THREE.MathUtils.degToRad(parent.rotation[0]),
+    THREE.MathUtils.degToRad(parent.rotation[1]),
+    THREE.MathUtils.degToRad(parent.rotation[2])
+  );
+  const parentQuat = new THREE.Quaternion().setFromEuler(parentRot);
+  const parentScale = new THREE.Vector3(parent.scale[0], parent.scale[1], parent.scale[2]);
+
+  const relativePos = childPos.clone().sub(parentPos);
+  relativePos.applyQuaternion(parentQuat.clone().invert());
+  relativePos.divide(parentScale);
+
+  const relativeQuat = parentQuat.clone().invert().multiply(childQuat);
+  const relativeEuler = new THREE.Euler().setFromQuaternion(relativeQuat);
+
+  const relativeScale = new THREE.Vector3(
+    childScale.x / parentScale.x,
+    childScale.y / parentScale.y,
+    childScale.z / parentScale.z
+  );
+
+  return {
+    position: [relativePos.x, relativePos.y, relativePos.z],
+    rotation: [
+      THREE.MathUtils.radToDeg(relativeEuler.x),
+      THREE.MathUtils.radToDeg(relativeEuler.y),
+      THREE.MathUtils.radToDeg(relativeEuler.z),
+    ],
+    scale: [relativeScale.x, relativeScale.y, relativeScale.z],
+  };
+}
+
+/**
+ * 由父对象变换与子对象相对变换计算子对象世界变换（数据版，computeRelativeTransformData 的逆运算）。
+ *
+ * @param {Object} relativeTransform - 子对象的相对变换
+ * @param {Object} parent - 父对象数据
+ * @returns {{ position: number[], rotation: number[], scale: number[] }} 世界变换（rotation 为度）
+ */
+export function computeWorldTransformFromRelativeData(relativeTransform, parent) {
+  const relativePos = new THREE.Vector3(
+    relativeTransform.position[0],
+    relativeTransform.position[1],
+    relativeTransform.position[2]
+  );
+  const relativeRot = new THREE.Euler(
+    THREE.MathUtils.degToRad(relativeTransform.rotation[0]),
+    THREE.MathUtils.degToRad(relativeTransform.rotation[1]),
+    THREE.MathUtils.degToRad(relativeTransform.rotation[2])
+  );
+  const relativeQuat = new THREE.Quaternion().setFromEuler(relativeRot);
+  const relativeScale = new THREE.Vector3(
+    relativeTransform.scale[0],
+    relativeTransform.scale[1],
+    relativeTransform.scale[2]
+  );
+
+  const parentPos = new THREE.Vector3(parent.position[0], parent.position[1], parent.position[2]);
+  const parentRot = new THREE.Euler(
+    THREE.MathUtils.degToRad(parent.rotation[0]),
+    THREE.MathUtils.degToRad(parent.rotation[1]),
+    THREE.MathUtils.degToRad(parent.rotation[2])
+  );
+  const parentQuat = new THREE.Quaternion().setFromEuler(parentRot);
+  const parentScale = new THREE.Vector3(parent.scale[0], parent.scale[1], parent.scale[2]);
+
+  const worldPos = relativePos.clone();
+  worldPos.multiply(parentScale);
+  worldPos.applyQuaternion(parentQuat);
+  worldPos.add(parentPos);
+
+  const worldQuat = parentQuat.clone().multiply(relativeQuat);
+  const worldEuler = new THREE.Euler().setFromQuaternion(worldQuat);
+
+  const worldScale = new THREE.Vector3(
+    relativeScale.x * parentScale.x,
+    relativeScale.y * parentScale.y,
+    relativeScale.z * parentScale.z
+  );
+
+  return {
+    position: [worldPos.x, worldPos.y, worldPos.z],
+    rotation: [
+      THREE.MathUtils.radToDeg(worldEuler.x),
+      THREE.MathUtils.radToDeg(worldEuler.y),
+      THREE.MathUtils.radToDeg(worldEuler.z),
+    ],
+    scale: [worldScale.x, worldScale.y, worldScale.z],
+  };
+}
+
+/**
  * 收集指定对象所有后代的相对变换（自顶向下逐层计算）。
  * @param {number} parentId - 父对象 ID
  * @param {Array<Object>} objects - 场景对象列表

@@ -141,8 +141,9 @@ pnpm typecheck     # tsc（对 .js 意义有限，一般不需要）
 
 ## 测试
 - engine 纯逻辑（TreeMath/ObjectFactory 等）必须具备测试（模式见 `src/tests/engine.test.js`）。
+- Viewport 拆分 hooks（useViewportPick/useSelectionOutline/useViewCubeMount）有交互测试（`src/tests/viewportHooks.test.jsx`），用真实 three 数学 + mock ViewCube。
 - 测试文件位于 `src/tests/`，命名 `*.test.js`/`*.test.jsx`。
-- 涉及 WebGL/three 场景的组件测试需 mock；当前 Viewport 无交互测试——改动其逻辑时靠 engine 层测试 + `pnpm build` 成功兜底，最终交由用户手动验证。
+- 涉及 WebGL/three 场景的组件测试需 mock；改 Viewport 逻辑时靠 hooks/engine 层测试 + `pnpm build` 成功兜底，最终交由用户手动验证。
 - 测试用例用中文描述（遵循现有命名习惯），断言需明确；跑测试前先 `pnpm build` 确认可编译。
 
 ## 项目文件格式（.astra）

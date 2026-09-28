@@ -20,6 +20,8 @@ import {
   extractTransformFromObject3D,
   computeRelativeTransform,
   computeWorldTransformFromRelative,
+  computeRelativeTransformData,
+  computeWorldTransformFromRelativeData,
   applyTransformToDescendants,
   collectDescendantRelativeTransforms,
 } from '../engine/TreeMath.js';
@@ -167,6 +169,37 @@ describe('TreeMath', () => {
       const world = computeWorldTransformFromRelative(parent, relative);
       expect(world.position.x).toBeCloseTo(7);
       expect(world.position.z).toBeCloseTo(7);
+    });
+
+    test('computeRelativeTransformData / computeWorldTransformFromRelativeData 逆向一致', () => {
+      const parent = { position: [5, 5, 5], rotation: [0, 45, 0], scale: [2, 2, 2] };
+      const child = { position: [7, 5, 7], rotation: [0, 0, 0], scale: [1, 1, 1] };
+
+      const relative = computeRelativeTransformData(child, parent);
+      const world = computeWorldTransformFromRelativeData(relative, parent);
+      expect(world.position[0]).toBeCloseTo(7);
+      expect(world.position[2]).toBeCloseTo(7);
+    });
+
+    test('computeRelativeTransformData 与 mesh 版结果一致', () => {
+      const parentMesh = new THREE.Object3D();
+      const childMesh = new THREE.Object3D();
+      parentMesh.position.set(5, 5, 5);
+      parentMesh.rotation.y = Math.PI / 4;
+      parentMesh.scale.set(2, 2, 2);
+      parentMesh.updateMatrixWorld(true);
+      childMesh.position.set(7, 5, 7);
+      childMesh.updateMatrixWorld(true);
+
+      const parent = { position: [5, 5, 5], rotation: [0, 45, 0], scale: [2, 2, 2] };
+      const child = { position: [7, 5, 7], rotation: [0, 0, 0], scale: [1, 1, 1] };
+
+      const data = computeRelativeTransformData(child, parent);
+      const mesh = computeRelativeTransform(parentMesh, childMesh);
+      expect(data.position[0]).toBeCloseTo(mesh.position.x);
+      expect(data.position[1]).toBeCloseTo(mesh.position.y);
+      expect(data.position[2]).toBeCloseTo(mesh.position.z);
+      expect(data.scale[0]).toBeCloseTo(mesh.scale.x);
     });
   });
 

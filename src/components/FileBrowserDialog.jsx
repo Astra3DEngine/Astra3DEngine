@@ -1,125 +1,24 @@
+/**
+ * @file components/FileBrowserDialog.jsx
+ * @description 文件浏览器对话框（Electron 桌面端），支持打开/保存、导航历史、快速访问。
+ * @module components/FileBrowserDialog
+ */
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { msg } from '../i18n/index.js';
 import { useDialog } from '../hooks/useDialog.jsx';
 import Modal from './Modal.jsx';
+import FileBrowserToolbar from './fileBrowser/FileBrowserToolbar.jsx';
+import FileBrowserSidebar from './fileBrowser/FileBrowserSidebar.jsx';
+import FileBrowserList from './fileBrowser/FileBrowserList.jsx';
+import FileBrowserFooter from './fileBrowser/FileBrowserFooter.jsx';
+import { readRawLocalStorage, writeRawLocalStorage } from '../utils/localstorage.js';
+import { normalizePath, splitPathParts } from '../utils/pathUtils.js';
 
-import ArrowLeftIcon from '../assets/icons/nav/arrow-left.svg?react';
-import ArrowRightIcon from '../assets/icons/nav/arrow-right.svg?react';
-import ArrowUpIcon from '../assets/icons/nav/arrow-up.svg?react';
-import FolderIcon from '../assets/icons/editor/folder.svg?react';
-import FileIcon from '../assets/icons/editor/file.svg?react';
-import PlusIcon from '../assets/icons/editor/plus.svg?react';
-import HomeIcon from '../assets/icons/editor/home.svg?react';
-import DesktopIcon from '../assets/icons/editor/desktop.svg?react';
-import DocumentIcon from '../assets/icons/editor/document.svg?react';
-import DownloadIcon from '../assets/icons/editor/download.svg?react';
-import ImageFileIcon from '../assets/icons/misc/image-file.svg?react';
-import AudioIcon from '../assets/icons/viewport/audio.svg?react';
-import VideoIcon from '../assets/icons/viewport/video.svg?react';
-import BookIcon from '../assets/icons/editor/book.svg?react';
-import ListIcon from '../assets/icons/tools/list.svg?react';
-import CodeIcon from '../assets/icons/misc/code.svg?react';
-import BoxIcon from '../assets/icons/tools/box.svg?react';
-import PlayCircleIcon from '../assets/icons/viewport/play-circle.svg?react';
-import ModelIcon from '../assets/icons/tools/model.svg?react';
-
-const Icon = ({ src, size = 16, className = '' }) => (
-  <img
-    src={src}
-    alt=""
-    width={size}
-    height={size}
-    className={`icon ${className}`}
-    style={{
-      filter: 'var(--icon-filter, none)',
-      opacity: 'var(--icon-opacity, 1)',
-    }}
-  />
-);
-
-const getFileIcon = (filename) => {
-  const ext = filename.split('.').pop()?.toLowerCase();
-
-  const iconMap = {
-    jpg: ImageFileIcon,
-    jpeg: ImageFileIcon,
-    png: ImageFileIcon,
-    gif: ImageFileIcon,
-    bmp: ImageFileIcon,
-    svg: ImageFileIcon,
-    mp3: AudioIcon,
-    wav: AudioIcon,
-    ogg: AudioIcon,
-    flac: AudioIcon,
-    mp4: VideoIcon,
-    avi: VideoIcon,
-    mkv: VideoIcon,
-    mov: VideoIcon,
-    webm: VideoIcon,
-    pdf: BookIcon,
-    doc: DocumentIcon,
-    docx: DocumentIcon,
-    xls: DocumentIcon,
-    xlsx: DocumentIcon,
-    ppt: DocumentIcon,
-    pptx: DocumentIcon,
-    zip: BoxIcon,
-    rar: BoxIcon,
-    '7z': BoxIcon,
-    tar: BoxIcon,
-    gz: BoxIcon,
-    exe: PlayCircleIcon,
-    msi: PlayCircleIcon,
-    app: PlayCircleIcon,
-    dmg: PlayCircleIcon,
-    js: CodeIcon,
-    ts: CodeIcon,
-    jsx: CodeIcon,
-    tsx: CodeIcon,
-    py: CodeIcon,
-    java: CodeIcon,
-    cpp: CodeIcon,
-    c: CodeIcon,
-    json: ListIcon,
-    xml: ListIcon,
-    yaml: ListIcon,
-    yml: ListIcon,
-    toml: ListIcon,
-    md: DocumentIcon,
-    txt: DocumentIcon,
-    rtf: DocumentIcon,
-    html: CodeIcon,
-    css: CodeIcon,
-    scss: CodeIcon,
-    gltf: ModelIcon,
-    glb: ModelIcon,
-    obj: ModelIcon,
-    fbx: ModelIcon,
-    astra: PlayCircleIcon,
-    a3d: PlayCircleIcon,
-  };
-
-  return iconMap[ext] || FileIcon;
-};
-
-// 记忆上次打开的路径（跨对话框复用，跨会话持久化）
+/**
+ * 记忆上次打开的路径（跨对话框复用，跨会话持久化）
+ */
 const LAST_PATH_KEY = 'a3de_last_filebrowser_path';
-
-function getLastPath() {
-  try {
-    return localStorage.getItem(LAST_PATH_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function saveLastPath(p) {
-  try {
-    localStorage.setItem(LAST_PATH_KEY, p);
-  } catch {
-    /* ignore quota errors */
-  }
-}
 
 const FileBrowserDialog = ({
   isOpen,
@@ -147,43 +46,6 @@ const FileBrowserDialog = ({
   const [isEditingPath, setIsEditingPath] = useState(false);
   const [editedPath, setEditedPath] = useState('');
 
-  // 规范化路径：统一分隔符、去除重复斜杠、确保末尾无斜杠（跨平台支持）
-  const normalizePath = useCallback((rawPath) => {
-    if (!rawPath) return rawPath;
-
-    // 检测是否为 Windows 路径（盘符开头或网络路径）
-    const isWindowsPath = /^[A-Za-z]:/.test(rawPath) || rawPath.startsWith('\\\\');
-
-    if (isWindowsPath) {
-      // Windows 路径：统一使用反斜杠
-      let p = rawPath.replace(/\//g, '\\');
-      const driveMatch = p.match(/^([A-Za-z]:)(.*)/);
-      if (driveMatch) {
-        const drive = driveMatch[1]; // e.g. "D:"
-        const rest = driveMatch[2].replace(/\\+/g, '\\'); // 统一反斜杠
-        // 去除开头的多余斜杠，然后分割各段过滤空串
-        const segments = rest.replace(/^\\+/, '').split('\\').filter(Boolean);
-        return drive + '\\' + segments.join('\\');
-      }
-      // 网络路径 \\server\share
-      return p.replace(/\\+/g, '\\').replace(/\\$/, '');
-    } else {
-      // Unix 路径（Linux/macOS）：统一使用正斜杠
-      let p = rawPath.replace(/\\/g, '/');
-      // 确保以 / 开头（绝对路径）
-      if (!p.startsWith('/')) {
-        p = '/' + p;
-      }
-      // 去除重复斜杠，保留开头的 /
-      p = '/' + p.slice(1).replace(/\/+/g, '/');
-      // 去除末尾斜杠（但保留根路径 /）
-      if (p.length > 1) {
-        p = p.replace(/\/$/, '');
-      }
-      return p;
-    }
-  }, []);
-
   const isElectron = typeof window !== 'undefined' && window.electronAPI?.fs;
 
   useEffect(() => {
@@ -206,7 +68,7 @@ const FileBrowserDialog = ({
         setDrives(drivesResult.drives);
       }
 
-      const initialPath = defaultPath || getLastPath() || dirs.home || dirs.documents;
+      const initialPath = defaultPath || readRawLocalStorage(LAST_PATH_KEY) || dirs.home || dirs.documents;
       if (initialPath) {
         navigateTo(initialPath, true);
       } else {
@@ -247,7 +109,7 @@ const FileBrowserDialog = ({
 
           setItems(filteredItems);
           setCurrentPath(normalizedPath);
-          saveLastPath(normalizedPath);
+          writeRawLocalStorage(LAST_PATH_KEY, normalizedPath);
 
           if (addToHistory) {
             const newHistory = history.slice(0, historyIndex + 1);
@@ -264,7 +126,7 @@ const FileBrowserDialog = ({
 
       setIsLoading(false);
     },
-    [showHiddenFiles, history, historyIndex, normalizePath]
+    [showHiddenFiles, history, historyIndex]
   );
 
   const goBack = useCallback(() => {
@@ -312,7 +174,7 @@ const FileBrowserDialog = ({
         navigateTo('/');
       }
     }
-  }, [currentPath, drives, isWindows, navigateTo, normalizePath]);
+  }, [currentPath, drives, isWindows, navigateTo]);
 
   const handlePathClick = useCallback(() => {
     setIsEditingPath(true);
@@ -430,17 +292,6 @@ const FileBrowserDialog = ({
     }
   }, [currentPath, pathSeparator, navigateTo, dialog]);
 
-  const formatSize = useCallback((bytes) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
-  }, []);
-
-  const formatDate = useCallback((timestamp) => {
-    return new Date(timestamp).toLocaleDateString();
-  }, []);
-
   const matchesFilter = useCallback(
     (item) => {
       if (item.isDirectory) return true;
@@ -462,14 +313,8 @@ const FileBrowserDialog = ({
   }, [items, matchesFilter]);
 
   const pathParts = useMemo(() => {
-    if (!currentPath) return [];
-    // 先规范化再分割，确保路径格式一致
-    const normalized = normalizePath(currentPath);
-    // 根据平台使用正确的分隔符
-    const sep = isWindows ? '\\' : '/';
-    const parts = normalized.split(sep).filter(Boolean);
-    return parts;
-  }, [currentPath, normalizePath, isWindows]);
+    return splitPathParts(currentPath, isWindows, normalizePath);
+  }, [currentPath, isWindows]);
 
   // 根据点击的 index 构建子路径
   const buildSubPath = useCallback(
@@ -518,226 +363,59 @@ const FileBrowserDialog = ({
       );
     }
 
+    // 打开模式禁用 toolbar 的"进入文件"行为依赖此标志
+    const canConfirm = mode === 'save' ? !!filename.trim() : selectedItems.length > 0;
+
     return (
       <>
-        <div className="file-browser-toolbar">
-          <button
-            className="file-browser-nav-btn"
-            onClick={goBack}
-            disabled={historyIndex <= 0}
-            title={msg('fileBrowser.back')}
-          >
-            <Icon src={ArrowLeftIcon} size={14} />
-          </button>
-          <button
-            className="file-browser-nav-btn"
-            onClick={goForward}
-            disabled={historyIndex >= history.length - 1}
-            title={msg('fileBrowser.forward')}
-          >
-            <Icon src={ArrowRightIcon} size={14} />
-          </button>
-          <button className="file-browser-nav-btn" onClick={goUp} title={msg('fileBrowser.up')}>
-            <Icon src={ArrowUpIcon} size={14} />
-          </button>
-
-          <div className="file-browser-path">
-            {isEditingPath ? (
-              <input
-                type="text"
-                className="file-browser-path-input"
-                value={editedPath}
-                onChange={handlePathInputChange}
-                onKeyDown={handlePathInputKeyDown}
-                onBlur={handlePathInputBlur}
-                autoFocus
-              />
-            ) : (
-              <div className="file-browser-path-parts" onClick={handlePathClick}>
-                {pathParts.map((part, index) => {
-                  const subPath = buildSubPath(index);
-
-                  return (
-                    <span
-                      key={index}
-                      className="file-browser-path-part"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigateTo(subPath);
-                      }}
-                    >
-                      {part}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <button
-            className="file-browser-action-btn"
-            onClick={handleCreateFolder}
-            title={msg('fileBrowser.newFolder')}
-          >
-            <Icon src={FolderIcon} size={14} />
-            <Icon src={PlusIcon} size={10} className="plus-overlay" />
-          </button>
-        </div>
+        <FileBrowserToolbar
+          goBack={goBack}
+          goForward={goForward}
+          goUp={goUp}
+          historyIndex={historyIndex}
+          historyLength={history.length}
+          isEditingPath={isEditingPath}
+          editedPath={editedPath}
+          pathParts={pathParts}
+          buildSubPath={buildSubPath}
+          navigateTo={navigateTo}
+          handlePathClick={handlePathClick}
+          handlePathInputChange={handlePathInputChange}
+          handlePathInputKeyDown={handlePathInputKeyDown}
+          handlePathInputBlur={handlePathInputBlur}
+          handleCreateFolder={handleCreateFolder}
+        />
 
         <div className="file-browser-body">
-          <div className="file-browser-sidebar">
-            <div className="file-browser-quick-access">
-              <h4>{msg('fileBrowser.quickAccess')}</h4>
-              {commonDirs && (
-                <>
-                  {commonDirs.desktop && (
-                    <div
-                      className="file-browser-quick-item"
-                      onClick={() => navigateTo(commonDirs.desktop)}
-                    >
-                      <Icon src={DesktopIcon} size={16} />
-                      <span>{msg('fileBrowser.desktop')}</span>
-                    </div>
-                  )}
-                  {commonDirs.documents && (
-                    <div
-                      className="file-browser-quick-item"
-                      onClick={() => navigateTo(commonDirs.documents)}
-                    >
-                      <Icon src={DocumentIcon} size={16} />
-                      <span>{msg('fileBrowser.documents')}</span>
-                    </div>
-                  )}
-                  {commonDirs.downloads && (
-                    <div
-                      className="file-browser-quick-item"
-                      onClick={() => navigateTo(commonDirs.downloads)}
-                    >
-                      <Icon src={DownloadIcon} size={16} />
-                      <span>{msg('fileBrowser.downloads')}</span>
-                    </div>
-                  )}
-                  {commonDirs.home && (
-                    <div
-                      className="file-browser-quick-item"
-                      onClick={() => navigateTo(commonDirs.home)}
-                    >
-                      <Icon src={HomeIcon} size={16} />
-                      <span>{msg('fileBrowser.home')}</span>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+          <FileBrowserSidebar
+            commonDirs={commonDirs}
+            drives={drives}
+            currentPath={currentPath}
+            isWindows={isWindows}
+            navigateTo={navigateTo}
+          />
 
-            {drives.length > 0 && (
-              <div className="file-browser-drives">
-                <h4>{msg('fileBrowser.drives')}</h4>
-                {drives.map((drive) => {
-                  // 去掉末尾斜杠进行比较，避免路径格式不一致导致判断失败
-                  const drivePathNormalized = drive.path.replace(/[\\/]$/, '');
-                  const currentPathNormalized = currentPath.replace(/[\\/]$/, '');
-                  const isActive =
-                    currentPathNormalized === drivePathNormalized ||
-                    (currentPathNormalized.startsWith(
-                      drivePathNormalized + (isWindows ? '\\' : '/')
-                    ) &&
-                      isWindows); // Linux 区别于 Windows 的分区机制
-                  return (
-                    <div
-                      key={drive.path}
-                      className={`file-browser-quick-item ${isActive ? 'active' : ''}`}
-                      onClick={() => navigateTo(drive.path)}
-                    >
-                      <Icon src={DesktopIcon} size={16} />
-                      <span>{drive.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="file-browser-content">
-            {error && <div className="file-browser-error">{error}</div>}
-
-            {!error && items.length > 0 && isLoading && (
-              <div className="file-browser-loading">{msg('fileBrowser.loading')}</div>
-            )}
-
-            {!error && !isLoading && visibleItems.length === 0 && (
-              <div className="file-browser-empty">{msg('fileBrowser.empty')}</div>
-            )}
-
-            {!error && !isLoading && visibleItems.length > 0 && (
-              <div className="file-browser-list">
-                {visibleItems.map((item) => (
-                  <div
-                    key={item.path}
-                    className={`file-browser-item ${selectedItems.some((i) => i.path === item.path) ? 'selected' : ''}`}
-                    onClick={(e) => handleItemClick(item, e)}
-                    onDoubleClick={() => handleItemDoubleClick(item)}
-                  >
-                    <span className="file-browser-item-icon">
-                      <Icon
-                        src={item.isDirectory ? FolderIcon : getFileIcon(item.name)}
-                        size={16}
-                      />
-                    </span>
-                    <span className="file-browser-item-name">{item.name}</span>
-                    <span className="file-browser-item-size">
-                      {item.isDirectory ? '' : formatSize(item.size)}
-                    </span>
-                    <span className="file-browser-item-date">{formatDate(item.modifiedTime)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <FileBrowserList
+            isLoading={isLoading}
+            items={visibleItems}
+            selectedItems={selectedItems}
+            error={error}
+            onItemClick={handleItemClick}
+            onItemDoubleClick={handleItemDoubleClick}
+          />
         </div>
 
-        <div className="file-browser-footer">
-          {mode === 'save' && (
-            <div className="file-browser-filename-input">
-              <label>{msg('fileBrowser.filename')}:</label>
-              <input
-                type="text"
-                value={filename}
-                onChange={(e) => setFilename(e.target.value)}
-                placeholder={msg('fileBrowser.filenamePlaceholder')}
-              />
-            </div>
-          )}
-
-          {filters.length > 0 && (
-            <div className="file-browser-filter">
-              <label>{msg('fileBrowser.filter')}:</label>
-              <select
-                value={activeFilterIndex}
-                onChange={(e) => setActiveFilterIndex(parseInt(e.target.value, 10))}
-              >
-                {filters.map((filter, index) => (
-                  <option key={index} value={index}>
-                    {filter.name} ({filter.extensions?.join(', ') || '*'})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="file-browser-actions">
-            <button className="file-browser-btn-cancel" onClick={onClose}>
-              {msg('fileBrowser.cancel')}
-            </button>
-            <button
-              className="file-browser-btn-confirm"
-              onClick={handleConfirm}
-              disabled={mode === 'save' ? !filename.trim() : selectedItems.length === 0}
-            >
-              {mode === 'save' ? msg('fileBrowser.save') : msg('fileBrowser.open')}
-            </button>
-          </div>
-        </div>
+        <FileBrowserFooter
+          mode={mode}
+          filename={filename}
+          onFilenameChange={setFilename}
+          filters={filters}
+          activeFilterIndex={activeFilterIndex}
+          onFilterChange={(v) => setActiveFilterIndex(parseInt(v, 10))}
+          canConfirm={canConfirm}
+          onCancel={onClose}
+          onConfirm={handleConfirm}
+        />
       </>
     );
   };
