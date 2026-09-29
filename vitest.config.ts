@@ -7,13 +7,13 @@ export default defineConfig({
   plugins: [react(), svgr()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    }
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
   },
   test: {
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/tests/setup.js'],
-    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}']
-  }
+    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+  },
 });

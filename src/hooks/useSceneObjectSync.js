@@ -13,14 +13,9 @@ import {
   cloneTexture,
   createPrimitiveMaterial,
 } from '../engine/materials.js';
-import {
-  applyTransformToObject3D,
-} from '../engine/TreeMath.js';
+import { applyTransformToObject3D } from '../engine/TreeMath.js';
 import { buildModelGroup, buildMeshPart, findMeshByPath } from '../engine/ModelLoader.js';
-import {
-  createLightFromObject,
-  updateLightTargetFromObject,
-} from '../engine/lights.js';
+import { createLightFromObject, updateLightTargetFromObject } from '../engine/lights.js';
 
 /** 立方体六个面的约定顺序（与 ObjectFactory 的 faceTextures 键一致） */
 export const CUBE_FACE_NAMES = ['right', 'left', 'top', 'bottom', 'front', 'back'];
@@ -343,6 +338,14 @@ export function useSceneObjectSync(
       sceneRef.current.add(mesh);
       meshesRef.current[obj.id] = mesh;
     });
-     
-  }, [objects, assets, lightRenderingEnabled, sceneRef, meshesRef, assetsRef, defaultLightRef, lightRenderingEnabledRef]);
+  }, [
+    objects,
+    assets,
+    lightRenderingEnabled,
+    sceneRef,
+    meshesRef,
+    assetsRef,
+    defaultLightRef,
+    lightRenderingEnabledRef,
+  ]);
 }

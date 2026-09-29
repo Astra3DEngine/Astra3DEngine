@@ -17,14 +17,19 @@ import { formatSize, formatDate } from '../../utils/pathUtils.js';
  * @param {Function} props.onItemClick
  * @param {Function} props.onItemDoubleClick
  */
-function FileBrowserList({ isLoading, items, selectedItems, error, onItemClick, onItemDoubleClick }) {
+function FileBrowserList({
+  isLoading,
+  items,
+  selectedItems,
+  error,
+  onItemClick,
+  onItemDoubleClick,
+}) {
   return (
     <div className="file-browser-content">
       {error && <div className="file-browser-error">{error}</div>}
 
-      {isLoading && (
-        <div className="file-browser-loading">{msg('fileBrowser.loading')}</div>
-      )}
+      {isLoading && <div className="file-browser-loading">{msg('fileBrowser.loading')}</div>}
 
       {!error && !isLoading && items.length === 0 && (
         <div className="file-browser-empty">{msg('fileBrowser.empty')}</div>

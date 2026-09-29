@@ -68,7 +68,8 @@ const FileBrowserDialog = ({
         setDrives(drivesResult.drives);
       }
 
-      const initialPath = defaultPath || readRawLocalStorage(LAST_PATH_KEY) || dirs.home || dirs.documents;
+      const initialPath =
+        defaultPath || readRawLocalStorage(LAST_PATH_KEY) || dirs.home || dirs.documents;
       if (initialPath) {
         navigateTo(initialPath, true);
       } else {

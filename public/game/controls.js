@@ -2,7 +2,15 @@ import * as THREE from 'three';
 import { BLOCK_TYPES, BLOCK_COLORS, JUMP_FORCE, WORLD_SIZE } from './config.js';
 import { decodeKey } from './world.js';
 import { getInstancedMeshes, addBlock, removeBlock } from './blocks.js';
-import { wouldCollide, setMoveState, setIsCrouching, getVelocity, getCanJump, setCanJump, getIsCrouching } from './player.js';
+import {
+  wouldCollide,
+  setMoveState,
+  setIsCrouching,
+  getVelocity,
+  getCanJump,
+  setCanJump,
+  getIsCrouching,
+} from './player.js';
 
 let selectedBlockType = BLOCK_TYPES.GRASS;
 let selectedIndex = 0;
@@ -13,7 +21,14 @@ const raycaster = new THREE.Raycaster();
 raycaster.far = 5;
 const pointer = new THREE.Vector2(0, 0);
 
-const BLOCK_LIST = [BLOCK_TYPES.GRASS, BLOCK_TYPES.DIRT, BLOCK_TYPES.STONE, BLOCK_TYPES.WOOD, BLOCK_TYPES.LEAVES, BLOCK_TYPES.SAND];
+const BLOCK_LIST = [
+  BLOCK_TYPES.GRASS,
+  BLOCK_TYPES.DIRT,
+  BLOCK_TYPES.STONE,
+  BLOCK_TYPES.WOOD,
+  BLOCK_TYPES.LEAVES,
+  BLOCK_TYPES.SAND,
+];
 
 const SENSITIVITY = 0.002;
 
@@ -27,16 +42,16 @@ export function getSelectedBlockType() {
 
 export function initControls(pCamera, renderer) {
   camera = pCamera;
-  
+
   const blocker = document.getElementById('blocker');
   const playBtn = document.getElementById('playBtn');
   const crosshair = document.getElementById('crosshair');
   const hotbar = document.getElementById('hotbar');
   const debug = document.getElementById('debug');
   const fps = document.getElementById('fps');
-  
+
   playBtn.addEventListener('click', () => renderer.domElement.requestPointerLock());
-  
+
   document.addEventListener('pointerlockchange', () => {
     isLocked = document.pointerLockElement === renderer.domElement;
     blocker.classList.toggle('hidden', isLocked);
@@ -45,7 +60,7 @@ export function initControls(pCamera, renderer) {
     debug.style.display = isLocked ? 'block' : 'none';
     fps.style.display = isLocked ? 'block' : 'none';
   });
-  
+
   document.addEventListener('keydown', handleKeyDown);
   document.addEventListener('keyup', handleKeyUp);
   document.addEventListener('mousemove', handleMouseMove);
@@ -56,7 +71,7 @@ export function initControls(pCamera, renderer) {
 
 function handleKeyDown(e) {
   if (!isLocked) return;
-  
+
   switch (e.code) {
     case 'KeyW':
       setMoveState({ forward: true });
@@ -119,10 +134,10 @@ function handleKeyUp(e) {
 
 function handleMouseMove(e) {
   if (!isLocked) return;
-  
+
   const movementX = e.movementX || 0;
   const movementY = e.movementY || 0;
-  
+
   camera.rotation.order = 'YXZ';
   camera.rotation.y -= movementX * SENSITIVITY;
   camera.rotation.x -= movementY * SENSITIVITY;
@@ -131,16 +146,16 @@ function handleMouseMove(e) {
 
 function handleMouseDown(e) {
   if (!isLocked) return;
-  
+
   raycaster.setFromCamera(pointer, camera);
   const meshes = Object.values(getInstancedMeshes());
   const intersects = raycaster.intersectObjects(meshes);
-  
+
   if (intersects.length > 0) {
     const intersect = intersects[0];
     const mesh = intersect.object;
     const instanceId = intersect.instanceId;
-    
+
     for (const [key, idx] of mesh.userData.blockIndices) {
       if (idx === instanceId) {
         const { x, y, z } = decodeKey(key);
@@ -151,8 +166,10 @@ function handleMouseDown(e) {
           const newX = x + Math.round(normal.x);
           const newY = y + Math.round(normal.y);
           const newZ = z + Math.round(normal.z);
-          
-          if (!wouldCollide(newX, newY, newZ, camera.position.x, camera.position.y, camera.position.z)) {
+
+          if (
+            !wouldCollide(newX, newY, newZ, camera.position.x, camera.position.y, camera.position.z)
+          ) {
             addBlock(newX, newY, newZ, selectedBlockType);
           }
         }
@@ -165,7 +182,7 @@ function handleMouseDown(e) {
 function handleWheel(e) {
   if (!isLocked) return;
   e.preventDefault();
-  
+
   const delta = Math.sign(e.deltaY);
   selectedIndex = (selectedIndex + delta + BLOCK_LIST.length) % BLOCK_LIST.length;
   selectedBlockType = BLOCK_LIST[selectedIndex];
@@ -173,7 +190,7 @@ function handleWheel(e) {
 }
 
 function updateHotbarSelection() {
-  document.querySelectorAll('.hotbar-slot').forEach(slot => {
+  document.querySelectorAll('.hotbar-slot').forEach((slot) => {
     slot.classList.toggle('selected', parseInt(slot.dataset.type) === selectedBlockType);
   });
 }
@@ -189,19 +206,26 @@ function toggleInventory() {
 
 export function createHotbar() {
   const hotbar = document.getElementById('hotbar');
-  const blocks = [BLOCK_TYPES.GRASS, BLOCK_TYPES.DIRT, BLOCK_TYPES.STONE, BLOCK_TYPES.WOOD, BLOCK_TYPES.LEAVES, BLOCK_TYPES.SAND];
-  
+  const blocks = [
+    BLOCK_TYPES.GRASS,
+    BLOCK_TYPES.DIRT,
+    BLOCK_TYPES.STONE,
+    BLOCK_TYPES.WOOD,
+    BLOCK_TYPES.LEAVES,
+    BLOCK_TYPES.SAND,
+  ];
+
   blocks.forEach((type, index) => {
     const slot = document.createElement('div');
     slot.className = 'hotbar-slot' + (index === 0 ? ' selected' : '');
     slot.dataset.type = type;
     slot.dataset.index = index;
-    
+
     const slotNumber = document.createElement('span');
     slotNumber.className = 'slot-number';
     slotNumber.textContent = index + 1;
     slot.appendChild(slotNumber);
-    
+
     const canvas = createBlockIcon(type);
     slot.appendChild(canvas);
     hotbar.appendChild(slot);
@@ -210,17 +234,24 @@ export function createHotbar() {
 
 export function createInventory() {
   const inventory = document.getElementById('inventory');
-  const blocks = [BLOCK_TYPES.GRASS, BLOCK_TYPES.DIRT, BLOCK_TYPES.STONE, BLOCK_TYPES.WOOD, BLOCK_TYPES.LEAVES, BLOCK_TYPES.SAND];
-  
+  const blocks = [
+    BLOCK_TYPES.GRASS,
+    BLOCK_TYPES.DIRT,
+    BLOCK_TYPES.STONE,
+    BLOCK_TYPES.WOOD,
+    BLOCK_TYPES.LEAVES,
+    BLOCK_TYPES.SAND,
+  ];
+
   for (let i = 0; i < 27; i++) {
     const slot = document.createElement('div');
     slot.className = 'inventory-slot';
-    
+
     if (i < blocks.length) {
       const canvas = createBlockIcon(blocks[i]);
       slot.appendChild(canvas);
       slot.dataset.type = blocks[i];
-      
+
       slot.addEventListener('click', () => {
         selectedBlockType = blocks[i];
         selectedIndex = i;
@@ -228,7 +259,7 @@ export function createInventory() {
         inventory.style.display = 'none';
       });
     }
-    
+
     inventory.appendChild(slot);
   }
 }

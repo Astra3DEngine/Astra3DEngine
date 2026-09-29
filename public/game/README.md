@@ -22,15 +22,15 @@ public/game/
 
 ### 方块类型
 
-| 方块 | ID | 描述 |
-|------|-----|------|
-| 空气 | 0 | 空方块 |
-| 草地 | 1 | 地表草地 |
-| 泥土 | 2 | 草地下方的泥土 |
-| 石头 | 3 | 地下石头 |
-| 木头 | 4 | 树干 |
-| 树叶 | 5 | 树冠 |
-| 沙子 | 6 | 沙漠/水域边缘 |
+| 方块 | ID  | 描述           |
+| ---- | --- | -------------- |
+| 空气 | 0   | 空方块         |
+| 草地 | 1   | 地表草地       |
+| 泥土 | 2   | 草地下方的泥土 |
+| 石头 | 3   | 地下石头       |
+| 木头 | 4   | 树干           |
+| 树叶 | 5   | 树冠           |
+| 沙子 | 6   | 沙漠/水域边缘  |
 
 ### 地形生成
 
@@ -62,41 +62,41 @@ public/game/
 
 ## 控制方式
 
-| 按键 | 功能 |
-|------|------|
-| W/A/S/D | 移动 |
-| 空格 | 跳跃 |
-| Shift | 潜行 |
-| E | 打开/关闭背包 |
-| ESC | 暂停 |
-| 1-6 | 切换快捷栏 |
-| 鼠标移动 | 视角旋转 |
-| 左键 | 破坏方块 |
-| 右键 | 放置方块 |
-| 滚轮 | 切换方块类型 |
+| 按键     | 功能          |
+| -------- | ------------- |
+| W/A/S/D  | 移动          |
+| 空格     | 跳跃          |
+| Shift    | 潜行          |
+| E        | 打开/关闭背包 |
+| ESC      | 暂停          |
+| 1-6      | 切换快捷栏    |
+| 鼠标移动 | 视角旋转      |
+| 左键     | 破坏方块      |
+| 右键     | 放置方块      |
+| 滚轮     | 切换方块类型  |
 
 ## 配置参数 (config.js)
 
 ```javascript
 export const CONFIG = {
   // 世界
-  WORLD_SIZE: 48,           // 世界大小 48×48
-  CHUNK_SIZE: 16,           // 区块大小
-  
+  WORLD_SIZE: 48, // 世界大小 48×48
+  CHUNK_SIZE: 16, // 区块大小
+
   // 物理
-  GRAVITY: 25,              // 重力加速度
-  JUMP_FORCE: 7.75,         // 跳跃力度
-  PLAYER_SPEED: 5,          // 移动速度
-  PLAYER_HEIGHT: 1.8,       // 玩家高度
-  
+  GRAVITY: 25, // 重力加速度
+  JUMP_FORCE: 7.75, // 跳跃力度
+  PLAYER_SPEED: 5, // 移动速度
+  PLAYER_HEIGHT: 1.8, // 玩家高度
+
   // 渲染
-  FOV: 75,                  // 视野角度
-  NEAR: 0.1,                // 近裁剪面
-  FAR: 1000,                // 远裁剪面
-  
+  FOV: 75, // 视野角度
+  NEAR: 0.1, // 近裁剪面
+  FAR: 1000, // 远裁剪面
+
   // UI
-  HOTBAR_SIZE: 6,           // 快捷栏格数
-  INVENTORY_SIZE: 27        // 背包格数
+  HOTBAR_SIZE: 6, // 快捷栏格数
+  INVENTORY_SIZE: 27, // 背包格数
 };
 ```
 
@@ -129,11 +129,11 @@ function isCave(x, y, z) {
 function checkCollision(position, velocity) {
   const nextPos = position.clone().add(velocity);
   const blockPos = nextPos.floor();
-  
+
   for (let dx = -1; dx <= 1; dx++) {
     for (let dy = -1; dy <= 1; dy++) {
       for (let dz = -1; dz <= 1; dz++) {
-        const checkPos = blockPos.clone().add({x: dx, y: dy, z: dz});
+        const checkPos = blockPos.clone().add({ x: dx, y: dy, z: dz });
         if (getBlock(checkPos) !== AIR) {
           // 检测碰撞并修正位置
         }

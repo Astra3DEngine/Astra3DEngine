@@ -77,7 +77,11 @@ export default function Dock() {
           );
         })}
         {collapseBottom && (
-          <button className="dock-collapse-btn" onClick={handleCollapseClick} {...tip(msg('dock.collapse'))}>
+          <button
+            className="dock-collapse-btn"
+            onClick={handleCollapseClick}
+            {...tip(msg('dock.collapse'))}
+          >
             ×
           </button>
         )}

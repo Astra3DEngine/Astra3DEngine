@@ -17,9 +17,9 @@ export function getBlockKey(x, y, z) {
 
 export function decodeKey(key) {
   return {
-    x: (key >> 20) & 0x3FF,
-    y: (key >> 10) & 0x3FF,
-    z: key & 0x3FF
+    x: (key >> 20) & 0x3ff,
+    y: (key >> 10) & 0x3ff,
+    z: key & 0x3ff,
   };
 }
 
@@ -40,21 +40,25 @@ function noise2D(x, z, scale, octaves) {
   let value = 0;
   let amplitude = 1;
   let frequency = scale;
-  
+
   for (let i = 0; i < octaves; i++) {
-    value += amplitude * (Math.sin(x * frequency) * Math.cos(z * frequency) + 
-                          Math.sin((x + z) * frequency * 0.7) * 0.5);
+    value +=
+      amplitude *
+      (Math.sin(x * frequency) * Math.cos(z * frequency) +
+        Math.sin((x + z) * frequency * 0.7) * 0.5);
     amplitude *= 0.5;
     frequency *= 2;
   }
-  
+
   return value;
 }
 
 function noise3D(x, y, z, scale) {
-  return Math.sin(x * scale) * Math.cos(y * scale) * Math.sin(z * scale) +
-         Math.sin((x + y) * scale * 0.7) * Math.cos((y + z) * scale * 0.7) * 0.5 +
-         Math.cos((x + z) * scale * 0.5) * Math.sin(y * scale * 0.5) * 0.3;
+  return (
+    Math.sin(x * scale) * Math.cos(y * scale) * Math.sin(z * scale) +
+    Math.sin((x + y) * scale * 0.7) * Math.cos((y + z) * scale * 0.7) * 0.5 +
+    Math.cos((x + z) * scale * 0.5) * Math.sin(y * scale * 0.5) * 0.3
+  );
 }
 
 export function generateWorld() {
@@ -62,13 +66,13 @@ export function generateWorld() {
     for (let z = 0; z < WORLD_SIZE; z++) {
       const heightNoise = noise2D(x, z, 0.08, 3);
       const height = Math.floor(12 + heightNoise * 5);
-      
+
       for (let y = 0; y <= height; y++) {
         const caveNoise = noise3D(x, y, z, 0.15);
         const isCave = y > 2 && y < height - 2 && caveNoise > 0.6;
-        
+
         if (isCave) continue;
-        
+
         let blockType;
         if (y === height) blockType = BLOCK_TYPES.GRASS;
         else if (y >= height - 2) blockType = BLOCK_TYPES.DIRT;
@@ -77,9 +81,9 @@ export function generateWorld() {
       }
     }
   }
-  
+
   generateCaveEntrances();
-  
+
   for (let i = 0; i < 12; i++) {
     const tx = Math.floor(Math.random() * (WORLD_SIZE - 8)) + 4;
     const tz = Math.floor(Math.random() * (WORLD_SIZE - 8)) + 4;
@@ -96,11 +100,11 @@ export function generateWorld() {
 
 function generateCaveEntrances() {
   const entranceCount = 3;
-  
+
   for (let i = 0; i < entranceCount; i++) {
     const ex = Math.floor(Math.random() * (WORLD_SIZE - 10)) + 5;
     const ez = Math.floor(Math.random() * (WORLD_SIZE - 10)) + 5;
-    
+
     let surfaceY = 0;
     for (let y = 30; y >= 0; y--) {
       if (getBlock(ex, y, ez) !== BLOCK_TYPES.AIR) {
@@ -108,7 +112,7 @@ function generateCaveEntrances() {
         break;
       }
     }
-    
+
     const entranceRadius = 2;
     for (let dx = -entranceRadius; dx <= entranceRadius; dx++) {
       for (let dz = -entranceRadius; dz <= entranceRadius; dz++) {
@@ -123,7 +127,7 @@ function generateCaveEntrances() {
         }
       }
     }
-    
+
     for (let y = surfaceY - 8; y >= 3; y--) {
       setBlock(ex, y, ez, BLOCK_TYPES.AIR);
       if (Math.random() < 0.3) {
@@ -136,21 +140,21 @@ function generateCaveEntrances() {
 
 function generateTree(x, y, z) {
   const trunkHeight = 4 + Math.floor(Math.random() * 2);
-  
+
   for (let i = 0; i < trunkHeight; i++) {
     setBlock(x, y + i, z, BLOCK_TYPES.WOOD);
   }
-  
+
   const leafStart = y + trunkHeight - 2;
   const leafHeight = 3;
-  
+
   for (let dy = 0; dy < leafHeight; dy++) {
-    const radius = dy === 0 ? 2 : (dy === leafHeight - 1 ? 1 : 2);
-    
+    const radius = dy === 0 ? 2 : dy === leafHeight - 1 ? 1 : 2;
+
     for (let dx = -radius; dx <= radius; dx++) {
       for (let dz = -radius; dz <= radius; dz++) {
         if (dx === 0 && dz === 0 && dy < leafHeight - 1) continue;
-        
+
         const dist = Math.abs(dx) + Math.abs(dz);
         if (dist <= radius + 1) {
           setBlock(x + dx, leafStart + dy, z + dz, BLOCK_TYPES.LEAVES);
@@ -158,6 +162,6 @@ function generateTree(x, y, z) {
       }
     }
   }
-  
+
   setBlock(x, leafStart + leafHeight, z, BLOCK_TYPES.LEAVES);
 }

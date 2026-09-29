@@ -21,23 +21,23 @@ export default tseslint.config(
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
-      globals: globals.browser
+      globals: globals.browser,
     },
     plugins: {
-      'react-hooks': reactHooks
+      'react-hooks': reactHooks,
     },
     rules: {
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       '@typescript-eslint/no-unused-vars': [
         'error',
-        { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }
+        { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/no-explicit-any': 'warn',
       'no-undef': 'error',
       'no-console': ['warn', { allow: ['warn', 'error'] }],
-      'no-warning-comments': 'warn'
-    }
+      'no-warning-comments': 'warn',
+    },
   },
   {
     // 测试文件使用 vitest 全局（describe/it/expect 等）
@@ -45,21 +45,21 @@ export default tseslint.config(
     languageOptions: {
       globals: {
         ...globals.browser,
-        ...globals.vitest
-      }
-    }
+        ...globals.vitest,
+      },
+    },
   },
   {
     files: ['electron/**/*.js', 'scripts/**/*.js', 'vite.config.js', 'vite.config.desktop.js'],
     languageOptions: {
-      globals: globals.node
+      globals: globals.node,
     },
     rules: {
       'no-console': 'off',
       '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-unused-vars': 'warn',
-      'no-empty': 'off'
-    }
+      'no-empty': 'off',
+    },
   },
   prettier
 );

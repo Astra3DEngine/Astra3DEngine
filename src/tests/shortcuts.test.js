@@ -6,16 +6,15 @@ import {
   shortcuts,
 } from '../lib/ShortcutManager.js';
 
-const ev = (init) =>
-  ({
-    ctrlKey: false,
-    metaKey: false,
-    shiftKey: false,
-    altKey: false,
-    key: 'x',
-    target: { tagName: 'DIV' },
-    ...init,
-  });
+const ev = (init) => ({
+  ctrlKey: false,
+  metaKey: false,
+  shiftKey: false,
+  altKey: false,
+  key: 'x',
+  target: { tagName: 'DIV' },
+  ...init,
+});
 
 describe('matchesCombo', () => {
   it('纯按键匹配', () => {
@@ -26,7 +25,9 @@ describe('matchesCombo', () => {
   it('修饰组合匹配', () => {
     expect(matchesCombo(ev({ key: 's', ctrlKey: true }), 'ctrl+s')).toBe(true);
     expect(matchesCombo(ev({ key: 's' }), 'ctrl+s')).toBe(false);
-    expect(matchesCombo(ev({ key: 'S', ctrlKey: true, shiftKey: true }), 'ctrl+shift+s')).toBe(true);
+    expect(matchesCombo(ev({ key: 'S', ctrlKey: true, shiftKey: true }), 'ctrl+shift+s')).toBe(
+      true
+    );
     expect(matchesCombo(ev({ key: 's', ctrlKey: true, shiftKey: true }), 'ctrl+s')).toBe(false);
   });
 

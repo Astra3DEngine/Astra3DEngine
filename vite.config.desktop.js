@@ -17,10 +17,10 @@ export default defineConfig({
           build: {
             outDir: 'dist-electron',
             rollupOptions: {
-              external: ['electron']
-            }
-          }
-        }
+              external: ['electron'],
+            },
+          },
+        },
       },
       {
         entry: 'electron/preload.js',
@@ -33,19 +33,19 @@ export default defineConfig({
             rollupOptions: {
               external: ['electron'],
               output: {
-                format: 'cjs'
-              }
-            }
-          }
-        }
-      }
-    ])
+                format: 'cjs',
+              },
+            },
+          },
+        },
+      },
+    ]),
   ],
   server: {
-    port: 3000
+    port: 3000,
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
-  }
+    sourcemap: true,
+  },
 });

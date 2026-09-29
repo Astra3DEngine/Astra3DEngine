@@ -162,7 +162,10 @@ describe('useViewportPick', () => {
 
     renderHook(() =>
       useViewportPick(refs, {
-        objects: [{ id: 7, name: 'Parent' }, { id: 1, name: 'Cube' }],
+        objects: [
+          { id: 7, name: 'Parent' },
+          { id: 1, name: 'Cube' },
+        ],
         currentTool: 'select',
         onSelectObject,
         isPlaying: false,

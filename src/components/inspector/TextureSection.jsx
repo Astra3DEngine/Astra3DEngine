@@ -21,11 +21,11 @@ function TextureSection({ selectedObject, onUpdateObject, textureAssets }) {
     <select
       className="inspector-input inspector-select"
       value={selectedObject.textureId || ''}
-      onChange={(e) =>
-        update({ textureId: e.target.value ? parseInt(e.target.value) : null })
-      }
+      onChange={(e) => update({ textureId: e.target.value ? parseInt(e.target.value) : null })}
     >
-      <option value="">{msg(includeOriginal ? 'inspector.originalTexture' : 'inspector.noTexture')}</option>
+      <option value="">
+        {msg(includeOriginal ? 'inspector.originalTexture' : 'inspector.noTexture')}
+      </option>
       {textureAssets.map((asset) => (
         <option key={asset.id} value={asset.id}>
           {asset.name}

@@ -49,21 +49,36 @@ const menuRef = useRef(null);
   ref={menuRef}
   label="文件"
   items={[
-    { label: '新建', icon: <IconNew className="menu-icon" />, shortcut: 'Ctrl+N', onClick: handleNew },
+    {
+      label: '新建',
+      icon: <IconNew className="menu-icon" />,
+      shortcut: 'Ctrl+N',
+      onClick: handleNew,
+    },
     { divider: true },
-    { label: '保存', icon: <IconSave className="menu-icon" />, shortcut: 'Ctrl+S', onClick: handleSave },
-    { label: '删除', icon: <IconDelete className="menu-icon" />, danger: true, onClick: handleDelete },
+    {
+      label: '保存',
+      icon: <IconSave className="menu-icon" />,
+      shortcut: 'Ctrl+S',
+      onClick: handleSave,
+    },
+    {
+      label: '删除',
+      icon: <IconDelete className="menu-icon" />,
+      danger: true,
+      onClick: handleDelete,
+    },
     {
       label: '语言',
       icon: <IconLang className="menu-icon" />,
       submenu: [
         { label: '中文', active: true, onClick: () => setLocale('zh') },
         { label: 'English', onClick: () => setLocale('en') },
-      ]
-    }
+      ],
+    },
   ]}
-  roundedCorners="bottom"      // 底部圆角（与顶栏按钮衔接）
-/>
+  roundedCorners="bottom" // 底部圆角（与顶栏按钮衔接）
+/>;
 ```
 
 #### 模式 B：受控模式（外部 Hook 控制开关和位置）
@@ -120,7 +135,13 @@ const menu = useDropdownMenu({
   menuRef={menu.menuRef}
   roundedCorners="all"
 >
-  <div className="custom-item" onClick={() => { doSomething(); menu.close(); }}>
+  <div
+    className="custom-item"
+    onClick={() => {
+      doSomething();
+      menu.close();
+    }}
+  >
     自定义内容
   </div>
 </DropdownMenu>
@@ -130,17 +151,17 @@ const menu = useDropdownMenu({
 
 ### 3. 菜单项数据结构（items）
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `label` | `string \| ReactNode` | 显示文本 |
-| `icon` | `ReactNode` | 图标（建议统一用 `className="dropdown-icon"`） |
-| `onClick` | `Function` | 点击回调（自动关闭菜单） |
-| `disabled` | `boolean` | 是否禁用 |
-| `danger` | `boolean` | 危险操作（红色样式） |
-| `shortcut` | `string` | 快捷键提示（仅 Trigger 模式有样式） |
-| `submenu` | `Array<Item>` | 子菜单列表 |
-| `active` | `boolean` | 子菜单项是否选中（显示 ✓） |
-| `divider` | `boolean` | 分隔线（此时其他字段无效） |
+| 字段       | 类型                  | 说明                                           |
+| ---------- | --------------------- | ---------------------------------------------- |
+| `label`    | `string \| ReactNode` | 显示文本                                       |
+| `icon`     | `ReactNode`           | 图标（建议统一用 `className="dropdown-icon"`） |
+| `onClick`  | `Function`            | 点击回调（自动关闭菜单）                       |
+| `disabled` | `boolean`             | 是否禁用                                       |
+| `danger`   | `boolean`             | 危险操作（红色样式）                           |
+| `shortcut` | `string`              | 快捷键提示（仅 Trigger 模式有样式）            |
+| `submenu`  | `Array<Item>`         | 子菜单列表                                     |
+| `active`   | `boolean`             | 子菜单项是否选中（显示 ✓）                     |
+| `divider`  | `boolean`             | 分隔线（此时其他字段无效）                     |
 
 ---
 
@@ -193,11 +214,17 @@ Logo 菜单使用受控模式 + `items` 数组。
 
 ```jsx
 // ✅ 正确
-{ icon: <IconCopy className="dropdown-icon" /> }
+{
+  icon: <IconCopy className="dropdown-icon" />;
+}
 
 // ❌ 错误 — 使用旧的自定义类名
-{ icon: <IconCopy className="context-menu-icon" /> }
-{ icon: <IconCopy className="add-menu-item-icon" /> }
+{
+  icon: <IconCopy className="context-menu-icon" />;
+}
+{
+  icon: <IconCopy className="add-menu-item-icon" />;
+}
 ```
 
 > **现有规则：任何新的菜单，都不要再手搓 `useState` + `useRef` + `useEffect` 了。**
@@ -208,20 +235,20 @@ Logo 菜单使用受控模式 + `items` 数组。
 
 ### 1. 状态管理层：`useModal.js`
 
-| 返回值 | 类型 | 说明 |
-|---|---|---|
-| `isOpen` | `boolean` | 当前模态框是否打开 |
-| `open` | `() => void` | 打开模态框（触发 `onOpen` 回调） |
-| `close` | `() => void` | 关闭模态框（触发 `onClose` 回调） |
-| `toggle` | `() => void` | 切换模态框开关状态 |
-| `modalRef` | `React.RefObject` | 绑定到 Modal 组件的 DOM ref |
+| 返回值     | 类型              | 说明                              |
+| ---------- | ----------------- | --------------------------------- |
+| `isOpen`   | `boolean`         | 当前模态框是否打开                |
+| `open`     | `() => void`      | 打开模态框（触发 `onOpen` 回调）  |
+| `close`    | `() => void`      | 关闭模态框（触发 `onClose` 回调） |
+| `toggle`   | `() => void`      | 切换模态框开关状态                |
+| `modalRef` | `React.RefObject` | 绑定到 Modal 组件的 DOM ref       |
 
 ```js
 import { useModal } from '../hooks/useModal.js';
 
 const { isOpen, open, close, toggle, modalRef } = useModal({
   onOpen: () => console.log('opened'),
-  onClose: () => console.log('closed')
+  onClose: () => console.log('closed'),
 });
 ```
 
@@ -229,24 +256,24 @@ const { isOpen, open, close, toggle, modalRef } = useModal({
 
 ### 2. 渲染组件层：`Modal.jsx`
 
-| Prop | 类型 | 默认值 | 说明 |
-|---|---|---|---|
-| `isOpen` | `boolean` | — | 是否显示模态框（必填） |
-| `onClose` | `Function` | — | 关闭回调（必填） |
-| `title` | `string` | — | 标题（不传则不渲染 header） |
-| `children` | `ReactNode` | — | body 内容 |
-| `footer` | `ReactNode` | — | footer 内容（可选） |
-| `width` | `number\|string` | — | 宽度（数字默认单位 px，字符串可写 `60%` 等） |
-| `height` | `number\|string` | — | 高度（同上） |
-| `maxWidth` | `number\|string` | `'90vw'` | 最大宽度 |
-| `maxHeight` | `number\|string` | `'85vh'` | 最大高度 |
-| `className` | `string` | `''` | content 额外类名 |
-| `bodyClassName` | `string` | `''` | body 区域额外类名 |
-| `overlayClassName` | `string` | `''` | overlay 额外类名 |
-| `closeButton` | `boolean` | `true` | 是否显示右上角 × 关闭按钮 |
-| `closeOnOverlayClick` | `boolean` | `true` | 点击遮罩是否关闭 |
-| `closeOnEscape` | `boolean` | `true` | 按 Escape 是否关闭 |
-| `modalRef` | `ref` | — | 绑定到 overlay 的 ref |
+| Prop                  | 类型             | 默认值   | 说明                                         |
+| --------------------- | ---------------- | -------- | -------------------------------------------- |
+| `isOpen`              | `boolean`        | —        | 是否显示模态框（必填）                       |
+| `onClose`             | `Function`       | —        | 关闭回调（必填）                             |
+| `title`               | `string`         | —        | 标题（不传则不渲染 header）                  |
+| `children`            | `ReactNode`      | —        | body 内容                                    |
+| `footer`              | `ReactNode`      | —        | footer 内容（可选）                          |
+| `width`               | `number\|string` | —        | 宽度（数字默认单位 px，字符串可写 `60%` 等） |
+| `height`              | `number\|string` | —        | 高度（同上）                                 |
+| `maxWidth`            | `number\|string` | `'90vw'` | 最大宽度                                     |
+| `maxHeight`           | `number\|string` | `'85vh'` | 最大高度                                     |
+| `className`           | `string`         | `''`     | content 额外类名                             |
+| `bodyClassName`       | `string`         | `''`     | body 区域额外类名                            |
+| `overlayClassName`    | `string`         | `''`     | overlay 额外类名                             |
+| `closeButton`         | `boolean`        | `true`   | 是否显示右上角 × 关闭按钮                    |
+| `closeOnOverlayClick` | `boolean`        | `true`   | 点击遮罩是否关闭                             |
+| `closeOnEscape`       | `boolean`        | `true`   | 按 Escape 是否关闭                           |
+| `modalRef`            | `ref`            | —        | 绑定到 overlay 的 ref                        |
 
 ```jsx
 <Modal
@@ -266,10 +293,10 @@ const { isOpen, open, close, toggle, modalRef } = useModal({
 
 ### 3. 全局调度层：`useModalManager.jsx`
 
-| 方法 | 签名 | 返回值 | 说明 |
-|---|---|---|---|
-| `open` | `(Component, props = {}) => Promise` | `Promise<any>` | 打开一个模态框组件，自动注入 `isOpen` 和 `onClose` |
-| `closeAll` | `() => void` | `void` | 关闭所有模态框，所有 pending Promise 以 `null` resolve |
+| 方法       | 签名                                 | 返回值         | 说明                                                   |
+| ---------- | ------------------------------------ | -------------- | ------------------------------------------------------ |
+| `open`     | `(Component, props = {}) => Promise` | `Promise<any>` | 打开一个模态框组件，自动注入 `isOpen` 和 `onClose`     |
+| `closeAll` | `() => void`                         | `void`         | 关闭所有模态框，所有 pending Promise 以 `null` resolve |
 
 ```js
 import { useModalManager } from '../hooks/useModalManager.jsx';
@@ -291,11 +318,11 @@ modalManager.closeAll();
 
 ### 三层之间的关系
 
-| 层级 | 用途 | 典型场景 |
-|---|---|---|
-| **`useModal.js`** | 单个模态框的局部状态管理 | 组件内部有模态框，用 `isOpen`/`open`/`close` 控制 |
-| **`Modal.jsx`** | 统一渲染外壳（overlay + header + body + footer） | 所有模态框内容组件都用它包裹 |
-| **`useModalManager.jsx`** | 跨组件/跨层级以 Promise 方式打开模态框 | App.jsx 从 Toolbar 打开 InfoModal，从菜单打开 PreferencesModal |
+| 层级                      | 用途                                             | 典型场景                                                       |
+| ------------------------- | ------------------------------------------------ | -------------------------------------------------------------- |
+| **`useModal.js`**         | 单个模态框的局部状态管理                         | 组件内部有模态框，用 `isOpen`/`open`/`close` 控制              |
+| **`Modal.jsx`**           | 统一渲染外壳（overlay + header + body + footer） | 所有模态框内容组件都用它包裹                                   |
+| **`useModalManager.jsx`** | 跨组件/跨层级以 Promise 方式打开模态框           | App.jsx 从 Toolbar 打开 InfoModal，从菜单打开 PreferencesModal |
 
 **三层的组合用法：**
 
@@ -306,7 +333,7 @@ const { isOpen, open, close, modalRef } = useModal();
 // 2. 渲染组件统一外壳
 <Modal isOpen={isOpen} onClose={close} title="我的模态框" width={480}>
   <MyContent />
-</Modal>
+</Modal>;
 
 // 3. 全局调度（从任何地方一键打开）
 const modalManager = useModalManager();

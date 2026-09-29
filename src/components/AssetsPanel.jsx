@@ -1,3 +1,9 @@
+/**
+ * @file components/AssetsPanel.jsx
+ * @description 资产面板组件，支持导入（文件/文件夹/拖拽）、过滤、选中与重命名。
+ * @module components/AssetsPanel
+ */
+
 import React, { useRef, useState, useMemo, useCallback } from 'react';
 import { msg } from '../i18n/index.js';
 import usePanelSearch from '../hooks/usePanelSearch.js';
@@ -5,116 +11,15 @@ import FileBrowserDialog from './FileBrowserDialog.jsx';
 import { useAssetsStore } from '../stores/useAssetsStore.js';
 import useDropdownMenu from '../hooks/useDropdownMenu.js';
 import DropdownMenu from './DropdownMenu.jsx';
-import RenameInput from './primitives/RenameInput.jsx';
+import AssetItem from './assets/AssetItem.jsx';
 import IconModel from '../assets/icons/tools/cube.svg?react';
 import IconImage from '../assets/icons/misc/image.svg?react';
-import IconFile from '../assets/icons/editor/file.svg?react';
 import IconDelete from '../assets/icons/editor/delete.svg?react';
 import IconRename from '../assets/icons/editor/rename.svg?react';
 import IconPlus from '../assets/icons/editor/plus.svg?react';
 import { tip } from '../lib/tooltip.js';
 import { getBasename } from '../utils/id.js';
-
-const getMimeType = (filename) => {
-  const ext = filename.split('.').pop()?.toLowerCase();
-  const mimeTypes = {
-    gltf: 'model/gltf+json',
-    glb: 'model/gltf-binary',
-    obj: 'model/obj',
-    png: 'image/png',
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    webp: 'image/webp',
-    gif: 'image/gif',
-    bmp: 'image/bmp',
-  };
-  return mimeTypes[ext] || 'application/octet-stream';
-};
-
-/**
- * 递归收集 FileSystem 目录条目到 fileMap（相对路径 -> File）。
- * @param {FileSystemDirectoryEntry} entry
- * @param {Map<string, File>} fileMap
- * @param {string} [basePath='']
- */
-async function collectDirectoryInto(entry, fileMap, basePath = '') {
-  const reader = entry.createReader();
-
-  const readEntriesBatch = async () => {
-    const entries = await new Promise((resolve, reject) => {
-      reader.readEntries(resolve, reject);
-    });
-
-    for (const subEntry of entries) {
-      const relPath = basePath ? `${basePath}/${subEntry.name}` : subEntry.name;
-      if (subEntry.isDirectory) {
-        await collectDirectoryInto(subEntry, fileMap, relPath);
-      } else {
-        const file = await new Promise((resolve, reject) => {
-          subEntry.file(resolve, reject);
-        });
-        if (file) fileMap.set(relPath, file);
-      }
-    }
-
-    // readEntries 可能一次只返回部分条目，需要循环读取直到空
-    if (entries.length > 0) {
-      await readEntriesBatch();
-    }
-  };
-
-  await readEntriesBatch();
-}
-
-/**
- * 批量导入文件集合。
- *
- * - 若存在 .gltf：为每个 gltf 收集同目录资源（.bin/贴图）成 resourceMap 一起导入，
- *   .glb 自包含直接导入。
- * - 否则逐个导入所有文件。
- *
- * @param {Map<string, File>} fileMap - 相对路径 -> File
- * @param {(fileOrObject: File|Object) => void} onImport
- */
-export function importFileCollection(fileMap, onImport) {
-  const gltfFiles = [];
-  for (const [relativePath, file] of fileMap) {
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (ext === 'gltf' || ext === 'glb') {
-      gltfFiles.push({ relativePath, file, ext });
-    }
-  }
-
-  if (gltfFiles.length === 0) {
-    for (const file of fileMap.values()) {
-      onImport(file);
-    }
-    return;
-  }
-
-  for (const { relativePath, file, ext } of gltfFiles) {
-    if (ext === 'glb') {
-      onImport(file);
-      continue;
-    }
-
-    // 收集同目录或子目录下的资源文件
-    const resourceMap = new Map();
-    const gltfDir = relativePath.substring(0, relativePath.lastIndexOf('/')) || '';
-
-    for (const [resourcePath, resourceFile] of fileMap) {
-      if (resourcePath === relativePath) continue;
-      const resourceDir = resourcePath.substring(0, resourcePath.lastIndexOf('/')) || '';
-      if (resourceDir === gltfDir || resourceDir.startsWith(gltfDir + '/')) {
-        const relativeToGltf =
-          gltfDir === '' ? resourcePath : resourcePath.substring(gltfDir.length + 1);
-        resourceMap.set(relativeToGltf, resourceFile);
-      }
-    }
-
-    onImport({ file, resourceMap, relativePath });
-  }
-}
+import { getMimeType, collectDirectoryInto, importFileCollection } from '../utils/fileImport.js';
 
 function AssetsPanel() {
   // ===== store 驱动 =====
@@ -351,16 +256,6 @@ function AssetsPanel() {
     };
   }, [assets]);
 
-  const getAssetIcon = (asset) => {
-    if (asset.assetType === 'model') {
-      return <IconModel className="asset-type-icon" />;
-    }
-    if (asset.assetType === 'texture') {
-      return null;
-    }
-    return <IconFile className="asset-type-icon" />;
-  };
-
   const ctxMenuItems = useMemo(() => {
     if (!contextMenuAsset) return [];
     return [
@@ -443,43 +338,22 @@ function AssetsPanel() {
         ) : (
           <div className="assets-grid">
             {filteredAssets.map((asset, index) => (
-              <div
+              <AssetItem
                 key={asset.id || index}
-                className={`asset-item ${selectedAsset?.id === asset.id ? 'selected' : ''}`}
-                onClick={() => onSelectAsset(asset)}
+                asset={asset}
+                isSelected={selectedAsset?.id === asset.id}
+                editingAsset={editingAsset}
+                onSelect={() => onSelectAsset(asset)}
                 onContextMenu={(e) => handleContextMenu(e, asset)}
                 onDragStart={(e) => handleAssetDragStart(e, asset)}
-                draggable={asset.assetType === 'texture'}
-                {...tip(asset.name)}
-              >
-                <div className="asset-preview">
-                  {asset.assetType === 'texture' && asset.url ? (
-                    <img
-                      src={asset.url}
-                      alt={asset.name}
-                      className="asset-thumbnail"
-                      draggable={false}
-                    />
-                  ) : (
-                    <div className="asset-icon-wrapper">{getAssetIcon(asset)}</div>
-                  )}
-                </div>
-                {editingAsset?.id === asset.id ? (
-                  <RenameInput
-                    value={asset.name}
-                    className="asset-name-input"
-                    onSubmit={(value) => {
-                      if (value !== asset.name && onRenameAsset) {
-                        onRenameAsset(asset, value);
-                      }
-                      setEditingAsset(null);
-                    }}
-                    onCancel={() => setEditingAsset(null)}
-                  />
-                ) : (
-                  <div className="asset-name">{asset.name}</div>
-                )}
-              </div>
+                onRenameSubmit={(assetObj, value) => {
+                  if (value !== assetObj.name && onRenameAsset) {
+                    onRenameAsset(assetObj, value);
+                  }
+                  setEditingAsset(null);
+                }}
+                onRenameCancel={() => setEditingAsset(null)}
+              />
             ))}
           </div>
         )}

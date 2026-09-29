@@ -3,7 +3,11 @@
   src: local('Courier New');
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
 body {
   font-family: 'Minecraft', 'Courier New', monospace;
@@ -15,8 +19,10 @@ body {
 
 #blocker {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(0, 0, 0, 0.85);
   display: flex;
   flex-direction: column;
@@ -25,7 +31,9 @@ body {
   z-index: 100;
 }
 
-#blocker.hidden { display: none; }
+#blocker.hidden {
+  display: none;
+}
 
 .title {
   font-size: 64px;
@@ -72,13 +80,15 @@ body {
 
 #crosshair {
   position: fixed;
-  top: 50%; left: 50%;
+  top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%);
-  width: 32px; height: 32px;
+  width: 32px;
+  height: 32px;
   pointer-events: none;
   z-index: 50;
   display: none;
-  background: 
+  background:
     linear-gradient(to right, transparent 46%, white 46%, white 54%, transparent 54%),
     linear-gradient(to bottom, transparent 46%, white 46%, white 54%, transparent 54%);
 }
@@ -96,7 +106,8 @@ body {
 }
 
 .hotbar-slot {
-  width: 40px; height: 40px;
+  width: 40px;
+  height: 40px;
   background: linear-gradient(180deg, #8b8b8b 0%, #6b6b6b 100%);
   border: 2px solid #000;
   border-top-color: #373737;
@@ -118,13 +129,15 @@ body {
 }
 
 .hotbar-slot canvas {
-  width: 32px; height: 32px;
+  width: 32px;
+  height: 32px;
   image-rendering: pixelated;
 }
 
 .hotbar-slot .slot-number {
   position: absolute;
-  top: 1px; left: 2px;
+  top: 1px;
+  left: 2px;
   font-size: 10px;
   color: white;
   text-shadow: 1px 1px 0 #3f3f3f;
@@ -148,7 +161,8 @@ body {
 }
 
 .inventory-slot {
-  width: 40px; height: 40px;
+  width: 40px;
+  height: 40px;
   background: linear-gradient(180deg, #8b8b8b 0%, #6b6b6b 100%);
   border: 2px solid #000;
   border-top-color: #373737;
@@ -167,13 +181,15 @@ body {
 }
 
 .inventory-slot canvas {
-  width: 32px; height: 32px;
+  width: 32px;
+  height: 32px;
   image-rendering: pixelated;
 }
 
 #debug {
   position: fixed;
-  top: 10px; left: 10px;
+  top: 10px;
+  left: 10px;
   font-size: 14px;
   color: white;
   font-family: 'Minecraft', 'Courier New', monospace;
@@ -187,7 +203,8 @@ body {
 
 #fps {
   position: fixed;
-  top: 10px; right: 10px;
+  top: 10px;
+  right: 10px;
   font-size: 16px;
   color: white;
   font-family: 'Minecraft', 'Courier New', monospace;

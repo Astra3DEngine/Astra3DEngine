@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { importFileCollection } from '../components/AssetsPanel.jsx';
+import { importFileCollection } from '../utils/fileImport.js';
 
 const mkFile = (name) => new File([`content-${name}`], name);
 

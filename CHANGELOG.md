@@ -3,6 +3,7 @@
 ## 2026-06-24 VSCode 风格侧栏 + 主题色系统
 
 ### 新增功能
+
 - **VSCode 风格侧栏**：
   - InspectorPanel 重构为 VSCode 风格的侧栏
   - 右侧固定显示图标按钮栏（场景/对象）
@@ -14,6 +15,7 @@
   - 激活指示条使用主题色
 
 ### BUG修复
+
 - **对象操作后消失**：
   - 拖拽对象后，对象从场景中消失
   - 原因：`handleUpdateObject` 使用 `sceneObjects` 导致状态不一致
@@ -28,6 +30,7 @@
 ## 2026-06-17 多场景系统 UI 完善 + 版本号管理
 
 ### 新增功能
+
 - **版本号元数据文件**：
   - 创建 `src/meta.js` 统一管理引擎版本号和项目格式版本号
   - `ENGINE_VERSION`：引擎版本号（0.1.0）
@@ -49,6 +52,7 @@
   - 添加按钮使用相同的类名（`add-menu-trigger`）和样式
 
 ### BUG修复
+
 - **版本号不一致问题**：
   - 底部栏显示的版本号使用 i18n 文件中的内容，与 meta.js 中的版本号不一致
   - 修复：状态栏版本号改为使用 `ENGINE_VERSION`，从所有 i18n 文件中移除 `app.version`
@@ -68,6 +72,7 @@
 ## 2026-06-11 Pivot 变换系统全面修复
 
 ### BUG修复
+
 - **Pivot 变换系统失效**：
   - 选择模型时创建的 pivot（几何中心支点）功能失效
   - 旋转和缩放相对于模型原点而不是 pivot 中心进行
@@ -90,6 +95,7 @@
   - 修复：光源没有 geometry，直接使用 position 作为中心
 
 ### 技术改进
+
 - **坐标系转换逻辑统一**：
   - 所有几何中心计算使用统一的 `getMeshGeometryCenterWorld` 函数
   - 所有多选中心计算使用统一的 `calculateSelectionsCenter` 函数
@@ -102,6 +108,7 @@
 ## 2026-06-10 光渲染开关 + 阴影系统完整实现
 
 ### 新增功能
+
 - **光渲染开关**：
   - 在预览窗口 Dock 中添加光渲染开关按钮（灯泡图标）
   - F1 快捷键切换光渲染开关
@@ -120,6 +127,7 @@
   - 添加 computeVertexNormals() 确保法线数据
 
 ### BUG修复
+
 - **导入模型不产生阴影**：
   - mesh 类型对象（handleImportModelParts 创建）缺少 castShadow/receiveShadow 属性
   - 修复：在创建 mesh 时设置阴影属性
@@ -136,6 +144,7 @@
 ## 2026-06-09 OBJ 模型导入 + 贴图功能 + 光源系统
 
 ### 新增功能
+
 - **OBJ 模型导入支持**：
   - 添加 OBJLoader，支持导入 .obj 格式模型
   - OBJ 模型在加载时将子 Mesh 相对于中心点偏移，确保后续缩放正确
@@ -168,6 +177,7 @@
   - 卡片固定尺寸 80x80，垂直滚动
 
 ### BUG修复
+
 - **选择框对齐问题**：
   - model 类型（Group）的 outline 没有正确对齐模型
   - 修复：用 `Box3.setFromObject` 计算边界盒，`worldToLocal` 转换到局部坐标
@@ -189,6 +199,7 @@
   - 修复：方向光箭头旋转180度朝下，聚光灯光锥不旋转
 
 ### 修改文件
+
 - `src/App.jsx` — OBJ 加载 + 文件夹导入处理 + 光源类型定义 + 模型层级解析
 - `src/components/Viewport.jsx` — 选择框/多选缩放/拖拽修复 + 光源渲染 + 贴图面检测
 - `src/components/InspectorPanel.jsx` — model 贴图支持 + 光源属性编辑
@@ -206,6 +217,7 @@
 ## 2026-06-07 文件浏览器跨平台修复 + Electron 图标路径修复
 
 ### BUG修复
+
 - **文件浏览器 Linux/macOS 路径错误**：
   - 原因：路径处理逻辑只针对 Windows 设计（使用 `\` 分隔符）
   - 修复：`normalizePath` 支持跨平台路径格式，自动检测并规范化
@@ -219,15 +231,18 @@
   - 改进：Windows 优先使用 `.ico` 格式（任务栏支持更好）
 
 ### 改进
+
 - `electron/main.js`：macOS/Linux 盘符路径不带末尾斜杠，与前端保持一致
 
 ### 修改文件
+
 - `src/components/FileBrowserDialog.jsx` — 跨平台路径支持
 - `electron/main.js` — 图标路径修复 + 盘符路径格式统一
 
 ## 2026-06-04 文件浏览器优化 + 遗留待办清零 + GitHub Actions CI/CD
 
 ### BUG修复
+
 - **文件浏览器打开时窗口卡死（无响应）**：
   - 原因：`execSync` 同步阻塞 Electron 主进程事件循环
   - 修复：改为异步 `exec` + Promise 包装，主进程不再冻结
@@ -242,6 +257,7 @@
   - 修复为 `./src/main.jsx`
 
 ### 新增功能
+
 - **盘符列表缓存**：
   - 模块级 TTL 缓存（60 秒），避免重复执行 PowerShell
 - **跨平台盘符支持**：
@@ -253,11 +269,13 @@
   - 优先级：调用方指定 > 上次路径 > 用户主目录
 
 ### 功能验证
+
 - **父子变换跟随代码验证通过**：
   - 移动/旋转/缩放三种模式均正确调用 `applyTransformToDescendants`
   - 单选 Pivot 模式和多选模式两条路径均覆盖
 
 ### CI/CD 工作流
+
 - **新增 deploy-stable.yml**：push main → 自动构建部署到 `astra3d.cyberneko.cn/editor/`
 - **新增 deploy-preview.yml**：push develop → 自动构建部署到 `astra3d.cyberneko.cn/develop/`
 - **新增 release.yml**：push v* tag → 构建全平台桌面端产物 + 创建 GitHub Release
@@ -268,6 +286,7 @@
 - **UV 缩放/偏移功能确认已实现**（InspectorPanel + Viewport 双端齐全）
 
 ### 修改文件
+
 - `electron/main.js` — execSync→async exec + TTL缓存 + macOS/Linux跨平台 + label格式
 - `src/App.jsx` — handleReorderObjects 清理调试日志
 - `src/components/InspectorPanel.jsx` — handleParentChange 清理调试日志
@@ -276,6 +295,7 @@
 ## 2026-06-01 自定义文件浏览器
 
 ### 新增功能
+
 - **自定义文件浏览器**：
   - 创建 `FileBrowserDialog.jsx` 组件，替代系统文件选择对话框
   - 支持导航功能：返回、前进、向上、主页
@@ -290,6 +310,7 @@
   - 图标颜色支持明暗模式自动切换
 
 ### 新增文件
+
 - `src/components/FileBrowserDialog.jsx` - 自定义文件浏览器组件
 - `src/styles/file-browser.css` - 文件浏览器样式
 - `src/icons/folder.svg` - 文件夹图标
@@ -301,6 +322,7 @@
 - `src/icons/arrow-right.svg` - 向右箭头图标
 
 ### 修改文件
+
 - `electron/main.js` - 添加文件系统操作IPC处理函数，区分文本和二进制文件读取
 - `electron/preload.js` - 暴露文件系统操作API
 - `src/App.jsx` - 项目打开/保存功能改用自定义文件浏览器
@@ -310,6 +332,7 @@
 - `src/i18n/en.json` - 添加文件浏览器英文翻译
 
 ### BUG修复
+
 - **路径拼接错误**：修复点击路径框文件夹名称生成错误路径（如 "D:\C:\awa\"）的问题
   - 原因：Windows盘符路径拼接逻辑错误
   - 解决：修改 `buildSubPath` 函数，正确处理盘符路径
@@ -340,13 +363,15 @@
 ## 2026-05-31 代码注释系统
 
 ### 新增
+
 - **代码注释**：
   - 为所有核心代码文件添加了文件注释（@file、@description、@module）
   - 为所有函数/组件添加了详细的 @param 和 @returns 注释
-  
+
 ## 2026-05-23 层级面板拖拽与父子关系修复
 
 ### BUG修复
+
 - **拖拽排序问题**：
   - 修复拖拽对象调整顺序时跳到末尾的问题
   - 原因：事件冒泡导致 `handleDrop` 和 `handleDropOnEmpty` 都被触发
@@ -357,6 +382,7 @@
   - 解决：简化为只使用用户控制的展开状态
 
 ### 新增功能
+
 - **双击展开/折叠**：双击父对象可展开/折叠子对象
 - **展开图标**：
   - 新增 `chevron-collapsed.svg` 现代扁平风箭头图标
@@ -364,11 +390,13 @@
   - 展开时通过 CSS 旋转 90 度
 
 ### 改进
+
 - 添加调试日志帮助定位问题
 - 展开图标尺寸增大（12px → 16px）
 - 展开图标 hover 时显示背景色
 
 ### 修改文件
+
 - `src/components/HierarchyPanel.jsx` - 拖拽修复、展开修复、双击功能
 - `src/App.jsx` - 调试日志
 - `src/components/InspectorPanel.jsx` - 调试日志
@@ -378,6 +406,7 @@
 ## 2026-05-22 小游戏完善
 
 ### 新增功能
+
 - **山洞系统**：
   - 使用 3D 噪声函数生成地下山洞
   - 添加 3 个地表入口（圆形坑洞向下延伸）
@@ -389,6 +418,7 @@
   - MC 风格背包 UI
 
 ### 改进
+
 - **地形生成**：
   - 世界基础高度从 8 提高到 12
   - 高度变化范围从 ±4 提高到 ±5
@@ -405,6 +435,7 @@
   - 更接近 Minecraft 的跳跃手感
 
 ### 修改文件
+
 - `public/game/controls.js` - 去掉平滑视角、添加背包功能
 - `public/game/world.js` - 山洞入口、树木改进、世界高度
 - `public/game/config.js` - 跳跃力调整
@@ -416,6 +447,7 @@
 ## 2026-05-20 Electron 桌面端支持
 
 ### 新增功能
+
 - **Electron 桌面端支持**：
   - 新增 `pnpm desktop` 命令启动桌面应用调试
   - 新增 `pnpm desktop:build` 构建桌面端安装包
@@ -435,6 +467,7 @@
   - `window-close.svg` - 关闭图标
 
 ### 新增文件
+
 - `electron/main.js` - Electron 主进程
 - `electron/preload.js` - Preload 脚本
 - `vite.config.desktop.js` - 桌面端 Vite 配置
@@ -446,12 +479,14 @@
 - `src/icons/window-close.svg` - 关闭图标
 
 ### 修改文件
+
 - `package.json` - 添加 Electron 相关依赖和脚本
 - `src/components/Toolbar.jsx` - Logo 点击功能、窗口控制按钮、Electron 环境检测
 - `src/styles/toolbar.css` - Logo 按钮、下拉菜单、窗口控制按钮样式
 - `src/styles/modal.css` - InfoModal 样式
 
 ### BUG修复
+
 - **Preload 脚本格式错误**：改用 CommonJS 的 `require` 语法
 - **vite-plugin-electron 配置**：使用数组形式配置多个入口
 - **Electron 环境检测失败**：改为在 useEffect 中检测并使用 state
@@ -459,6 +494,7 @@
 - **窗口控制按钮图标不一致**：重新设计 SVG 图标，统一 12x12 viewBox
 
 ### 技术改进
+
 - 使用 IPC 通信实现窗口控制
 - Preload 脚本暴露 `electronAPI` 到渲染进程
 - 支持最大化状态同步（窗口事件监听）
@@ -466,6 +502,7 @@
 ## 2026-05-18 插件系统 l10n 完善
 
 ### 问题描述
+
 - 插件设置界面的多语言没有随编辑器语言切换
 - 插件 manifest 信息（名称、描述）始终显示中文，切换到英文后仍显示中文
 - PluginManager 的 locale 没有被正确初始化和同步
@@ -473,31 +510,36 @@
 ### 解决方案
 
 #### l10n 文件结构重组
+
 ```
 src/i18n/plugin-settings/     # 插件设置界面翻译（新增）
 src/plugins/plugins/*/l10n/   # 插件自己的翻译
 ```
 
 #### 翻译来源
-| 内容 | 位置 | 获取方式 |
-|------|------|----------|
-| 插件设置界面 UI | `src/i18n/plugin-settings/` | `msg('pluginSettings.key')` |
-| 插件名称/描述 | `src/plugins/plugins/[id]/l10n/` | `pluginMsg(pluginId, 'name')` |
-| 插件内部文本 | `src/plugins/plugins/[id]/l10n/` | `ctx.msg('key')` |
+
+| 内容            | 位置                             | 获取方式                      |
+| --------------- | -------------------------------- | ----------------------------- |
+| 插件设置界面 UI | `src/i18n/plugin-settings/`      | `msg('pluginSettings.key')`   |
+| 插件名称/描述   | `src/plugins/plugins/[id]/l10n/` | `pluginMsg(pluginId, 'name')` |
+| 插件内部文本    | `src/plugins/plugins/[id]/l10n/` | `ctx.msg('key')`              |
 
 ### 关键修复
+
 - **App.jsx**：初始化时和切换语言时同步 PluginManager locale
 - **PluginManager.js**：添加 locale 订阅机制，支持组件响应语言变化
 - **PluginSettingsModal.jsx**：订阅 locale 变化重新渲染
 - **i18n/index.js**：合并插件设置界面翻译，添加 locale 订阅
 
 ### 新增文件
+
 - `src/i18n/plugin-settings/en.json` - 插件设置界面英文翻译
 - `src/i18n/plugin-settings/zh.json` - 插件设置界面中文翻译
 - `src/plugins/plugins/*/l10n/en.json` - 各插件英文翻译
 - `src/plugins/plugins/*/l10n/zh.json` - 各插件中文翻译
 
 ### 修改文件
+
 - `src/App.jsx` - 初始化和切换语言时同步 PluginManager locale
 - `src/i18n/index.js` - 合并插件设置界面翻译、添加 locale 订阅
 - `src/plugins/PluginManager.js` - 添加 locale 订阅机制、修复 l10n 加载路径
@@ -507,6 +549,7 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 ## 2026-05-17 多视角布局与资源管理器完善
 
 ### 新增功能
+
 - **多视角布局系统**：
   - 创建 `MultiViewport.jsx` 组件
   - 支持单视图和四视图模式切换（右上角按钮）
@@ -532,11 +575,13 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 - **新增 SVG 图标**：image、file、folder、edit、trash、layout-single、layout-quad
 
 ### 新增文件
+
 - `src/components/Toast.jsx` - Toast 弹窗组件
 - `src/hooks/useToast.jsx` - ToastProvider 和 useToast Hook
 - `src/components/MultiViewport.jsx` - 多视角布局组件
 
 ### BUG修复
+
 - **快照恢复弹窗重复弹出**：使用 `useRef` 确保只执行一次
 - **文件句柄失效后无限弹窗**：修复权限验证逻辑
 - **视口不渲染内容**：修复单视图模式缺少 style、容器尺寸为 0
@@ -549,17 +594,20 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 - **右键菜单图标不一致**：统一使用 IconRename 和 IconDelete
 
 ### UI改进
+
 - **层级面板添加按钮重构**：底部三个按钮改为标题栏右侧"+"下拉菜单
 - **素材面板导入按钮改进**：文字按钮改为透明底"+"图标按钮
 - **面板标题栏紧凑化**：减小 padding、font-size、按钮和图标尺寸
 
 ### 国际化
+
 - 新增多视图翻译：俄语、拉丁语、日语
 - 新增添加对象相关翻译：hierarchy.addObject、hierarchy.cube/sphere/plane
 
 ## 2026-05-16 预制件系统与右键菜单
 
 ### 新增功能
+
 - **预制件系统**：
   - 创建 `PrefabsPanel` 组件显示预制件列表
   - 从层级面板右键菜单创建预制件
@@ -597,6 +645,7 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
   - 折叠面板后视口自动调整大小
 
 ### BUG修复
+
 - **预制件面板滚动条不显示**：修复预制件列表超出高度后不显示滚动条的问题
   - 添加 `overflow: hidden` 到父容器
   - 添加 `min-height: 0` 允许 flex 子项收缩
@@ -606,12 +655,14 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
   - `.icon-btn.icon-btn-accent` 强调按钮（主题色高亮）
 
 ### 技术改进
+
 - 预制件数据结构：`{ id, name, template: { type, color, scale, defaultPosition, defaultRotation, assetId, isModel } }`
 - 预制件实例：`{ ...obj, prefabId, overrides: { scale, color } }`
 - 复制/粘贴使用 clipboard 状态管理
 - 重命名使用内联输入框，支持 Enter/Escape 键
 
 ### 新增文件
+
 - `src/components/PrefabsPanel.jsx` - 预制件面板组件
 - `src/components/CollapsiblePanel.jsx` - 可折叠面板组件
 - `src/icons/cube.svg` - 立方体图标
@@ -630,6 +681,7 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 - `src/icons/chevron-right.svg` - 向右箭头图标
 
 ### 修改文件
+
 - `src/App.jsx` - 集成预制件系统、复制/粘贴/重命名功能、面板折叠状态管理
 - `src/components/HierarchyPanel.jsx` - 右键菜单功能、SVG 图标、折叠功能
 - `src/components/InspectorPanel.jsx` - 预制件实例信息显示、折叠功能
@@ -647,6 +699,7 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 ## 2026-05-16 撤销重做与首选项设置
 
 ### 新增功能
+
 - **Undo/Redo 系统**：
   - 创建 `useHistory` 自定义 Hook 管理状态历史
   - 支持最多 50 条历史记录
@@ -658,6 +711,7 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
   - 语言切换（中文/English）
 
 ### BUG修复
+
 - **Undo/Redo 过度记录**：修复 TransformControls 拖动时每次微小移动都记录历史的问题
   - 拖拽过程中只更新状态不记录历史
   - 拖拽结束时才记录一次历史
@@ -699,11 +753,13 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
   - 避免调用 `toggleLocale()` 导致语言被切换两次
 
 ### 技术改进
+
 - 新建/加载项目时重置历史记录
 - 添加对象、删除对象时自动记录历史
 - `handleUpdateObject` 新增 `recordHistory` 参数控制是否记录历史
 
 ### 新增文件
+
 - `src/hooks/useHistory.js` - 历史管理 Hook
 - `src/components/PreferencesModal.jsx` - 首选项模态框
 - `src/styles/modal.css` - 模态框样式
@@ -712,6 +768,7 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 ## 2026-05-15 工具栏菜单与主题系统
 
 ### 新增功能
+
 - **下拉菜单组件**：创建可复用的 `DropdownMenu` 组件，支持自定义圆角、向上/向下展开
 - **工具栏菜单系统**：
   - 文件菜单：新建、打开、保存、另存为
@@ -730,11 +787,13 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 - **File System Access API**：支持直接保存到已选择的文件
 
 ### BUG修复
+
 - **快捷键冲突**：将新建项目快捷键改为 `Ctrl+Alt+N` 避免浏览器拦截
 - **正交视角定向球点击**：修复正交视角下点击定向球无法定位的问题（raycaster使用正确的相机）
 - **下拉框被遮挡**：dock栏下拉框改为向上展开
 
 ### UI优化
+
 - 下拉框样式改为只有底部圆角
 - 预览界面工具按钮使用SVG图标
 - 相机模式下拉框使用统一组件
@@ -742,17 +801,19 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 - 网格颜色固定为浅灰色
 
 ### 技术改进
+
 - 国际化新增主题、语言、首选项等翻译键
 - 删除冗余的 `localeNames` 导出
-
 
 ## 2025-05-13 视口与定向球功能完善
 
 ### 新增功能
+
 - **透视/正交视角切换**：在视口底部工具条添加下拉框，支持切换透视和正交视角
 - **底部工具条**：新增视口底部 dock 区域，用于放置视角切换等控制选项
 
 ### BUG修复
+
 - **定向球相对面变色**：修复点击定向球某个面时，相对的另一个面也同时变色的问题（原因：三角形分组时使用了绝对值导致正反两面被分配到同一索引）
 - **定向球方向偏转**：修复右键拖拽改变摄像机位置后，定向球方向发生奇怪偏转的问题（改用四元数同步相机旋转状态）
 - **工具条遮挡定向球**：调整定向球位置，避免被底部工具条遮挡
@@ -761,6 +822,7 @@ src/plugins/plugins/*/l10n/   # 插件自己的翻译
 - **万向节锁问题**：修复相机在极点（正上/正下）时定向球和视角切换的异常行为（正确处理 up 向量和四元数同步）
 
 ### 技术改进
+
 - 定向球相机同步方式改为直接复制主相机四元数，保留完整旋转状态
 - 正交相机 frustum 大小根据透视相机距离动态计算
 - 国际化支持新增"正交"、"视角模式"文本

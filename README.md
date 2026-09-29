@@ -2,7 +2,7 @@
 
 A joking 3D engine, just like [NOTHING](https://github.com/NeuronPulse/nothing).
 
-  ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)![NodeJS](https://img.shields.io/badge/Node.js-v22.18.0-339933?style=flat-square&logo=node.js)![React](https://img.shields.io/badge/React-v18.2.0-0099FF?style=flat-square&logo=react)![Three.js](https://img.shields.io/badge/Three.js-v0.160.0-66ccff?style=flat-square&logo=three.js)![Vite](https://img.shields.io/badge/Vite-v4.4.9-9135ff?style=flat-square&logo=vite)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)![NodeJS](https://img.shields.io/badge/Node.js-v22.18.0-339933?style=flat-square&logo=node.js)![React](https://img.shields.io/badge/React-v18.2.0-0099FF?style=flat-square&logo=react)![Three.js](https://img.shields.io/badge/Three.js-v0.160.0-66ccff?style=flat-square&logo=three.js)![Vite](https://img.shields.io/badge/Vite-v4.4.9-9135ff?style=flat-square&logo=vite)
 
 English | [简体中文](./README_CN.md)
 
@@ -61,10 +61,14 @@ Astra3DEngine/
 │   ├── i18n/                  # Internationalization
 │   ├── App.jsx
 │   └── main.jsx
-├── PROJECT_PROPOSAL.md        # Detailed project proposal
+├── DOCS.md                    # Consolidated design docs (5 chapters)
 ├── package.json
 └── vite.config.js
 ```
+
+## Docs
+
+For detailed design documents (project proposal, multi-scene system, project format, script system, voxel editor & animation engine), see [DOCS.md](DOCS.md).
 
 ## Contributing
 

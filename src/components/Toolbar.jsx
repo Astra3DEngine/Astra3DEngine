@@ -7,35 +7,21 @@
  */
 
 import React, { useRef, useEffect, useState } from 'react';
-import { msg, languages, getLocale } from '../i18n/index.js';
+import { msg } from '../i18n/index.js';
 import DropdownMenu from './DropdownMenu.jsx';
+import WindowControls from './toolbar/WindowControls.jsx';
 import IconLogo from '../assets/icons/logo/logo.svg?react';
 import InfoModal from './InfoModal.jsx';
 import useDropdownMenu from '../hooks/useDropdownMenu.js';
 import { modal as modalService } from '../lib/ModalManager.js';
 import { shortcuts, formatShortcutDisplay } from '../lib/ShortcutManager.js';
-import { tip } from '../lib/tooltip.js';
-
-import IconNewProject from '../assets/icons/editor/new-project.svg?react';
-import IconOpenProject from '../assets/icons/editor/open-project.svg?react';
-import IconSave from '../assets/icons/editor/save.svg?react';
-import IconSaveAs from '../assets/icons/editor/save-as.svg?react';
-import IconUndo from '../assets/icons/editor/undo.svg?react';
-import IconRedo from '../assets/icons/editor/redo.svg?react';
-import IconTheme from '../assets/icons/misc/theme.svg?react';
-import IconLanguage from '../assets/icons/misc/language.svg?react';
-import IconSettings from '../assets/icons/editor/settings.svg?react';
-import IconPlay from '../assets/icons/viewport/play.svg?react';
-import IconStop from '../assets/icons/viewport/stop.svg?react';
-import IconImport from '../assets/icons/editor/import.svg?react';
-import IconExport from '../assets/icons/editor/export.svg?react';
-import IconSnapshot from '../assets/icons/editor/snapshot.svg?react';
-import IconRecent from '../assets/icons/editor/recent.svg?react';
-
-import IconWindowMinimize from '../assets/icons/window/window-minimize.svg?react';
-import IconWindowMaximize from '../assets/icons/window/window-maximize.svg?react';
-import IconWindowRestore from '../assets/icons/window/window-restore.svg?react';
-import IconWindowClose from '../assets/icons/window/window-close.svg?react';
+import {
+  buildFileMenuItems,
+  buildEditMenuItems,
+  buildViewMenuItems,
+  buildRunMenuItems,
+  buildLogoMenuItems,
+} from './toolbar/menuItems.jsx';
 
 /**
  * 工具栏组件
@@ -138,113 +124,30 @@ function Toolbar({
     return () => document.removeEventListener('keydown', handleMenuShortcut);
   }, []);
 
-  const fileMenuItems = [
-    {
-      label: msg('menu.newProject'),
-      icon: <IconNewProject className="menu-icon" />,
-      shortcut: shortcutOf('file.new'),
-      onClick: onNewProject,
-    },
-    {
-      label: msg('menu.openProject'),
-      icon: <IconOpenProject className="menu-icon" />,
-      shortcut: shortcutOf('file.open'),
-      onClick: onLoadProject,
-    },
-    {
-      label: msg('menu.importAstra'),
-      icon: <IconImport className="menu-icon" />,
-      onClick: onImportAstra,
-    },
-    { divider: true },
-    {
-      label: msg('menu.saveProject'),
-      icon: <IconSave className="menu-icon" />,
-      shortcut: shortcutOf('file.save'),
-      onClick: onSaveProject,
-    },
-    {
-      label: msg('menu.saveAs'),
-      icon: <IconSaveAs className="menu-icon" />,
-      shortcut: shortcutOf('file.saveAs'),
-      onClick: onSaveAsProject,
-    },
-    {
-      label: msg('menu.exportAstra'),
-      icon: <IconExport className="menu-icon" />,
-      onClick: onExportAsAstra,
-    },
-    { divider: true },
-    {
-      label: msg('menu.snapshots'),
-      icon: <IconSnapshot className="menu-icon" />,
-      onClick: onOpenSnapshots,
-    },
-    ...(recentProjects.length > 0
-      ? [
-          { divider: true },
-          {
-            label: msg('menu.recentProjects'),
-            icon: <IconRecent className="menu-icon" />,
-            submenu: recentProjects.slice(0, 5).map((project) => ({
-              label: project.name,
-              hint: new Date(project.lastOpened).toLocaleDateString(),
-              onClick: () => onOpenRecentProject && onOpenRecentProject(project),
-            })),
-          },
-        ]
-      : []),
-  ];
+  const fileMenuItems = buildFileMenuItems({
+    onNewProject,
+    onLoadProject,
+    onImportAstra,
+    onSaveProject,
+    onSaveAsProject,
+    onExportAsAstra,
+    onOpenSnapshots,
+    recentProjects,
+    onOpenRecentProject,
+    shortcutOf,
+  });
 
-  const editMenuItems = [
-    {
-      label: msg('menu.undo'),
-      icon: <IconUndo className="menu-icon" />,
-      shortcut: shortcutOf('edit.undo'),
-      disabled: !canUndo,
-      onClick: onUndo,
-    },
-    {
-      label: msg('menu.redo'),
-      icon: <IconRedo className="menu-icon" />,
-      shortcut: shortcutOf('edit.redo'),
-      disabled: !canRedo,
-      onClick: onRedo,
-    },
-  ];
+  const editMenuItems = buildEditMenuItems({ canUndo, canRedo, onUndo, onRedo, shortcutOf });
 
-  const viewMenuItems = [
-    {
-      label: theme === 'dark' ? msg('menu.lightMode') : msg('menu.darkMode'),
-      icon: <IconTheme className="menu-icon" />,
-      onClick: onToggleTheme,
-    },
-    {
-      label: msg('menu.language'),
-      icon: <IconLanguage className="menu-icon" />,
-      submenu: languages.map((lang) => ({
-        label: lang.nativeName,
-        active: getLocale() === lang.code,
-        onClick: () => onSetLocale(lang.code),
-      })),
-    },
-    { divider: true },
-    {
-      label: msg('menu.preferences'),
-      icon: <IconSettings className="menu-icon" />,
-      shortcut: shortcutOf('preferences.open'),
-      onClick: onOpenPreferences,
-    },
-  ];
+  const viewMenuItems = buildViewMenuItems({
+    theme,
+    onToggleTheme,
+    onSetLocale,
+    onOpenPreferences,
+    shortcutOf,
+  });
 
-  const runMenuItems = [
-    {
-      label: isPlaying ? msg('toolbar.stop') : msg('toolbar.play'),
-      icon: isPlaying ? <IconStop className="menu-icon" /> : <IconPlay className="menu-icon" />,
-      shortcut: shortcutOf('view.togglePlay'),
-      onClick: () => setIsPlaying(!isPlaying),
-    },
-  ];
+  const runMenuItems = buildRunMenuItems({ isPlaying, setIsPlaying, shortcutOf });
 
   const handleMinimize = () => {
     if (isElectron) {
@@ -295,12 +198,7 @@ function Toolbar({
     }
   };
 
-  const logoMenuItems = [
-    { label: msg('logo.privacy'), onClick: () => handleLogoMenuItemClick('privacy') },
-    { label: msg('logo.source'), onClick: () => handleLogoMenuItemClick('source') },
-    { label: msg('logo.update'), onClick: () => handleLogoMenuItemClick('update') },
-    { label: msg('logo.about'), onClick: () => handleLogoMenuItemClick('about') },
-  ];
+  const logoMenuItems = buildLogoMenuItems({ onItemClick: handleLogoMenuItemClick });
 
   return (
     <>
@@ -363,29 +261,12 @@ function Toolbar({
         {isElectron && (
           <>
             <div className="toolbar-spacer"></div>
-            <div className="toolbar-window-controls">
-              <button
-                className="window-control-btn minimize"
-                onClick={handleMinimize}
-                {...tip(msg('window.minimize'))}
-              >
-                <IconWindowMinimize />
-              </button>
-              <button
-                className="window-control-btn maximize"
-                onClick={handleMaximize}
-                {...tip(msg(isMaximized ? 'window.restore' : 'window.maximize'))}
-              >
-                {isMaximized ? <IconWindowRestore /> : <IconWindowMaximize />}
-              </button>
-              <button
-                className="window-control-btn close"
-                onClick={handleClose}
-                {...tip(msg('window.close'))}
-              >
-                <IconWindowClose />
-              </button>
-            </div>
+            <WindowControls
+              isMaximized={isMaximized}
+              onMinimize={handleMinimize}
+              onMaximize={handleMaximize}
+              onClose={handleClose}
+            />
           </>
         )}
       </div>

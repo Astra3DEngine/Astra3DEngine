@@ -52,9 +52,7 @@ function FileBrowserSidebar({ commonDirs, drives, currentPath, isWindows, naviga
             const currentPathNormalized = currentPath.replace(/[\\/]$/, '');
             const isActive =
               currentPathNormalized === drivePathNormalized ||
-              (currentPathNormalized.startsWith(
-                drivePathNormalized + (isWindows ? '\\' : '/')
-              ) &&
+              (currentPathNormalized.startsWith(drivePathNormalized + (isWindows ? '\\' : '/')) &&
                 isWindows); // Linux 区别于 Windows 的分区机制
             return (
               <div

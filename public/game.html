@@ -1,33 +1,33 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MiniCraft - Astra 3D Engine</title>
-  <link rel="stylesheet" href="./game/style.css">
-</head>
-<body>
-  <div id="blocker">
-    <div class="title">MINICRAFT</div>
-    <div class="subtitle">A Minecraft-style Block Game</div>
-    <button class="play-btn" id="playBtn">Play</button>
-  </div>
-  
-  <div id="crosshair"></div>
-  <div id="debug"></div>
-  <div id="fps"></div>
-  <div id="hotbar"></div>
-  
-  <div id="inventory"></div>
-  
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "./three.module.js"
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MiniCraft - Astra 3D Engine</title>
+    <link rel="stylesheet" href="./game/style.css" />
+  </head>
+  <body>
+    <div id="blocker">
+      <div class="title">MINICRAFT</div>
+      <div class="subtitle">A Minecraft-style Block Game</div>
+      <button class="play-btn" id="playBtn">Play</button>
+    </div>
+
+    <div id="crosshair"></div>
+    <div id="debug"></div>
+    <div id="fps"></div>
+    <div id="hotbar"></div>
+
+    <div id="inventory"></div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./three.module.js"
+        }
       }
-    }
-  </script>
-  
-  <script type="module" src="./game/main.js"></script>
-</body>
+    </script>
+
+    <script type="module" src="./game/main.js"></script>
+  </body>
 </html>

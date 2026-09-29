@@ -2,7 +2,7 @@
 
 一个开玩笑的 3D 引擎，就和 [NOTHING](https://github.com/NeuronPulse/nothing) 一样。
 
-  ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)![NodeJS](https://img.shields.io/badge/Node.js-v22.18.0-339933?style=flat-square&logo=node.js)![React](https://img.shields.io/badge/React-v18.2.0-0099FF?style=flat-square&logo=react)![Three.js](https://img.shields.io/badge/Three.js-v0.160.0-66ccff?style=flat-square&logo=three.js)![Vite](https://img.shields.io/badge/Vite-v4.4.9-9135ff?style=flat-square&logo=vite)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)![NodeJS](https://img.shields.io/badge/Node.js-v22.18.0-339933?style=flat-square&logo=node.js)![React](https://img.shields.io/badge/React-v18.2.0-0099FF?style=flat-square&logo=react)![Three.js](https://img.shields.io/badge/Three.js-v0.160.0-66ccff?style=flat-square&logo=three.js)![Vite](https://img.shields.io/badge/Vite-v4.4.9-9135ff?style=flat-square&logo=vite)
 
 [English](./README.md) | 简体中文
 
@@ -61,10 +61,14 @@ Astra3DEngine/
 │   ├── i18n/                  # 国际化
 │   ├── App.jsx
 │   └── main.jsx
-├── PROJECT_PROPOSAL.md        # 详细项目提案
+├── DOCS.md                    # 设计文档合集（5 章）
 ├── package.json
 └── vite.config.js
 ```
+
+## 文档
+
+详细设计文档（项目策划、多场景系统、项目格式、脚本系统、方块建模器与骨骼动画引擎）请见 [DOCS.md](DOCS.md)。
 
 ## 贡献
 

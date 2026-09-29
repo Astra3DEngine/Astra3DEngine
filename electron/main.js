@@ -1,9 +1,9 @@
 /**
  * Electron 主进程入口
- * 
+ *
  * 负责创建应用窗口、处理 IPC 通信和系统对话框。
  * 无边框窗口设计，提供自定义窗口控制按钮。
- * 
+ *
  * @file electron/main.js
  * @module electron/main
  */
@@ -32,7 +32,7 @@ function getIconPath() {
     // 生产模式：electron 目录内容会被复制到 resources 目录
     basePath = __dirname;
   }
-  
+
   // Windows 优先使用 .ico 格式（任务栏图标支持更好）
   if (process.platform === 'win32') {
     const icoPath = path.join(basePath, 'icon.ico');
@@ -40,7 +40,7 @@ function getIconPath() {
       return icoPath;
     }
   }
-  
+
   // 其他平台使用 PNG
   return path.join(basePath, 'icon.png');
 }
@@ -48,7 +48,7 @@ function getIconPath() {
 function createWindow() {
   const iconPath = getIconPath();
   const icon = nativeImage.createFromPath(iconPath);
-  
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -164,8 +164,21 @@ ipcMain.handle('dialog:showMessage', async (event, options) => {
 ipcMain.handle('file:read', async (event, filePath) => {
   try {
     const ext = path.extname(filePath).toLowerCase();
-    const binaryExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.glb', '.gltf', '.obj', '.fbx', '.bin', '.astra'];
-    
+    const binaryExtensions = [
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.gif',
+      '.webp',
+      '.bmp',
+      '.glb',
+      '.gltf',
+      '.obj',
+      '.fbx',
+      '.bin',
+      '.astra',
+    ];
+
     if (binaryExtensions.includes(ext)) {
       const buffer = await fsp.readFile(filePath);
       const base64 = buffer.toString('base64');
@@ -190,20 +203,20 @@ ipcMain.handle('file:write', async (event, filePath, content) => {
 
 /**
  * 递归读取文件夹中的所有文件
- * 
+ *
  * 返回文件夹中所有文件的路径列表，支持递归遍历子文件夹。
  * 用于导入整个文件夹的资源。
  */
 ipcMain.handle('file:readDirectory', async (event, dirPath, recursive = true) => {
   try {
     const files = [];
-    
+
     const scanDir = async (currentPath) => {
       const entries = await fsp.readdir(currentPath, { withFileTypes: true });
-      
+
       for (const entry of entries) {
         const fullPath = path.join(currentPath, entry.name);
-        
+
         if (entry.isDirectory() && recursive) {
           await scanDir(fullPath);
         } else if (entry.isFile()) {
@@ -211,7 +224,7 @@ ipcMain.handle('file:readDirectory', async (event, dirPath, recursive = true) =>
         }
       }
     };
-    
+
     await scanDir(dirPath);
     return { success: true, files };
   } catch (error) {
@@ -222,32 +235,34 @@ ipcMain.handle('file:readDirectory', async (event, dirPath, recursive = true) =>
 ipcMain.handle('fs:listDirectory', async (event, dirPath) => {
   try {
     const entries = await fsp.readdir(dirPath, { withFileTypes: true });
-    const items = await Promise.all(entries.map(async (entry) => {
-      const fullPath = path.join(dirPath, entry.name);
-      let stats;
-      try {
-        stats = await fsp.stat(fullPath);
-      } catch (_e) {
-        stats = null;
-      }
-      
-      return {
-        name: entry.name,
-        path: fullPath,
-        isDirectory: entry.isDirectory(),
-        isFile: entry.isFile(),
-        size: stats ? stats.size : 0,
-        modifiedTime: stats ? stats.mtime.getTime() : 0,
-        isHidden: entry.name.startsWith('.')
-      };
-    }));
-    
+    const items = await Promise.all(
+      entries.map(async (entry) => {
+        const fullPath = path.join(dirPath, entry.name);
+        let stats;
+        try {
+          stats = await fsp.stat(fullPath);
+        } catch (_e) {
+          stats = null;
+        }
+
+        return {
+          name: entry.name,
+          path: fullPath,
+          isDirectory: entry.isDirectory(),
+          isFile: entry.isFile(),
+          size: stats ? stats.size : 0,
+          modifiedTime: stats ? stats.mtime.getTime() : 0,
+          isHidden: entry.name.startsWith('.'),
+        };
+      })
+    );
+
     items.sort((a, b) => {
       if (a.isDirectory && !b.isDirectory) return -1;
       if (!a.isDirectory && b.isDirectory) return 1;
       return a.name.localeCompare(b.name);
     });
-    
+
     return { success: true, items };
   } catch (error) {
     return { success: false, error: error.message, items: [] };
@@ -268,7 +283,7 @@ ipcMain.handle('fs:getCommonDirs', () => {
     music: app.getPath('music'),
     videos: app.getPath('videos'),
     appData: app.getPath('appData'),
-    userData: app.getPath('userData')
+    userData: app.getPath('userData'),
   };
 });
 
@@ -294,8 +309,8 @@ ipcMain.handle('fs:getPathInfo', async (event, filePath) => {
         size: stats.size,
         createdTime: stats.birthtime.getTime(),
         modifiedTime: stats.mtime.getTime(),
-        accessedTime: stats.atime.getTime()
-      }
+        accessedTime: stats.atime.getTime(),
+      },
     };
   } catch (error) {
     return { success: false, error: error.message };
@@ -318,7 +333,7 @@ const DRIVES_CACHE_TTL = 60 * 1000; // 缓存 60 秒
 
 ipcMain.handle('fs:getDrives', async () => {
   // 检查缓存是否有效
-  if (_drivesCache && (Date.now() - _drivesCacheTime) < DRIVES_CACHE_TTL) {
+  if (_drivesCache && Date.now() - _drivesCacheTime < DRIVES_CACHE_TTL) {
     return { success: true, drives: _drivesCache };
   }
 
@@ -330,7 +345,7 @@ ipcMain.handle('fs:getDrives', async () => {
         exec(
           'powershell -NoProfile -Command "Get-Volume | Where-Object { $_.DriveLetter -ne $null } | Select-Object DriveLetter, FileSystemLabel | ConvertTo-Json -Compress"',
           { timeout: 8000 },
-          (error, stdout) => error ? reject(error) : resolve(Buffer.from(stdout, 'binary'))
+          (error, stdout) => (error ? reject(error) : resolve(Buffer.from(stdout, 'binary')))
         );
       });
       const psOutput = new TextDecoder('gbk').decode(buf);
@@ -343,7 +358,7 @@ ipcMain.handle('fs:getDrives', async () => {
           drives.push({
             name: letter,
             label: rawLabel ? `${rawLabel} (${letter})` : letter,
-            path: letter + '\\'
+            path: letter + '\\',
           });
         }
       }
@@ -375,7 +390,7 @@ ipcMain.handle('fs:getDrives', async () => {
           drives.push({
             name: entry.name,
             label: entry.name,
-            path: '/Volumes/' + entry.name  // 不带末尾斜杠，与前端 normalizePath 保持一致
+            path: '/Volumes/' + entry.name, // 不带末尾斜杠，与前端 normalizePath 保持一致
           });
         }
       }
@@ -390,7 +405,22 @@ ipcMain.handle('fs:getDrives', async () => {
     try {
       const mounts = await fsp.readFile('/proc/mounts', 'utf-8');
       // 跳过 tmpfs、proc、sysfs 等虚拟文件系统，只保留真实设备
-      const skipFs = new Set(['tmpfs', 'proc', 'sysfs', 'devtmpfs', 'cgroup', 'cgroup2', 'debugfs', 'securityfs', 'fusectl', 'configfs', 'pstore', 'hugetlbfs', 'mqueue', 'binfmt_misc']);
+      const skipFs = new Set([
+        'tmpfs',
+        'proc',
+        'sysfs',
+        'devtmpfs',
+        'cgroup',
+        'cgroup2',
+        'debugfs',
+        'securityfs',
+        'fusectl',
+        'configfs',
+        'pstore',
+        'hugetlbfs',
+        'mqueue',
+        'binfmt_misc',
+      ]);
       for (const line of mounts.split('\n')) {
         if (!line.trim()) continue;
         const parts = line.split(/\s+/);
@@ -405,13 +435,13 @@ ipcMain.handle('fs:getDrives', async () => {
         drives.push({
           name: label,
           label: label,
-          path: mountPoint  // 不带末尾斜杠，与前端 normalizePath 保持一致
+          path: mountPoint, // 不带末尾斜杠，与前端 normalizePath 保持一致
         });
       }
     } catch (_) {}
 
     // 至少保证有根目录
-    if (drives.length === 0 || !drives.some(d => d.path === '/')) {
+    if (drives.length === 0 || !drives.some((d) => d.path === '/')) {
       drives.unshift({ name: '/', label: 'Root (/)', path: '/' });
     }
 

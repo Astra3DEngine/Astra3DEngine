@@ -105,7 +105,9 @@ describe('TreeMath', () => {
     ];
 
     test('getAllDescendants 递归收集', () => {
-      const ids = getAllDescendants(1, objects).map((o) => o.id).sort();
+      const ids = getAllDescendants(1, objects)
+        .map((o) => o.id)
+        .sort();
       expect(ids).toEqual([2, 3, 4]);
     });
 
@@ -225,7 +227,11 @@ describe('TreeMath', () => {
       // 收集相对变换（基于当前绝对位置）
       const rel = collectDescendantRelativeTransforms(1, objects, meshes);
       // 移动父对象到新绝对坐标（通过 world up-to-date 的计算）
-      applyTransformToObject3D(parentMesh, { position: [11, 5, 5], rotation: [0, 0, 0], scale: [1, 1, 1] });
+      applyTransformToObject3D(parentMesh, {
+        position: [11, 5, 5],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1],
+      });
       applyTransformToDescendants(1, rel, objects, meshes);
 
       childMesh.updateMatrixWorld(true);

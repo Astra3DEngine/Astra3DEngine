@@ -1,0 +1,2 @@
+# 设计文档包含大量 ASCII 艺术图与示例代码块，Prettier 格式化会破坏对齐
+DOCS.md

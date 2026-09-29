@@ -92,7 +92,10 @@ export default function TooltipHost() {
       right: { left: anchor.x + anchor.w + PAD, top: anchor.y + anchor.h / 2 - h / 2 },
     };
     const inViewport = ({ left, top }) =>
-      left >= 4 && top >= 4 && left + w <= window.innerWidth - 4 && top + h <= window.innerHeight - 4;
+      left >= 4 &&
+      top >= 4 &&
+      left + w <= window.innerWidth - 4 &&
+      top + h <= window.innerHeight - 4;
 
     let place = p;
     if (!inViewport(candidates[p])) {

@@ -5,6 +5,7 @@ Astra 3D Engine（A3DE）项目 AI 协作指南。本文件供 AI 助手在处�
 ## ⚠️ 最高优先级约束（必须遵守）
 
 ### 禁止启动服务器 / 守护进程
+
 - **AI 不允许在任何控制台/终端中启动长期运行的服务器进程或开发服务器**。
 - 明确禁止执行：`pnpm dev`、`pnpm start`、`pnpm preview`、`pnpm desktop`、`pnpm desktop:preview`、`vite`、`vite preview` 等任何会保持前台运行、等待连接或阻塞终端退回的命令。
 - 也不要用后台方式（`&`、`Start-Process`、`nohup`、独立进程）启动上述命令——服务器应由用户自行启动。
@@ -36,6 +37,11 @@ src/
     toast/           # ToastHost
     primitives/      # RenameInput/ ColorPicker/ TooltipHost
     dropdown…        # DropdownMenu（基于 @szhsin/react-menu）
+    inspector/       # 属性面板拆分块：ObjectSection/ LightSection/ TextureSection/ TransformSection/ Vector2Field
+    fileBrowser/     # 文件浏览器拆分块：Toolbar/ Sidebar/ List/ Footer/ FileIcons
+    hierarchy/       # HierarchyItem（层级树递归项）
+    assets/          # AssetItem（资源网格项）
+    toolbar/         # WindowControls + menuItems.jsx（菜单项定义）
   engine/            # three.js 纯逻辑层（禁止出现 React）
     TreeMath.js      # 层级树相对变换/后代传播（apply/extract/collect）
     materials.js     # 材质：createPrimitiveMaterial/ cloneTexture/ ensureStandardMaterial 等
@@ -57,6 +63,8 @@ src/
     id.js            # generateGUID/ generateId/ generatePrefixedId/ getBasename
     localstorage.js  # readRawLocalStorage/ writeRawLocalStorage（自带 try/catch）
     names.js         # generateUniqueName
+    pathUtils.js     # normalizePath/ formatSize/ formatDate/ splitPathParts（文件浏览器用）
+    fileImport.js    # getMimeType/ collectDirectoryInto/ importFileCollection（资产导入逻辑）
     projectSchema.js # editorObjectToEngineObject/ engineObjectToEditorObject
     projectExporter.js # .astra 导出/导入（ZIP）
     themeManager.js  # 主题注册/应用
@@ -64,18 +72,18 @@ src/
 
 ## Stores（zustand）
 
-| store | 职责 | 持久化 |
-|---|---|---|
-| `useScenesStore` | 场景数组/当前场景/undo-redo 历史 + 对象 CRUD | 无（由文件服务负责） |
-| `useSelectionStore` | 单选 `selectedObject` + 多选 `selectedObjects`（同源，多选首项即单选） | 无 |
-| `useAssetsStore` | 资产库 + 导入（含 GLTF 解析） | 无 |
-| `usePrefabsStore` | 预制件库 | 无 |
-| `useProjectStore` | 项目文件名/unsaved 标记（自动保存/快照设置走 Settings） | 无 |
-| `useEditorStore` | 工具/播放/光渲染等编辑器态 | 无 |
-| `useUIStore` | 侧栏 active 视图/折叠 | `astra-sidebar-*` |
-| `useWorkspaceTabsStore` | 顶部 tab | `astra-active-tab` |
-| `useDockStore` | 面板停靠区（left/bottom） | `astra-dock-*` |
-| `useBottomPanelStore` | 底栏高度/收起 | `astra-bottom-panel-*` |
+| store                   | 职责                                                                   | 持久化                 |
+| ----------------------- | ---------------------------------------------------------------------- | ---------------------- |
+| `useScenesStore`        | 场景数组/当前场景/undo-redo 历史 + 对象 CRUD                           | 无（由文件服务负责）   |
+| `useSelectionStore`     | 单选 `selectedObject` + 多选 `selectedObjects`（同源，多选首项即单选） | 无                     |
+| `useAssetsStore`        | 资产库 + 导入（含 GLTF 解析）                                          | 无                     |
+| `usePrefabsStore`       | 预制件库                                                               | 无                     |
+| `useProjectStore`       | 项目文件名/unsaved 标记（自动保存/快照设置走 Settings）                | 无                     |
+| `useEditorStore`        | 工具/播放/光渲染等编辑器态                                             | 无                     |
+| `useUIStore`            | 侧栏 active 视图/折叠                                                  | `astra-sidebar-*`      |
+| `useWorkspaceTabsStore` | 顶部 tab                                                               | `astra-active-tab`     |
+| `useDockStore`          | 面板停靠区（left/bottom）                                              | `astra-dock-*`         |
+| `useBottomPanelStore`   | 底栏高度/收起                                                          | `astra-bottom-panel-*` |
 
 ## 命令
 
@@ -96,6 +104,7 @@ pnpm typecheck     # tsc（对 .js 意义有限，一般不需要）
 ## 核心约定
 
 ### 状态管理（stores）
+
 - 全部 zustand `create((set, get) => ...)`。
 - 组件必须用 **selector 订阅**（`useXStore((s) => s.field)`），禁止整包订阅 `const store = useXStore()`（引发不必要重渲染）。
 - 动作内调自身 action 用局部 `get()`，不要 `useXStore.getState()` 自引用（`getState()` 仅用于跨 store 或事件回调）。
@@ -103,14 +112,17 @@ pnpm typecheck     # tsc（对 .js 意义有限，一般不需要）
 - 撤销/重做由 `stores/history.js` 的 `createHistorySlice` 提供；`currentSceneId` 作为 snapshotField 一并入历史，undo/redo 后清空 selection 防悬垂。
 
 ### 持久化
+
 - 一律走 `utils/localstorage.js` 的 `readRawLocalStorage`/`writeRawLocalStorage`（自带 try/catch），禁止裸写 `localStorage.getItem/setItem`。
 - 业务数据（场景/资产/预制件）不进 localStorage，由 ProjectFileService 负责项目文件读写。
 
 ### 工具函数去重
+
 - ID/GUID 统一用 `utils/id.js`；编辑器↔引擎对象转换统一用 `utils/projectSchema.js`。
 - 发现重复实现时收敛到 utils，不要复制粘贴。
 
 ### Viewport 组件结构（重要）
+
 - `Viewport.jsx` 是大型组件，已拆分出以下 hooks，**新增独立逻辑也应抽成 hook**：
   - `useViewportPick`：射线拾取 + 播放旋转
   - `useSelectionOutline`：选中高亮 + 轴心吸附
@@ -121,18 +133,21 @@ pnpm typecheck     # tsc（对 .js 意义有限，一般不需要）
 - three 纯逻辑（相对变换、材质、灯光、模型构建）一律放 `src/engine/`，不写进组件。
 
 ### i18n
+
 - 所有用户可见文本必须走 `msg('key')`，禁止硬编码中文/英文。
 - tooltip 用 `tip(msg('key'))`；Toast/对话框用 `msg('key', { param })` 插值。
 - 新增 key 必须同步加到全部 5 个语言文件（zh/en/ja/ru/la），键须保持对齐（当前各 317）；改后跑 `pnpm test`（i18n 专项用例）验证。
 - 语言以 i18n 为唯一来源（勿从 Settings 读取 language，该键已移除）。
 
 ### 样式
+
 - 样式按模块分文件，入口 `styles/main.css` 用 @import。
 - 颜色只用 `variables.css` 的 CSS 变量（规范名：`--bg-hover`/`--accent-active`/`--danger`/`--theme-color` 等），禁止硬编码色值。
 - 按钮家族统一在 `buttons.css`（`.btn`/`.btn-primary`/`.btn-secondary`/`.btn-danger`）。
 - 不用的样式类应删除（已有历史清理，勿让死 CSS 回流）。
 
 ### 代码卫生
+
 - ESLint 零错误零警告（`--max-warnings=0`）；新增代码不得引入 `no-unused-vars`/`no-undef`/`no-console`。
 - 禁用 `console.log`（允许 `console.warn`/`console.error`）。
 - **不要改动现有注释**（项目保留中文"喵"等风格注释，用户明确要求不清理、不规范化）。
@@ -140,6 +155,7 @@ pnpm typecheck     # tsc（对 .js 意义有限，一般不需要）
 - 新文件头部保留既有 JSDoc 风格（`@file`/`@description`/`@module`）。
 
 ## 测试
+
 - engine 纯逻辑（TreeMath/ObjectFactory 等）必须具备测试（模式见 `src/tests/engine.test.js`）。
 - Viewport 拆分 hooks（useViewportPick/useSelectionOutline/useViewCubeMount）有交互测试（`src/tests/viewportHooks.test.jsx`），用真实 three 数学 + mock ViewCube。
 - 测试文件位于 `src/tests/`，命名 `*.test.js`/`*.test.jsx`。
@@ -147,12 +163,14 @@ pnpm typecheck     # tsc（对 .js 意义有限，一般不需要）
 - 测试用例用中文描述（遵循现有命名习惯），断言需明确；跑测试前先 `pnpm build` 确认可编译。
 
 ## 项目文件格式（.astra）
+
 - 编辑器内部与 .astra 均使用**多场景 `{ scenes: [...] }`** 结构（v1.0.0）。
 - 导出/导入的编辑器↔引擎对象转换统一走 `utils/projectSchema.js`，不要各自硬编码。
 - 导入会做版本白名单校验（`0.1.0`/`1.0.0`），未知版本抛错。
 - 前端存储端点（localStorage/IndexedDB）出现异常用 try/catch 静默降级，不抛到 UI。
 
 ## 已废弃（不要新增引用）
+
 - `src/plugins/` 已删除（插件系统废弃），不要重新引入。
 - 死 API 已清理：`Settings.use`/`useSettings`、`Settings.get('language')`、`settingsRegistry.unregisterByCategory` 等已移除。
 - 历史死代码已删（`history.canUndo/canRedo`、`meta.getEngineInfo` 等），不要重新声明。

@@ -9,29 +9,19 @@ import { msg } from '../i18n/index.js';
 import useDropdownMenu from '../hooks/useDropdownMenu.js';
 import usePanelSearch from '../hooks/usePanelSearch.js';
 import DropdownMenu from './DropdownMenu.jsx';
-import { getAllDescendants, getAllDescendantIds } from '../engine/TreeMath.js';
-import RenameInput from './primitives/RenameInput.jsx';
+import HierarchyItem from './hierarchy/HierarchyItem.jsx';
+import { getAllDescendantIds } from '../engine/TreeMath.js';
 import { useScenesStore } from '../stores/useScenesStore.js';
 import { useSelectionStore } from '../stores/useSelectionStore.js';
 import { usePrefabsStore } from '../stores/usePrefabsStore.js';
-import IconCube from '../assets/icons/tools/cube.svg?react';
-import IconSphere from '../assets/icons/tools/sphere.svg?react';
-import IconPlane from '../assets/icons/tools/plane.svg?react';
-import IconModel from '../assets/icons/tools/model.svg?react';
-import IconFolder from '../assets/icons/editor/folder.svg?react';
-import IconPrefabInstance from '../assets/icons/tools/prefab-instance.svg?react';
-import IconDelete from '../assets/icons/editor/delete.svg?react';
-import IconPrefab from '../assets/icons/tools/prefab.svg?react';
 import IconCopy from '../assets/icons/editor/copy.svg?react';
 import IconPaste from '../assets/icons/editor/paste.svg?react';
 import IconDuplicate from '../assets/icons/editor/duplicate.svg?react';
 import IconRename from '../assets/icons/editor/rename.svg?react';
 import IconSearch from '../assets/icons/editor/search.svg?react';
-import IconChevronCollapsed from '../assets/icons/nav/chevron-collapsed.svg?react';
-import IconPointLight from '../assets/icons/tools/light-point.svg?react';
-import IconDirectionalLight from '../assets/icons/tools/light-directional.svg?react';
-import IconSpotLight from '../assets/icons/tools/light-spot.svg?react';
-import { tip } from '../lib/tooltip.js';
+import IconPrefabInstance from '../assets/icons/tools/prefab-instance.svg?react';
+import IconPrefab from '../assets/icons/tools/prefab.svg?react';
+import IconDelete from '../assets/icons/editor/delete.svg?react';
 
 /**
  * 层级面板组件
@@ -151,15 +141,7 @@ function HierarchyPanel() {
    */
   const handleCopy = () => {
     if (contextMenuObject) {
-      if (
-        selectedObjects &&
-        selectedObjects.length > 1 &&
-        selectedObjects.some((o) => o && o.id === contextMenuObject.id)
-      ) {
-        onCopyObject(contextMenuObject.id);
-      } else {
-        onCopyObject(contextMenuObject.id);
-      }
+      onCopyObject(contextMenuObject.id);
     }
     ctxMenu.close();
   };
@@ -194,20 +176,6 @@ function HierarchyPanel() {
     return prefab?.name || 'Unknown Prefab';
   };
 
-  const getObjectIcon = (obj) => {
-    if (obj.isFolder) return <IconFolder className="hierarchy-icon" />;
-    if (obj.type === 'mesh') return <IconModel className="hierarchy-icon" />;
-    if (obj.prefabId) return <IconPrefabInstance className="hierarchy-icon" />;
-    if (obj.type === 'cube') return <IconCube className="hierarchy-icon" />;
-    if (obj.type === 'sphere') return <IconSphere className="hierarchy-icon" />;
-    if (obj.type === 'plane') return <IconPlane className="hierarchy-icon" />;
-    if (obj.type === 'model') return <IconModel className="hierarchy-icon" />;
-    if (obj.type === 'pointLight') return <IconPointLight className="hierarchy-icon" />;
-    if (obj.type === 'directionalLight') return <IconDirectionalLight className="hierarchy-icon" />;
-    if (obj.type === 'spotLight') return <IconSpotLight className="hierarchy-icon" />;
-    return <IconCube className="hierarchy-icon" />;
-  };
-
   /**
    * 递归获取所有后代对象的 ID
    *
@@ -216,9 +184,6 @@ function HierarchyPanel() {
    *
    * 这个递归实现有点暴力，每次拖拽都要重新计算，但考虑到场景对象数量通常不多，
    * 能跑就行，不肉，能跑就行。
-   *
-   * @param {number} objId - 对象 ID
-   * @returns {Set<number>} 所有后代对象的 ID 集合
    */
   const handleDragStart = (e, obj) => {
     e.dataTransfer.effectAllowed = 'move';
@@ -350,95 +315,25 @@ function HierarchyPanel() {
     setDropPosition(null);
   };
 
-  const renderObject = (obj, depth = 0) => {
-    const isDropTarget = dropTarget === obj.id;
-    const isDragged = draggedId === obj.id;
-    const hasChildren = objects.some((o) => o.parentId === obj.id);
-    const isSelected = selectedObjects.some((o) => o && o.id === obj.id);
-    const isExpanded = computedExpandedIds.has(obj.id);
-
-    return (
-      <React.Fragment key={obj.id}>
-        <div
-          className={`hierarchy-item ${isSelected ? 'selected' : ''} ${obj.prefabId ? 'prefab-instance' : ''} ${isDragged ? 'dragging' : ''} ${isDropTarget && dropPosition === 'before' ? 'drop-before' : ''} ${isDropTarget && dropPosition === 'after' ? 'drop-after' : ''} ${isDropTarget && dropPosition === 'inside' ? 'drop-inside' : ''}`}
-          style={{ paddingLeft: `${6 + depth * 16}px` }}
-          onClick={(e) => {
-            if (isRenaming) return;
-            if (obj.isFolder) {
-              const descendants = getAllDescendants(obj.id, objects);
-              onSelectObject(obj, e.ctrlKey || e.metaKey, [obj, ...descendants]);
-            } else {
-              onSelectObject(obj, e.ctrlKey || e.metaKey);
-            }
-          }}
-          onDoubleClick={(e) => {
-            if (hasChildren) {
-              e.stopPropagation();
-              toggleExpanded(obj.id);
-            }
-          }}
-          onContextMenu={(e) => handleContextMenu(e, obj)}
-          draggable={true}
-          onDragStart={(e) => handleDragStart(e, obj)}
-          onDragEnd={handleDragEnd}
-          onDragOver={(e) => handleDragOver(e, obj)}
-          onDragLeave={handleDragLeave}
-          onDrop={(e) => handleDrop(e, obj)}
-        >
-          {hasChildren && (
-            <span
-              className={`hierarchy-expand-icon ${isExpanded ? 'expanded' : ''}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                toggleExpanded(obj.id);
-              }}
-            >
-              <IconChevronCollapsed className="hierarchy-expand-svg" />
-            </span>
-          )}
-          {!hasChildren && depth > 0 && <span className="hierarchy-expand-placeholder" />}
-          <span className="hierarchy-item-icon">{getObjectIcon(obj)}</span>
-          {isRenaming === obj.id ? (
-            <RenameInput
-              value={obj.name}
-              className="hierarchy-rename-input"
-              onSubmit={(value) => {
-                onRenameObject(obj.id, value);
-                setIsRenaming(null);
-              }}
-              onCancel={() => setIsRenaming(null)}
-            />
-          ) : (
-            <span className="hierarchy-item-name">{obj.name}</span>
-          )}
-          {obj.prefabId && (
-            <span className="hierarchy-prefab-badge" {...tip(getPrefabName(obj.prefabId))}>
-              P
-            </span>
-          )}
-          <button
-            className="icon-btn icon-btn-danger"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteObject(obj.id);
-            }}
-            {...tip(msg('hierarchy.delete'))}
-          >
-            <IconDelete className="btn-icon" />
-          </button>
-        </div>
-        {isExpanded &&
-          objects
-            .filter((o) => o.parentId === obj.id)
-            .sort((a, b) => {
-              const indexA = objects.findIndex((item) => item.id === a.id);
-              const indexB = objects.findIndex((item) => item.id === b.id);
-              return indexA - indexB;
-            })
-            .map((child) => renderObject(child, depth + 1))}
-      </React.Fragment>
-    );
+  const itemProps = {
+    selectedObjects,
+    isRenaming,
+    expandedIds: computedExpandedIds,
+    draggedId,
+    dropTarget,
+    dropPosition,
+    getPrefabName,
+    toggleExpanded,
+    onSelectObject,
+    onDeleteObject,
+    onRenameObject,
+    onRenameCancel: () => setIsRenaming(null),
+    onContextMenu: handleContextMenu,
+    onDragStart: handleDragStart,
+    onDragEnd: handleDragEnd,
+    onDragOver: handleDragOver,
+    onDragLeave: handleDragLeave,
+    onDrop: handleDrop,
   };
 
   const filteredObjects = useMemo(() => {
@@ -549,9 +444,13 @@ function HierarchyPanel() {
             )}
           </div>
         ) : isSearching ? (
-          filteredObjects.map((obj) => renderObject(obj))
+          filteredObjects.map((obj) => (
+            <HierarchyItem key={obj.id} obj={obj} objects={objects} {...itemProps} />
+          ))
         ) : (
-          filteredObjects.filter((obj) => !obj.parentId).map((obj) => renderObject(obj))
+          filteredObjects
+            .filter((obj) => !obj.parentId)
+            .map((obj) => <HierarchyItem key={obj.id} obj={obj} objects={objects} {...itemProps} />)
         )}
       </div>
 

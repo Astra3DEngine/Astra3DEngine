@@ -13,7 +13,7 @@ export const BLOCK_TYPES = {
   STONE: 3,
   WOOD: 4,
   LEAVES: 5,
-  SAND: 6
+  SAND: 6,
 };
 
 export const BLOCK_COLORS = {
@@ -22,7 +22,7 @@ export const BLOCK_COLORS = {
   [BLOCK_TYPES.STONE]: 0x808080,
   [BLOCK_TYPES.WOOD]: 0x8b4513,
   [BLOCK_TYPES.LEAVES]: 0x228b22,
-  [BLOCK_TYPES.SAND]: 0xf4d03f
+  [BLOCK_TYPES.SAND]: 0xf4d03f,
 };
 
 export const BLOCK_TOP_COLORS = {
@@ -31,5 +31,5 @@ export const BLOCK_TOP_COLORS = {
   [BLOCK_TYPES.STONE]: 0x808080,
   [BLOCK_TYPES.WOOD]: 0x8b4513,
   [BLOCK_TYPES.LEAVES]: 0x228b22,
-  [BLOCK_TYPES.SAND]: 0xf4d03f
+  [BLOCK_TYPES.SAND]: 0xf4d03f,
 };

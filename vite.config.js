@@ -8,12 +8,12 @@ export default defineConfig({
   base: process.env.BASE_URL || '/',
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    }
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
   },
   server: {
     port: 3000,
-    open: true
+    open: true,
   },
   build: {
     outDir: 'dist',
@@ -23,9 +23,9 @@ export default defineConfig({
       output: {
         manualChunks: {
           three: ['three'],
-          vendor: ['react', 'react-dom', 'zustand']
-        }
-      }
-    }
-  }
+          vendor: ['react', 'react-dom', 'zustand'],
+        },
+      },
+    },
+  },
 });
