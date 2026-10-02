@@ -61,14 +61,28 @@ Astra3DEngine/
 │   ├── i18n/                  # Internationalization
 │   ├── App.jsx
 │   └── main.jsx
-├── DOCS.md                    # Consolidated design docs (5 chapters)
 ├── package.json
 └── vite.config.js
 ```
 
 ## Docs
 
-For detailed design documents (project proposal, multi-scene system, project format, script system, voxel editor & animation engine), see [DOCS.md](DOCS.md).
+Detailed design & code-pattern documents are maintained in the project [Wiki](https://github.com/Astra3DEngine/Astra3DEngine/wiki):
+
+- **[Design Docs](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Design-Docs)** — index with per-chapter pages:
+  - [Ch1 Project Overview & Planning](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Design-01-Project)
+  - [Ch2 Multi-Scene System](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Design-02-MultiScene)
+  - [Ch3 Project Format](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Design-03-ProjectFormat)
+  - [Ch4 Scripting System](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Design-04-ScriptSystem)
+  - [Ch5 Voxel Editor & Animation Engine](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Design-05-VoxelAnimation)
+- **[Element Template](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Element-Template)** — reusable elements & code patterns:
+  - [Global Hosts & Services](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Element-Template-Foundations)
+  - [State Management](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Element-Template-Stores)
+  - [Common Components](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Element-Template-Components)
+  - [Panels & i18n](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Element-Template-Panels)
+  - [Decomposition & Rules](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Element-Template-Patterns)
+
+English design docs also have per-chapter EN pages (e.g. `Design-01-Project-EN`, `Element-Template-Stores-EN`).
 
 ## Contributing
 

@@ -154,12 +154,13 @@ pnpm typecheck     # tsc（对 .js 意义有限，一般不需要）
 - 新增 TODO 注释需加 `/* eslint-disable-next-line no-warning-comments -- 说明 */` 防止 lint 报警。
 - 新文件头部保留既有 JSDoc 风格（`@file`/`@description`/`@module`）。
 
-### 文档维护（ELEMENT_TEMPLATE.md）
+### 文档维护（Wiki 页面）
 
-- `ELEMENT_TEMPLATE.md` 是**可复用元素与代码模式速查**（全局宿主/服务单例/store 约定/通用组件/面板体系/i18n/工具/拆分模式）。
-- 新增或修改可复用元素（组件、Hook、服务单例、store、工具函数、引擎模块、拆分模式）时，**必须同步更新 ELEMENT_TEMPLATE.md** 对应章节；若涉及章节不存在，先在目录中扩展。
+- 设计文档（策划/多场景/项目格式/脚本/建模与动画）维护在 **GitHub Wiki**（仓库 `Astra3DEngine.wiki/`），主索引页为 `Design-Docs.md`（`Design-Docs-EN.md`），各章拆分为独立页面：`Design-01-Project(-EN).md`、`Design-02-MultiScene(-EN).md`、`Design-03-ProjectFormat(-EN).md`、`Design-04-ScriptSystem(-EN).md`、`Design-05-VoxelAnimation(-EN).md`。
+- 可复用元素与代码模式速查（全局宿主/服务单例/store 约定/通用组件/面板体系/i18n/工具/拆分模式）维护在 **GitHub Wiki 的 `Element-Template` 系列页**（对应仓库 `Astra3DEngine.wiki/Element-Template.md` 及 `Element-Template-Foundations/Stores/Components/Panels/Patterns(-EN).md`），不在主仓库。
+- 新增或修改可复用元素（组件、Hook、服务单例、store、工具函数、引擎模块、拆分模式）时，**必须同步更新 Wiki 的 `Element-Template` 对应分页**；若涉及章节不存在，先在索引页 `Element-Template.md` 中扩展链接。
 - 内容必须与源码一致：路径、函数签名、props 表、store 键、i18n 用法都要核对真实实现后再写，禁止照搬过时描述（历史教训：`useModal`/`useModalManager` 已移除，文档曾保留死 API）。
-- 改动完跑 `pnpm check`（prettier 检查）；文档如含 ASCII 图则不格式化（勿用 `pnpm format` 整库时破坏）。
+- 该系列页含代码块无 ASCII 图，可跑 prettier 格式化；改动完跑 `pnpm check`。
 
 ## 测试
 

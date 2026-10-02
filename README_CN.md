@@ -61,14 +61,28 @@ Astra3DEngine/
 │   ├── i18n/                  # 国际化
 │   ├── App.jsx
 │   └── main.jsx
-├── DOCS.md                    # 设计文档合集（5 章）
 ├── package.json
 └── vite.config.js
 ```
 
 ## 文档
 
-详细设计文档（项目策划、多场景系统、项目格式、脚本系统、方块建模器与骨骼动画引擎）请见 [DOCS.md](DOCS.md)。
+详细设计文档与代码模式速查维护在项目 [Wiki](https://github.com/Astra3DEngine/Astra3DEngine/wiki)：
+
+- **[设计文档](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Design-Docs)** — 索引页，下含分章页面：
+  - [第一章 项目概述与策划案](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Design-01-Project)
+  - [第二章 多场景系统设计](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Design-02-MultiScene)
+  - [第三章 项目格式设计](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Design-03-ProjectFormat)
+  - [第四章 脚本系统设计](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Design-04-ScriptSystem)
+  - [第五章 方块建模器与骨骼动画引擎](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Design-05-VoxelAnimation)
+- **[组件模板](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Element-Template)** — 可复用元素与代码模式：
+  - [全局宿主与服务单例](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Element-Template-Foundations)
+  - [状态管理](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Element-Template-Stores)
+  - [通用组件](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Element-Template-Components)
+  - [面板布局与国际化](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Element-Template-Panels)
+  - [拆分模式与规则](https://github.com/Astra3DEngine/Astra3DEngine/wiki/Element-Template-Patterns)
+
+英文设计文档也有对应的分章页面（如 `Design-01-Project-EN`、`Element-Template-Stores-EN`）。
 
 ## 贡献
 
